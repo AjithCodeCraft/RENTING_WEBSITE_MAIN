@@ -11,9 +11,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+
+import os
+from pathlib import Path
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file
+env_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(env_path)
 
 
 # Quick-start development settings - unsuitable for production
@@ -76,10 +86,9 @@ WSGI_APPLICATION = 'Rental_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': 'rental_db',  # Replace with your MongoDB database name
+        'NAME': os.getenv('MONGO_DB_NAME'),  
         'CLIENT': {
-            'host': 'mongodb+srv://piggypoggy:%2305alAjith@cluster0.v5mm1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',  # MongoDB connection string
-            
+            'host': os.getenv('MONGO_HOST'),  
         }
     }
 }
