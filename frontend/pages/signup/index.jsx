@@ -363,7 +363,7 @@ import {
                 )}
                 <Button
                   type="submit"
-                  className={`w-full rounded-[5px] ${isSigningUp ? "bg-gray-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 transition duration-300"}`}
+                  className = "w-full"
                   disabled={isSigningUp}
                 >
                   {isSigningUp ? "Signing Up..." : "Create an account"}
@@ -372,7 +372,7 @@ import {
             </form>
             <p className="mt-4 text-center">
               Already have an account?{" "}
-              <Link href="/login" className="text-indigo-600 hover:underline">
+              <Link href="/login" className="text-[#2dac5c]  hover:underline">
                 Log in
               </Link>
             </p>
