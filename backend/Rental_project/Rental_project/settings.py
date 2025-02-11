@@ -14,7 +14,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import os
-from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials
+
+# Path to your Firebase credentials JSON file
+FIREBASE_CREDENTIALS_PATH = r"C:/RENTAL_APP/RENTING_WEBSITE_MAIN/backend/rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
+
+# Initialize Firebase if not already initialized
+if not firebase_admin._apps:
+    cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+    firebase_admin.initialize_app(cred)
+
 
 
 
@@ -47,7 +57,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rental_app',
+    'rest_framework',
+    'corsheaders'
 ]
+
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -57,6 +74,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
 ]
 
 ROOT_URLCONF = 'Rental_project.urls'
@@ -134,3 +152,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'user_id',  # 🔹 Tell SimpleJWT that the primary key is `user_id`
+}
