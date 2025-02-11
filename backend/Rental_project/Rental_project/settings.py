@@ -160,6 +160,10 @@ REST_FRAMEWORK = {
     ),
 }
 
+
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'user_id',  # 🔹 Tell SimpleJWT that the primary key is `user_id`
 }
+
+AUTH_USER_MODEL = 'rental_app.User'  # Ensure 'rental_app' is the actual app name
+ 
