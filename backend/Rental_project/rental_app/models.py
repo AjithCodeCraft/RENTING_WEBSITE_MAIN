@@ -1,28 +1,35 @@
 import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # User Manager
 class UserManager(BaseUserManager):
-    def create_user(self, email, phone, password=None, **extra_fields):
+    def create_user(self, email, password=None, **extra_fields):
+        """Create and return a regular user."""
         if not email:
-            raise ValueError("The Email field must be set")
-        if not phone:
-            raise ValueError("The Phone field must be set")
+            raise ValueError('The Email field must be set')
+
         email = self.normalize_email(email)
-        user = self.model(email=email, phone=phone, **extra_fields)
+        user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
+    def create_superuser(self, email, password=None, **extra_fields):
+        """Create and return a superuser with all permissions."""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        return self.create_user(email, password, **extra_fields)
+
 # Users Model
-class User(AbstractBaseUser):
+class User(AbstractBaseUser,PermissionsMixin):
     USER_TYPE_CHOICES = [
         ('seeker', 'Seeker'),
         ('owner', 'Owner')
     ]
-
-    user_id = models.CharField(max_length=28, primary_key=True)  # Firebase UID is usually 28 chars
+    id = models.AutoField(primary_key=True)  # ✅ Add this line to fix the issue
+    user_id = models.CharField(max_length=28, unique=True)  # Firebase UID is usually 28 chars
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, unique=True)
@@ -32,6 +39,9 @@ class User(AbstractBaseUser):
     longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)  # ✅ Add this
+    is_superuser = models.BooleanField(default=False)  # ✅ Add this
 
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -180,7 +190,7 @@ class HostelApproval(models.Model):
     approval_id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
     apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES,default='pending')
     comments = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

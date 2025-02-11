@@ -4,8 +4,10 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import User
-from .serializers import UserSerializer
+from .models import HouseOwner, User
+from .serializers import  HouseOwnerSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 @api_view(['POST'])
 def register_user(request):
@@ -65,3 +67,29 @@ def login_user(request):
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])  # ✅ Ensure authentication
+def add_house_owner(request):
+    ssn = request.data.get('SSN')  # Get SSN
+
+    if not ssn:
+        return Response({'error': 'SSN is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user  # ✅ Get authenticated user directly
+
+    if user.user_type != 'owner':
+        return Response({'error': 'User is not a house owner'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Prevent duplicate entries
+    if HouseOwner.objects.filter(owner=user).exists():
+        return Response({'error': 'House owner record already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Serialize and save HouseOwner
+    serializer = HouseOwnerSerializer(data={'owner': user.id, 'SSN': ssn})
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'House owner record created successfully'}, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
