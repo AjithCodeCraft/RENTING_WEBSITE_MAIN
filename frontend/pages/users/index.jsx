@@ -2,6 +2,7 @@ import React from "react";
 import UserHeader from "./UserHeader";
 import Searchbar from "./searchbar";
 import HomeCard from "./HomeCard";
+import { CardDemo } from "./Cards";
 
 export default function Index() {
   return (
@@ -17,8 +18,8 @@ export default function Index() {
       </div>
 
       {/* Homecard Section */}
-      <div className="flex justify-center items-center mt-9 pb-10">
-        <HomeCard />
+      <div className="flex  mt-9 pb-10">
+        <CardDemo/>
       </div>
     </div>
   );
