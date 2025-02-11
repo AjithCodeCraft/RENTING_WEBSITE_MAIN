@@ -4,8 +4,8 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User
-from .serializers import  HouseOwnerSerializer
+from .models import HouseOwner, User, Apartment
+from .serializers import  ApartmentSerializer, HouseOwnerSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
@@ -93,3 +93,48 @@ def add_house_owner(request):
         return Response({'message': 'House owner record created successfully'}, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
+def apartment_list_create(request):
+    """Handles GET (List) and POST (Create) for Apartments."""
+    
+    if request.method == 'GET':
+        apartments = Apartment.objects.all()
+        serializer = ApartmentSerializer(apartments, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = ApartmentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
+def apartment_detail(request, pk):
+    """Handles GET (Retrieve), PUT (Update), and DELETE for a specific Apartment."""
+    
+    try:
+        apartment = Apartment.objects.get(pk=pk)
+    except Apartment.DoesNotExist:
+        return Response({'error': 'Apartment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = ApartmentSerializer(apartment)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = ApartmentSerializer(apartment, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        apartment.delete()
+        return Response({'message': 'Apartment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

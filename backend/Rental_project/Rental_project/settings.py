@@ -16,9 +16,10 @@ from dotenv import load_dotenv
 import os
 import firebase_admin
 from firebase_admin import credentials
+from datetime import timedelta
 
 # Path to your Firebase credentials JSON file
-FIREBASE_CREDENTIALS_PATH = r"C:/RENTAL_APP/RENTING_WEBSITE_MAIN/backend/rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
+FIREBASE_CREDENTIALS_PATH = r"../rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
 
 # Initialize Firebase if not already initialized
 if not firebase_admin._apps:
@@ -161,9 +162,19 @@ REST_FRAMEWORK = {
 }
 
 
+
+
 SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Access token expires in 1 hour
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Refresh token expires in 7 days
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'user_id',  # 🔹 Tell SimpleJWT that the primary key is `user_id`
 }
+
 
 AUTH_USER_MODEL = 'rental_app.User'  # Ensure 'rental_app' is the actual app name
  
