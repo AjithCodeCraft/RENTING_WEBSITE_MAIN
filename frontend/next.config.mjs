@@ -2,8 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ["via.placeholder.com"], // ✅ Allow external images
+    domains: ["images.unsplash.com"], // ✅ Add your domains
   },
 };
 
-module.exports = nextConfig;
+// Correct ES module export
+export default nextConfig;
