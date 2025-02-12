@@ -4,8 +4,8 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment
-from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer
+from .models import HouseOwner, User, Apartment, ApartmentImage 
+from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
@@ -212,3 +212,70 @@ def get_apartments_by_owner(request, owner_id):
 
     except User.DoesNotExist:
         return Response({'error': 'Owner not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_apartment_image(request):
+    """Add an image to an apartment."""
+    serializer = ApartmentImageSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_apartment_images(request, apartment_id):
+    """Retrieve all images for a specific apartment."""
+    try:
+        images = ApartmentImage.objects.filter(apartment_id=apartment_id)
+        serializer = ApartmentImageSerializer(images, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except ApartmentImage.DoesNotExist:
+        return Response({'error': 'No images found for this apartment'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_apartment_image(request, image_id):
+    """Retrieve a single apartment image by image ID."""
+    try:
+        image = ApartmentImage.objects.get(image_id=image_id)
+        serializer = ApartmentImageSerializer(image)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except ApartmentImage.DoesNotExist:
+        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_apartment_image(request, image_id):
+    """Update an apartment image (e.g., set as primary)."""
+    try:
+        image = ApartmentImage.objects.get(image_id=image_id)
+        serializer = ApartmentImageSerializer(image, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except ApartmentImage.DoesNotExist:
+        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_apartment_image(request, image_id):
+    """Delete an apartment image."""
+    try:
+        image = ApartmentImage.objects.get(image_id=image_id)
+        image.delete()
+        return Response({'message': 'Image deleted successfully'}, status=status.HTTP_200_OK)
+    except ApartmentImage.DoesNotExist:
+        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
