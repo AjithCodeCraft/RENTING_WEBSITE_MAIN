@@ -18,7 +18,7 @@ import firebase_admin
 from firebase_admin import credentials
 
 # Path to your Firebase credentials JSON file
-FIREBASE_CREDENTIALS_PATH = r"C:/RENTAL_APP/RENTING_WEBSITE_MAIN/backend/rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
+FIREBASE_CREDENTIALS_PATH = r"../rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
 
 # Initialize Firebase if not already initialized
 if not firebase_admin._apps:
