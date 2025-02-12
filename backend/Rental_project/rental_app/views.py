@@ -5,9 +5,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from .models import HouseOwner, User, Apartment
-from .serializers import  ApartmentSerializer, HouseOwnerSerializer
+from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.hashers import make_password
+
 
 @api_view(['POST'])
 def register_user(request):
@@ -24,22 +26,20 @@ def register_user(request):
         # Create user in Firebase
         user_record = auth.create_user(email=email, password=password, phone_number=phone)
         
-        # Store user in Django database
+        # Store user in Django database with hashed password
         user = User.objects.create(
             user_id=user_record.uid,  # Firebase UID
             email=email,
             phone=phone,
             name=name,
             user_type=user_type,
-            password_hash=password  # Store raw password (not recommended)
+            password_hash=make_password(password)  # ✅ Hash the password before storing
         )
 
         return Response({'message': 'User created successfully', 'user_id': user.user_id}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
-
-
 
 
 
@@ -138,3 +138,77 @@ def apartment_detail(request, pk):
     elif request.method == 'DELETE':
         apartment.delete()
         return Response({'message': 'Apartment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+# Get House Owner by Owner ID
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_house_owner_by_id(request, owner_id):
+    try:
+        user = User.objects.get(user_id=owner_id)
+
+        if user.user_type != 'owner':
+            return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
+
+        house_owner = HouseOwner.objects.get(owner=user)
+        user_serializer = UserSerializer(user)
+        house_owner_serializer = HouseOwnerSerializer(house_owner)
+
+        return Response({
+            'user_details': user_serializer.data,
+            'house_owner_details': house_owner_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    except HouseOwner.DoesNotExist:
+        return Response({'error': 'House owner details not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+# Get House Owner by SSN
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_house_owner_by_ssn(request, ssn):
+    try:
+        house_owner = HouseOwner.objects.get(SSN=ssn)
+        user = house_owner.owner
+
+        if user.user_type != 'owner':
+            return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
+
+        user_serializer = UserSerializer(user)
+        house_owner_serializer = HouseOwnerSerializer(house_owner)
+
+        return Response({
+            'user_details': user_serializer.data,
+            'house_owner_details': house_owner_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except HouseOwner.DoesNotExist:
+        return Response({'error': 'House owner details not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+# Get All Apartments by Owner ID
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_apartments_by_owner(request, owner_id):
+    try:
+        user = User.objects.get(user_id=owner_id)
+
+        if user.user_type != 'owner':
+            return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
+
+        apartments = Apartment.objects.filter(owner__owner=user)
+        apartment_serializer = ApartmentSerializer(apartments, many=True)
+
+        return Response({
+            'owner_id': owner_id,
+            'total_apartments': apartments.count(),
+            'apartments': apartment_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response({'error': 'Owner not found'}, status=status.HTTP_404_NOT_FOUND)
