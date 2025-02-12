@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwner, User
+from .models import HouseOwner, User, Apartment, ApartmentImage
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,3 +13,16 @@ class HouseOwnerSerializer(serializers.ModelSerializer):
         model = HouseOwner
         fields = ['owner', 'SSN', 'verified']
         extra_kwargs = {'verified': {'read_only': True}}  # Admin will verify later
+
+
+
+class ApartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Apartment
+        fields = '__all__'  # Include all fields
+
+
+class ApartmentImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApartmentImage
+        fields = ['image_id', 'apartment', 'image_path', 'is_primary']

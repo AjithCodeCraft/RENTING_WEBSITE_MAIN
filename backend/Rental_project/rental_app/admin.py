@@ -30,3 +30,4 @@ admin.site.register(User, CustomUserAdmin)  # ✅ Register custom User model
 admin.site.register(Apartment)
 admin.site.register(ApartmentImage)
 
+
