@@ -54,11 +54,24 @@ class HouseOwner(models.Model):
     verified = models.BooleanField(default=False)
     SSN = models.CharField(max_length=20, unique=True, null=True, blank=True)
 
+
+class Food(models.Model):
+    FOOD_CHOICES = [
+        ('breakfast', 'Breakfast'),
+        ('lunch', 'Lunch'),
+        ('dinner', 'Dinner')
+    ]
+    name = models.CharField(max_length=20, choices=FOOD_CHOICES, unique=True)
+
+    def __str__(self):
+        return self.get_name_display()
+
+
 class Apartment(models.Model):
     DURATION_CHOICES = [('short-term', 'Short-term'), ('long-term', 'Long-term')]
     ROOM_SHARING_CHOICES = [('private', 'Private'), ('shared', 'Shared')]
     BHK_CHOICES = [('1BHK', '1BHK'), ('2BHK', '2BHK'), ('3BHK', '3BHK')]
-    
+    HOSTEL_TYPE_CHOICES = [('boys', 'Boys'), ('girls', 'Girls')]
     apartment_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     owner = models.ForeignKey(HouseOwner, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
@@ -74,6 +87,8 @@ class Apartment(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     total_beds = models.IntegerField(default=0)
     available_beds = models.IntegerField(default=0)
+    hostel_type = models.CharField(max_length=10, choices=HOSTEL_TYPE_CHOICES, null=True, blank=True)
+    food = models.ManyToManyField(Food)  # Many-to-Many relationship
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

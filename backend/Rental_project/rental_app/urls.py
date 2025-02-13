@@ -1,12 +1,14 @@
 from django.urls import path
-from .views import (add_house_owner, get_apartments_by_owner, get_house_owner_by_id, get_house_owner_by_ssn, register_user, login_user,apartment_list_create, apartment_detail,add_apartment_image, get_apartment_images, get_apartment_image, 
-update_apartment_image, delete_apartment_image)
+from .views import (add_house_owner, get_apartments_by_owner, get_house_owner_by_id, get_house_owner_by_ssn, register_user, login_user, apartment_detail,add_apartment_image, get_apartment_images, get_apartment_image, 
+update_apartment_image, delete_apartment_image,get_house_owner,add_apartment,get_apartment_list)
 
 urlpatterns = [
     path('signup/', register_user, name='register_user'),  # 🔹 User Registration
     path('login/', login_user, name='login_user'),
+    path('houseowner/', get_house_owner, name='get-house-owner'),
     path('add-house-owner/', add_house_owner, name='add-house-owner'), 
-    path('apartments/', apartment_list_create, name='apartment-list-create'),  # List & Create
+    path('api/apartments/', get_apartment_list, name='apartment-list'),  # ✅ Get all apartments
+    path('apartments/add/', add_apartment, name='add-apartment'),
     path('apartments/<uuid:pk>/', apartment_detail, name='apartment-detail'),
     path('api/house-owner/by-id/<str:owner_id>/', get_house_owner_by_id, name='get-house-owner-by-id'),
     path('api/house-owner/by-ssn/<str:ssn>/', get_house_owner_by_ssn, name='get-house-owner-by-ssn'),

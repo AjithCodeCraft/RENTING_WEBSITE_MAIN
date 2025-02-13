@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 import firebase_admin
 from firebase_admin import auth
@@ -67,6 +68,17 @@ def login_user(request):
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Ensure authentication
+def get_house_owner(request):
+    user = request.user  # Get authenticated user
+
+    if user.user_type != 'owner':
+        return Response({'error': 'User is not a house owner'}, status=status.HTTP_403_FORBIDDEN)
+    house_owner = get_object_or_404(HouseOwner, owner=user)
+    serializer = HouseOwnerSerializer(house_owner)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
 
 
 @api_view(['POST'])
@@ -95,24 +107,29 @@ def add_house_owner(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+def get_apartment_list(request):
+    apartments = Apartment.objects.all()
+    serializer = ApartmentSerializer(apartments, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
-def apartment_list_create(request):
-    """Handles GET (List) and POST (Create) for Apartments."""
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])  # ✅ Ensure only authenticated users can post
+def add_apartment(request):
+    user = request.user  
+
+    if not hasattr(user, 'houseowner'):
+        return Response({'error': 'Only house owners can add apartments'}, status=status.HTTP_403_FORBIDDEN)
+
+    request.data['owner'] = user.houseowner.owner  # ✅ Assign authenticated house owner
+
+    serializer = ApartmentSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Apartment added successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
     
-    if request.method == 'GET':
-        apartments = Apartment.objects.all()
-        serializer = ApartmentSerializer(apartments, many=True)
-        return Response(serializer.data)
-
-    elif request.method == 'POST':
-        serializer = ApartmentSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
@@ -146,7 +163,7 @@ def apartment_detail(request, pk):
 @permission_classes([IsAuthenticated])
 def get_house_owner_by_id(request, owner_id):
     try:
-        user = User.objects.get(user_id=owner_id)
+        user = User.objects.get(id=owner_id)
 
         if user.user_type != 'owner':
             return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
@@ -196,7 +213,7 @@ def get_house_owner_by_ssn(request, ssn):
 @permission_classes([IsAuthenticated])
 def get_apartments_by_owner(request, owner_id):
     try:
-        user = User.objects.get(user_id=owner_id)
+        user = User.objects.get(id=owner_id)
 
         if user.user_type != 'owner':
             return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
@@ -279,3 +296,5 @@ def delete_apartment_image(request, image_id):
         return Response({'message': 'Image deleted successfully'}, status=status.HTTP_200_OK)
     except ApartmentImage.DoesNotExist:
         return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
