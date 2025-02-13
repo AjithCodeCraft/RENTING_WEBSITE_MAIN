@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwner, User, Apartment
+from .models import HouseOwner, User, Apartment, ApartmentImage, Food
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,7 +16,29 @@ class HouseOwnerSerializer(serializers.ModelSerializer):
 
 
 
+class FoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Food
+        fields = ['id', 'name']
+
 class ApartmentSerializer(serializers.ModelSerializer):
+    food = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Food.objects.all(), required=False  # ✅ Make food selection optional
+    )
+
     class Meta:
         model = Apartment
-        fields = '__all__'  # Include all fields
+        fields = '__all__'
+
+    def create(self, validated_data):
+        food_data = validated_data.pop('food', [])  # ✅ Default to an empty list if no food is selected
+        apartment = Apartment.objects.create(**validated_data)
+        if food_data:
+            apartment.food.set(food_data)  # ✅ Only set if food is provided
+        return apartment
+
+
+class ApartmentImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApartmentImage
+        fields = ['image_id', 'apartment', 'image_path', 'is_primary']
