@@ -1,8 +1,10 @@
 import React from "react";
 import UserHeader from "./UserHeader";
 import Searchbar from "./searchbar";
-import HomeCard from "./HomeCard";
-import { CardDemo } from "./Cards";
+import  CardDemo  from "./Cards";
+// import Map from "./MapView";
+// import MapCard from "./MapView";
+import FooterSection from "./footerSection";
 
 export default function Index() {
   return (
@@ -18,9 +20,14 @@ export default function Index() {
       </div>
 
       {/* Homecard Section */}
-      <div className="flex  mt-9 pb-10">
+      <div className="">
         <CardDemo/>
       </div>
+      <div>
+      {/* <MapCard/> */}
+      </div>
+      <FooterSection/>
+      
     </div>
   );
 }

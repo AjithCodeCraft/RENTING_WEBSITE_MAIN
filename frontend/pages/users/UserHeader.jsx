@@ -1,14 +1,9 @@
-/**
- * v0 by Vercel.
- * @see https://v0.dev/t/HUhbzsOBjQS
- * Documentation: https://v0.dev/docs#integrating-generated-code-into-your-nextjs-app
- */
-import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { NavigationMenu, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
+import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { NavigationMenu, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageSquareText } from 'lucide-react'; // Import from lucide-react
 
 export default function UserHeader() {
   return (
@@ -30,7 +25,7 @@ export default function UserHeader() {
               Home
             </Link>
             <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
-              hostels
+              Hostels
             </Link>
             <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
               Notifications 
@@ -83,7 +78,7 @@ export default function UserHeader() {
               className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
               prefetch={false}
             >
-              Messages
+              Portfolio
             </Link>
           </NavigationMenuLink>
           <NavigationMenuLink asChild>
@@ -98,17 +93,16 @@ export default function UserHeader() {
         </NavigationMenuList>
       </NavigationMenu>
       <div className="ml-auto flex gap-2">
-        {/* <Button> */}
-        <Avatar>
-  <AvatarImage src="https://github.com/shadcn.png" />
-  <AvatarFallback>CN</AvatarFallback>
-</Avatar>
-
-        {/* </Button> */}
-        
-      </div>
+  <div className="flex items-center gap-8">
+    <MessageSquareText className="h-8 w-8" />
+    <Avatar>
+      <AvatarImage src="https://github.com/shadcn.png" />
+      <AvatarFallback>CN</AvatarFallback>
+    </Avatar>
+  </div>
+</div>
     </header>
-  )
+  );
 }
 
 function MenuIcon(props) {
@@ -129,9 +123,8 @@ function MenuIcon(props) {
       <line x1="4" x2="20" y1="6" y2="6" />
       <line x1="4" x2="20" y1="18" y2="18" />
     </svg>
-  )
+  );
 }
-
 
 function ShirtIcon(props) {
   return (
@@ -149,5 +142,5 @@ function ShirtIcon(props) {
     >
       <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
     </svg>
-  )
+  );
 }

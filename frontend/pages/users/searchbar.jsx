@@ -6,7 +6,7 @@ export default function Searchbar() {
   const [selectedRegion, setSelectedRegion] = useState('Europe');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  
+
   const regions = ['Europe', 'Australia', 'Africa'];
 
   const handleDropdownToggle = () => {
@@ -32,12 +32,12 @@ export default function Searchbar() {
 
   return (
     <div className="flex justify-center items-center w-full mt-2">
-    <div className="w-full max-w-4xl min-w-[800px]">
-      <div className="relative" ref={dropdownRef}>
+      <div className="w-full max-w-4xl min-w-[300px] px-4 sm:px-0">
+        <div className="relative" ref={dropdownRef}>
           <div className="absolute top-1 left-1 flex items-center">
             <button
               onClick={handleDropdownToggle}
-              className="rounded border border-transparent py-1 px-1.5 text-center flex items-center text-sm transition-all text-slate-600"
+              className="rounded border border-transparent py-2 px-3 text-center flex items-center text-sm transition-all text-slate-600 bg-slate-100 hover:bg-slate-200"
             >
               <span className="text-ellipsis overflow-hidden">{selectedRegion}</span>
               <svg
@@ -51,9 +51,9 @@ export default function Searchbar() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
               </svg>
             </button>
-            <div className="h-6 border-l border-slate-200 ml-1"></div>
+            <div className="h-8 border-l border-slate-200 ml-2"></div>
             {isDropdownOpen && (
-              <div className="min-w-[150px] absolute left-0 mt-10 bg-white border border-slate-200 rounded-md shadow-lg z-10">
+              <div className="min-w-[150px] absolute left-0 mt-2 bg-white border border-slate-200 rounded-md shadow-lg z-10">
                 <ul>
                   {regions.map((region) => (
                     <li
@@ -70,18 +70,18 @@ export default function Searchbar() {
           </div>
           <input
             type="text"
-            className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-sm border border-slate-200 rounded-md pr-12 pl-28 py-2 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow"
+            className="w-full bg-transparent placeholder:text-slate-400 text-slate-700 text-base border border-slate-200 rounded-md pr-14 pl-32 py-3 transition duration-300 ease focus:outline-none focus:border-slate-400 hover:border-slate-300 shadow-sm focus:shadow"
             placeholder="Germany..."
           />
           <button
-            className="absolute right-1 top-1 rounded bg-slate-800 p-1.5 border border-transparent text-center text-sm text-white transition-all shadow-sm hover:shadow focus:bg-slate-700 focus:shadow-none active:bg-slate-700 hover:bg-slate-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
+            className="absolute right-1 top-1 rounded bg-slate-800 p-2 border border-transparent text-center text-sm text-white transition-all shadow-sm hover:shadow focus:bg-slate-700 focus:shadow-none active:bg-slate-700 hover:bg-slate-700 active:shadow-none disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none"
             type="button"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 16 16"
               fill="currentColor"
-              className="w-4 h-4"
+              className="w-5 h-5"
             >
               <path
                 fillRule="evenodd"
