@@ -26,7 +26,11 @@ export default function Index() {
       <div>
       {/* <MapCard/> */}
       </div>
+      <div className="mt-4">
       <FooterSection/>
+
+      </div>
+
       
     </div>
   );
