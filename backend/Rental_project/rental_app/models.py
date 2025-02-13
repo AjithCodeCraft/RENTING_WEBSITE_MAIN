@@ -91,6 +91,7 @@ class Apartment(models.Model):
     food = models.ManyToManyField(Food)  # Many-to-Many relationship
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
 class ApartmentImage(models.Model):
     image_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
@@ -108,6 +109,7 @@ class SearchFilter(models.Model):
     bhk = models.CharField(max_length=10, choices=Apartment.BHK_CHOICES, null=True, blank=True)
     parking_available = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
 
 class Booking(models.Model):
     STATUS_CHOICES = [('active', 'Active'), ('cancelled', 'Cancelled'), ('completed', 'Completed')]

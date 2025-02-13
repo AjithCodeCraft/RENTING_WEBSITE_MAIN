@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwner, User, Apartment, ApartmentImage, Food
+from .models import HouseOwner, User, Apartment, ApartmentImage, Food, SearchFilter
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,3 +42,14 @@ class ApartmentImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApartmentImage
         fields = ['image_id', 'apartment', 'image_path', 'is_primary']
+
+
+class SearchFilterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SearchFilter
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at']
+        extra_kwargs = {
+            'user': {"required": False}
+        }
+        
