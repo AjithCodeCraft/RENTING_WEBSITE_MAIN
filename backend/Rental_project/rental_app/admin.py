@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User , Apartment, ApartmentImage
+from .models import User , Apartment, ApartmentImage,Food
 
 
 class CustomUserAdmin(UserAdmin):
@@ -29,5 +29,6 @@ admin.site.register(User, CustomUserAdmin)  # ✅ Register custom User model
 
 admin.site.register(Apartment)
 admin.site.register(ApartmentImage)
+admin.site.register(Food)
 
 
