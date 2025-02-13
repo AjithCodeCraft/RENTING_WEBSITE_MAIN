@@ -5,12 +5,15 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage 
-from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer
+from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter
+from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, SearchFilterSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
-
+from decimal import Decimal
+from bson.decimal128 import Decimal128
+from django.db.models.functions import Cast
+from django.db.models import DecimalField
 
 @api_view(['POST'])
 def register_user(request):
@@ -131,6 +134,8 @@ def add_apartment(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Fix this apartment = Apartment.objects.get(pk=pk) ->
+# apartment = Apartment.objects.get(apartment_id=pk)
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
 def apartment_detail(request, pk):
@@ -297,4 +302,119 @@ def delete_apartment_image(request, image_id):
     except ApartmentImage.DoesNotExist:
         return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
 
+# Make sure that decimal values like rent_min, rent_max are not in quotes when making a request
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_search_filter(request):
+    serializer = SearchFilterSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+# Get the filter of logged in user
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_search_filter(request):
+    filter = SearchFilter.objects.filter(user=request.user)
+    
+    if not filter.exists():
+        return Response(
+            {"message": "No search filter found for this user."},
+            status=status.HTTP_204_NO_CONTENT
+        )
+    
+    serializer = SearchFilterSerializer(filter, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_user_search_filter(request):
+    try:
+        filter_instance = SearchFilter.objects.get(user=request.user)
+    except SearchFilter.DoesNotExist:
+        return Response(
+            {"message": "No search filter found for this user!"},
+            status=status.HTTP_404_NOT_FOUND    
+        )
+    
+    serializer = SearchFilterSerializer(filter_instance, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_user_search_filter(request):
+    try:
+        filter = SearchFilter.objects.get(user=request.user)
+    except SearchFilter.DoesNotExist:
+        return Response(
+                {"message": "No search filter found for this user!"},
+            status=status.HTTP_404_NOT_FOUND    
+        )
+    filter.delete()
+    return Response(
+        {"message": "Search filter deleted successfully"},
+        status=status.HTTP_204_NO_CONTENT
+    )
+    
+
+
+def safe_decimal(value):
+    """Convert Decimal128 or string to Decimal."""
+    if isinstance(value, Decimal128):
+        return Decimal(value.to_decimal())  # Convert MongoDB Decimal128 to Python Decimal
+    elif isinstance(value, str):
+        try:
+            return Decimal(value)
+        except:
+            return None
+    return value
+
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_filtered_apartments(request):
+    try:
+        search_filter = SearchFilter.objects.get(user=request.user)
+    except:
+        return Response(
+            {"message": "No search filter found for this user!"},
+            status=status.HTTP_404_NOT_FOUND    
+        )
+        
+    apartments = Apartment.objects.all()
+    
+    for apartment in apartments:
+        apartment.rent = float(apartment.rent.to_decimal())
+    
+    if search_filter.location:
+        apartments = apartments.filter(location__icontains=search_filter.location)
+    if search_filter.rent_min is not None:
+        rent_min = safe_decimal(search_filter.rent_min)
+        apartments = [apt for apt in apartments if safe_decimal(apt.rent) >= rent_min]
+    if search_filter.rent_max is not None:
+        rent_max = safe_decimal(search_filter.rent_max)
+        apartments = [apt for apt in apartments if safe_decimal(apt.rent) <= rent_max]
+    if search_filter.duration:
+        apartments = apartments.filter(duration=search_filter.duration)
+    if search_filter.room_sharing_type:
+        apartments = apartments.filter(room_sharing_type=search_filter.room_sharing_type)
+    if search_filter.bhk:
+        apartments = apartments.filter(bhk=search_filter.bhk)
+    if search_filter.parking_available is not None:
+        apartments = apartments.filter(parking_available=search_filter.parking_available)
+
+    if not apartments:
+        return Response(
+            {"message": "No apartment found matching the search criteria"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = ApartmentSerializer(apartments, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+        
