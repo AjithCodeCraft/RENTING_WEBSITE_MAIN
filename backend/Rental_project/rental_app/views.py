@@ -5,15 +5,15 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter
-from .serializers import  ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, SearchFilterSerializer
+from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
 from decimal import Decimal
 from bson.decimal128 import Decimal128
-from django.db.models.functions import Cast
-from django.db.models import DecimalField
+from django.db.models import Q
+from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+                          SearchFilterSerializer, ChatSerializer)
 
 @api_view(['POST'])
 def register_user(request):
@@ -394,12 +394,6 @@ def get_filtered_apartments(request):
     
     if search_filter.location:
         apartments = apartments.filter(location__icontains=search_filter.location)
-    if search_filter.rent_min is not None:
-        rent_min = safe_decimal(search_filter.rent_min)
-        apartments = [apt for apt in apartments if safe_decimal(apt.rent) >= rent_min]
-    if search_filter.rent_max is not None:
-        rent_max = safe_decimal(search_filter.rent_max)
-        apartments = [apt for apt in apartments if safe_decimal(apt.rent) <= rent_max]
     if search_filter.duration:
         apartments = apartments.filter(duration=search_filter.duration)
     if search_filter.room_sharing_type:
@@ -408,6 +402,12 @@ def get_filtered_apartments(request):
         apartments = apartments.filter(bhk=search_filter.bhk)
     if search_filter.parking_available is not None:
         apartments = apartments.filter(parking_available=search_filter.parking_available)
+    if search_filter.rent_min is not None:
+        rent_min = safe_decimal(search_filter.rent_min)
+        apartments = [apt for apt in apartments if safe_decimal(apt.rent) >= rent_min]
+    if search_filter.rent_max is not None:
+        rent_max = safe_decimal(search_filter.rent_max)
+        apartments = [apt for apt in apartments if safe_decimal(apt.rent) <= rent_max]
 
     if not apartments:
         return Response(
@@ -418,3 +418,131 @@ def get_filtered_apartments(request):
     serializer = ApartmentSerializer(apartments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
         
+@api_view(['POST'])        
+@permission_classes([IsAuthenticated])
+def send_message(request, receiver_id):
+    try:
+        receiver = User.objects.get(id=receiver_id)
+    except User.DoesNotExist:
+        return Response(
+            {"message": "No user found with the given id!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = ChatSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(sender=request.user, receiver=receiver)
+        return Response(
+            {"message": "Message sent successfully!", "data": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_send_messages(request):
+    messages = Chat.objects.filter(sender=request.user)
+    if not messages:
+        return Response(
+            {"message": "No message found for the current user!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_send_received_messages(request):
+    messages = Chat.objects.filter(Q(sender=request.user) | Q(receiver=request.user))
+    if not messages:
+        return Response(
+            {"message": "No message send or received!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_received_messages(request):
+    
+    recevied_messages = Chat.objects.filter(receiver=request.user)
+    if not recevied_messages:
+        return Response(
+            {"message": "This user haven't received any messages!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    serializer = ChatSerializer(recevied_messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_received_messages_from(request, sender_id):
+    try:
+        sender = User.objects.get(id=sender_id)
+    except User.DoesNotExist:
+        return Response(
+            {"message": "No user found with the given id!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    received_messages_from = Chat.objects.filter(sender=sender, receiver=request.user)
+    
+    if not received_messages_from:
+        return Response(
+            {"message": "No messages received from this user!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    serializer = ChatSerializer(received_messages_from, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_send_messages_to(request, receiver_id):
+    try:
+        receiver = User.objects.get(id=receiver_id)
+    except User.DoesNotExist:
+        return Response(
+            {"message": "No user found with the given id!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    send_messages_to = Chat.objects.filter(sender=request.user, receiver=receiver_id)
+    
+    if not send_messages_to:
+        return Response(
+            {"message": "No messages send to this user!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = ChatSerializer(send_messages_to, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+# Get the entire chat with a particular user both send and received messages
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_send_received_messages_with(request, other_user_id):
+    try:
+        other_user = User.objects.get(id=other_user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"message": "No user found with the given id!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    messages = Chat.objects.filter(
+        Q(sender=request.user, receiver=other_user) | Q(sender=other_user, receiver=request.user))
+    
+    if not messages:
+        return Response(
+            {"message": "No messages sent or received with this user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
