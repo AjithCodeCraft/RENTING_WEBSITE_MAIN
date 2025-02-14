@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwner, User, Apartment, ApartmentImage, Food, SearchFilter
+from .models import HouseOwner, User, Apartment, ApartmentImage, Food, SearchFilter, Chat
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,3 +53,13 @@ class SearchFilterSerializer(serializers.ModelSerializer):
             'user': {"required": False}
         }
         
+        
+class ChatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chat
+        fields = ["chat_id", "sender", "receiver", "message"]
+        extra_kwargs = {
+            "chat_id": {"required": False},
+            'sender': {"required": False},
+            'receiver': {"required": False}
+        }
