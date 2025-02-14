@@ -14,30 +14,14 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-// Updated hostels array with unique IDs
+// Merged hostels array with location data
 const hostels = [
-  { id: 1, name: "Green View Hostel", location: "Downtown", price: "$300/mo", image: "/download.png" },
-  { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg" },
-  { id: 3, name: "City Lights Hostel", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg" },
-  { id: 4, name: "Green View Hostel 2", location: "Downtown", price: "$300/mo", image: "/download.png" },
-  { id: 5, name: "Sunset Residency 2", location: "Uptown", price: "$350/mo", image: "/loginhome.jpg" },
-  { id: 6, name: "City Lights Hostel 2", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg" },
-  { id: 7, name: "Mountain View Hostel", location: "Uptown", price: "$450/mo", image: "/loginhome.jpg" },
-  { id: 8, name: "Ocean Breeze Hostel", location: "Beachside", price: "$500/mo", image: "/loginhome.jpg" },
-  { id: 9, name: "Green View Hostel 3", location: "Downtown", price: "$300/mo", image: "/download.png" },
-  { id: 10, name: "Sunset Residency 3", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg" },
-  { id: 11, name: "City Lights Hostel 3", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg" },
-  { id: 12, name: "Mountain View Hostel 2", location: "Uptown", price: "$450/mo", image: "/loginhome.jpg" },
-  { id: 13, name: "Ocean Breeze Hostel 2", location: "Beachside", price: "$500/mo", image: "/loginhome.jpg" },
-];
-
-const HOSTEL_LOCATIONS = [
-  { lng: 76.88013843230549, lat: 8.55855167721169, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
-  { lng: 76.87899888341339, lat: 8.556990221115427, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
-  { lng: 76.87645772879704, lat: 8.558444894438177, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
-  { lng: 76.87603094023191, lat: 8.555420290444625, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
-  { lng: 76.87802262020246, lat: 8.554576210624122, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
-  { lng: 76.86806422034977, lat: 8.560906763671213, name: "Hostel Near You", address: "XYZ Street, Your City", price: "₹5000/month" },
+  { id: 1, name: "Green View Hostel", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.88013843230549, lat: 8.55855167721169, address: "XYZ Street, Your City" },
+  { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg", lng: 76.87899888341339, lat: 8.556990221115427, address: "XYZ Street, Your City" },
+  { id: 3, name: "City Lights Hostel", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.87645772879704, lat: 8.558444894438177, address: "XYZ Street, Your City" },
+  { id: 4, name: "Green View Hostel 2", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.87603094023191, lat: 8.555420290444625, address: "XYZ Street, Your City" },
+  { id: 5, name: "Sunset Residency 2", location: "Uptown", price: "$350/mo", image: "/loginhome.jpg", lng: 76.87802262020246, lat: 8.554576210624122, address: "XYZ Street, Your City" },
+  { id: 6, name: "City Lights Hostel 2", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.86806422034977, lat: 8.560906763671213, address: "XYZ Street, Your City" },
 ];
 
 const DEFAULT_ZOOM = 7;
@@ -87,7 +71,8 @@ const CardDemo = () => {
 
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
-    HOSTEL_LOCATIONS.forEach((hostel) => {
+    // Add markers for each hostel
+    hostels.forEach((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.lng, hostel.lat])
         .setPopup(new maplibregl.Popup().setText(hostel.name))
@@ -99,6 +84,7 @@ const CardDemo = () => {
       });
     });
 
+    // Get user location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -118,6 +104,7 @@ const CardDemo = () => {
       );
     }
 
+    // Handle clicks outside the details popup
     const handleClickOutside = (event) => {
       if (detailsRef.current && !detailsRef.current.contains(event.target)) {
         setSelectedHostel(null);
@@ -243,7 +230,7 @@ const CardDemo = () => {
       </div>
 
       {/* Right Section - Map */}
-      <div className="md:w-2/5  items-center justify-center rounded-xl     md:mt-0">
+      <div className="md:w-2/5  items-center justify-center rounded-xl  md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
             <div id="map" className="w-full h-full rounded-xl" />
