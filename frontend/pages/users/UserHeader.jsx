@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { NavigationMenu, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageSquareText } from 'lucide-react'; // Import from lucide-react
+import { BellRing, MessageSquareText } from 'lucide-react'; // Import from lucide-react
 
 export default function UserHeader() {
   return (
@@ -21,18 +21,14 @@ export default function UserHeader() {
             <span className="sr-only">ShadCN</span>
           </Link>
           <div className="grid gap-2 py-9">
-            <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            <Link href="/users" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
               Home
             </Link>
-            <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            <Link href="/users/hostels" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
               Hostels
             </Link>
-            <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
-              Notifications 
-            </Link>
-            <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
-              Portfolio
-            </Link>
+           
+           
             <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
               Contact
             </Link>
@@ -47,7 +43,7 @@ export default function UserHeader() {
         <NavigationMenuList>
           <NavigationMenuLink asChild>
             <Link
-              href="#"
+              href="/users"
               className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
               prefetch={false}
             >
@@ -56,14 +52,14 @@ export default function UserHeader() {
           </NavigationMenuLink>
           <NavigationMenuLink asChild>
             <Link
-              href="#"
+              href="/users/hostels"
               className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
               prefetch={false}
             >
               Hostels 
             </Link>
           </NavigationMenuLink>
-          <NavigationMenuLink asChild>
+          {/* <NavigationMenuLink asChild>
             <Link
               href="#"
               className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
@@ -71,8 +67,8 @@ export default function UserHeader() {
             >
               Notifications
             </Link>
-          </NavigationMenuLink>
-          <NavigationMenuLink asChild>
+          </NavigationMenuLink> */}
+          {/* <NavigationMenuLink asChild>
             <Link
               href="#"
               className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
@@ -80,7 +76,7 @@ export default function UserHeader() {
             >
               Portfolio
             </Link>
-          </NavigationMenuLink>
+          </NavigationMenuLink> */}
           <NavigationMenuLink asChild>
             <Link
               href="#"
@@ -93,8 +89,15 @@ export default function UserHeader() {
         </NavigationMenuList>
       </NavigationMenu>
       <div className="ml-auto flex gap-2">
+
   <div className="flex items-center gap-8">
+    <Link href="">
+    <BellRing className="h-8 w-8 "/>
+    </Link>
+    
+    <Link  href="/users/messages" >
     <MessageSquareText className="h-8 w-8" />
+    </Link>
     <Avatar>
       <AvatarImage src="https://github.com/shadcn.png" />
       <AvatarFallback>CN</AvatarFallback>
