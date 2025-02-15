@@ -24,6 +24,7 @@
     "@react-google-maps/api": "^2.20.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "embla-carousel-react": "^8.5.2",
     "google-map-react": "^2.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.475.0",
