@@ -13,6 +13,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import Link from "next/link";
 
 // Merged hostels array with location data
 const hostels = [
@@ -159,8 +160,9 @@ const CardDemo = () => {
       <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {currentHostels.map((hostel) => (
-            <div
+            <Link
               key={hostel.id}
+              href={`/users/HostelDetails/${hostel.id}`} passHref
               className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
               style={{
                 backgroundImage: `url(${hostel.image})`,
@@ -190,7 +192,7 @@ const CardDemo = () => {
                   {hostel.price}
                 </p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
