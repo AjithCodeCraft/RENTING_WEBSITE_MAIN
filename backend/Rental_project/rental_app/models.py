@@ -113,25 +113,30 @@ class SearchFilter(models.Model):
 
 class Booking(models.Model):
     STATUS_CHOICES = [('active', 'Active'), ('cancelled', 'Cancelled'), ('completed', 'Completed')]
-    
+
     booking_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
-    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
     booking_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
+
 
 class Payment(models.Model):
     PAYMENT_STATUS_CHOICES = [('pending', 'Pending'), ('completed', 'Completed'), ('failed', 'Failed')]
-    PAYMENT_METHOD_CHOICES = [('gpay', 'GPay'), ('cash', 'Cash')]
-    
+    PAYMENT_METHOD_CHOICES = [('razorpay', 'Razorpay'), ('cash', 'Cash')]
+
     payment_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES)
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
+    razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
+    razorpay_signature = models.CharField(max_length=256, null=True, blank=True)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='razorpay')
     timestamp = models.DateTimeField(auto_now_add=True)
+
 
 class Wishlist(models.Model):
     wishlist_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)

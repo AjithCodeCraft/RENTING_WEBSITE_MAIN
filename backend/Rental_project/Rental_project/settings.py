@@ -46,7 +46,9 @@ SECRET_KEY = 'django-insecure-i=0@70fgijn&@_t0totqqe+=i)i*8h7m5*-3g2pejj4)vq-zz$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '*'
+]
 
 
 # Application definition
@@ -178,3 +180,5 @@ SIMPLE_JWT = {
 
 AUTH_USER_MODEL = 'rental_app.User'  # Ensure 'rental_app' is the actual app name
  
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_SECRET_KEY = os.getenv("RAZORPAY_SECRET_KEY")

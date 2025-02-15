@@ -26,7 +26,22 @@ from .views import (
     get_all_received_messages,
     get_all_received_messages_from,
     get_all_send_messages_to,
-    get_all_send_received_messages_with
+    get_all_send_received_messages_with,
+    payment_callback,
+    BookingCreateView,
+    PaymentInitiateView,
+    generate_payment_url,\
+    check_payment_status,
+    total_bookings,
+    bookings_by_apartment,
+    bookings_by_user,
+    total_payments,
+    payments_by_booking,
+    payments_by_apartment,
+    payments_by_user
+
+
+
 )
 
 urlpatterns = [
@@ -119,4 +134,61 @@ urlpatterns = [
         get_all_send_received_messages_with,
         name="get_all_send_received_messages_with",
     ),
-]
+
+    path(
+        'booking/create/',
+        BookingCreateView.as_view(), 
+        name='create-booking'),
+
+    path(
+        'payment/initiate/<uuid:booking_id>/', 
+        PaymentInitiateView.as_view(), 
+        name='initiate-payment'),
+
+    path(
+        'payment/callback/',
+        payment_callback,
+        name='payment-callback'),
+
+    path(
+        'payment/url/', 
+        generate_payment_url, 
+        name='generate-payment-url'),
+
+    path(
+        "payment/status/<str:order_id>/", 
+        check_payment_status, 
+        name="check-payment-status"),
+    path(
+        'bookings/total/', 
+        total_bookings, 
+        name='total_bookings'),
+    path(
+        'bookings/apartment/<uuid:apartment_id>/', 
+        bookings_by_apartment, 
+        name='bookings_by_apartment'),
+    path(
+        'bookings/user/<int:user_id>/', 
+        bookings_by_user, 
+        name='bookings_by_user'),
+    path(
+        'payments/total/', 
+        total_payments, 
+        name='total_payments'),
+    path(
+        'payments/booking/<uuid:booking_id>/', 
+        payments_by_booking, 
+        name='payments_by_booking'),
+    path(
+        'payments/apartment/<uuid:apartment_id>/', 
+        payments_by_apartment, 
+        name='payments_by_apartment'),
+    path(
+        'payments/user/<str:user_id>/', 
+        payments_by_user, 
+        name='payments_by_user'),
+    
+
+
+
+    ]
