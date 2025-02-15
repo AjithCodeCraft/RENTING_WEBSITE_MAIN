@@ -1,11 +1,25 @@
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.views.decorators.csrf import csrf_exempt
 import firebase_admin
+from rest_framework.views import APIView
+import json
+import uuid
+import os
+import json
+from bson import ObjectId  # If using MongoDB
+from django.http import JsonResponse
+from rental_app.models import Booking  # Import Booking model
+import uuid  # Import UUID
+import razorpay
+from pymongo import MongoClient
+from django.http import JsonResponse
+from django.conf import settings
 from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat
+from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
@@ -13,7 +27,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
-                          SearchFilterSerializer, ChatSerializer)
+                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer)
 
 @api_view(['POST'])
 def register_user(request):
@@ -546,3 +560,310 @@ def get_all_send_received_messages_with(request, other_user_id):
         
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+def total_bookings(request):
+    """ Get total number of bookings along with the full list """
+    bookings = Booking.objects.all()
+    total = bookings.count()
+    serializer = BookingSerializer(bookings, many=True)
+    
+    return Response({
+        "total_bookings": total,
+        "bookings": serializer.data
+    })
+
+
+
+
+@api_view(['GET'])
+def bookings_by_apartment(request, apartment_id):
+    """ Get all bookings for a specific apartment UUID """
+    bookings = Booking.objects.filter(apartment_id=apartment_id)
+    serializer = BookingSerializer(bookings, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+def bookings_by_user(request, user_id):
+    """ Get all bookings for a specific user ID """
+    bookings = Booking.objects.filter(user_id=user_id)
+    serializer = BookingSerializer(bookings, many=True)
+    return Response(serializer.data)
+
+
+
+class BookingCreateView(APIView):
+    def post(self, request):
+        serializer = BookingSerializer(data=request.data)
+        if serializer.is_valid():
+            booking = serializer.save()
+            return Response({"message": "Booking created successfully", "booking_id": booking.booking_id}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['GET'])
+def total_payments(request):
+    """ Get total number of payments along with the full list """
+    payments = Payment.objects.all()
+    total = payments.count()
+    serializer = PaymentSerializer(payments, many=True)
+    
+    return Response({
+        "total_payments": total,
+        "payments": serializer.data
+    })
+
+
+@api_view(['GET'])
+def payments_by_booking(request, booking_id):
+    """ Get all payments for a specific booking UUID """
+    payments = Payment.objects.filter(booking_id=booking_id)
+    serializer = PaymentSerializer(payments, many=True)
+    return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+def payments_by_apartment(request, apartment_id):
+    """ Get all payments for a specific apartment UUID """
+    payments = Payment.objects.filter(apartment_id=apartment_id)
+    serializer = PaymentSerializer(payments, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def payments_by_user(request, user_id):
+    """ Get all payments for a specific user ID """
+    payments = Payment.objects.filter(user_id=str(user_id))  # Convert user_id to string for query
+    total = payments.count()
+    serializer = PaymentSerializer(payments, many=True)
+
+    return Response({
+        "total_payments": total,
+        "payments": serializer.data
+    })
+
+
+
+class PaymentInitiateView(APIView):
+    def post(self, request, booking_id):
+        try:
+            booking = Booking.objects.get(booking_id=booking_id)
+            amount = request.data.get('amount')  # Amount in INR
+
+            # Initialize Razorpay client
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_SECRET_KEY))
+
+            # Create order
+            order_data = {
+                "amount": int(amount * 100),  # Convert to paise
+                "currency": "INR",
+                "receipt": str(booking.booking_id),
+                "payment_capture": 1,  # Auto capture payment
+            }
+            order = client.order.create(order_data)
+
+            # Save payment details in DB
+            payment = Payment.objects.create(
+                booking=booking,
+                user=booking.user,
+                apartment=booking.apartment,
+                amount=amount,
+                razorpay_order_id=order['id'],
+                payment_status="pending"
+            )
+
+            return Response({
+                "order_id": order['id'],
+                "amount": order['amount'],
+                "currency": order['currency'],
+                "booking_id": str(booking.booking_id),
+                "razorpay_key": settings.RAZORPAY_KEY_ID,
+            }, status=status.HTTP_201_CREATED)
+
+        except Booking.DoesNotExist:
+            return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@csrf_exempt
+def payment_callback(request):
+    if request.method == "GET":
+        try:
+            razorpay_payment_id = request.GET.get("razorpay_payment_id")
+            razorpay_order_id = request.GET.get("razorpay_payment_link_reference_id")  
+            payment_status = request.GET.get("razorpay_payment_link_status")
+
+            if not razorpay_payment_id or not razorpay_order_id or not payment_status:
+                return JsonResponse({"error": "Missing parameters"}, status=400)
+
+            if payment_status == "paid":
+                # ✅ Fetch payment record from MongoDB
+                payment_record = payment_collection.find_one({"razorpay_order_id": razorpay_order_id})
+
+                if not payment_record:
+                    return JsonResponse({"error": "Payment record not found in DB"}, status=404)
+
+                # ✅ Extract and convert booking_id from Binary format
+                booking_id_binary = payment_record.get("booking_id")
+                
+                if not booking_id_binary:
+                    return JsonResponse({"error": "No booking ID found in payment record"}, status=404)
+
+                # Convert Binary UUID to string
+                if isinstance(booking_id_binary, bytes):  
+                    booking_id = str(uuid.UUID(bytes=booking_id_binary))
+                elif isinstance(booking_id_binary, uuid.UUID):
+                    booking_id = str(booking_id_binary)
+                else:
+                    booking_id = str(booking_id_binary)  # If already string, keep it
+
+                # ✅ Update MongoDB payment status
+                result = payment_collection.update_one(
+                    {"razorpay_order_id": razorpay_order_id},
+                    {"$set": {
+                        "razorpay_payment_id": razorpay_payment_id,
+                        "payment_status": "paid"
+                    }}
+                )
+
+                if result.modified_count > 0:
+                    try:
+                        # ✅ Fetch and update booking record in SQL DB
+                        booking = Booking.objects.get(booking_id=booking_id)
+                        booking.status = "confirmed"  
+                        booking.save()  
+
+                        return JsonResponse({
+                            "message": "Payment successful and booking confirmed",
+                            "status": "paid",
+                            "booking_status": "confirmed",
+                            "booking_id": str(booking_id)  # ✅ Convert UUID to string
+                        }, status=200)
+                    except Booking.DoesNotExist:
+                        return JsonResponse({"error": "Booking not found in SQL DB"}, status=404)
+
+                return JsonResponse({"error": "Payment updated but no matching order found in DB"}, status=404)
+
+            return JsonResponse({"error": "Payment not successful", "status": payment_status}, status=400)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+
+
+
+
+razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_SECRET_KEY")))
+client = MongoClient(os.getenv("MONGO_HOST"))
+# Select the database
+db = client["rental_db"] 
+
+# Select the collection (example)
+payment_collection = db["rental_app_payment"]
+
+
+
+@csrf_exempt
+def generate_payment_url(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            user_id = data.get("user_id")  # Required user ID
+            apartment_id = data.get("apartment_id")  # Required apartment ID
+            amount = data.get("amount")  # Required amount in INR
+            booking_id = data.get("booking_id")  # Required booking ID
+
+            if not user_id or not apartment_id or not amount or not booking_id:
+                return JsonResponse({"error": "Missing required fields"}, status=400)
+
+            # Convert amount to paise
+            amount_paise = int(float(amount) * 100)
+
+            # ✅ Generate unique transaction and payment IDs (Convert UUIDs to strings)
+            transaction_id = str(uuid.uuid4())  
+            payment_id = str(uuid.uuid4())  
+
+            # ✅ Create an **order** in Razorpay
+            order_data = {
+                "amount": amount_paise,
+                "currency": "INR",
+                "receipt": transaction_id,
+                "payment_capture": 1  # Auto-capture payment
+            }
+            razorpay_order = razorpay_client.order.create(order_data)
+
+            # ✅ Create the payment link on Razorpay with the order ID
+            payment_data = {
+                "amount": amount_paise,
+                "currency": "INR",
+                "description": "Apartment Booking Payment",
+                "notify": {"sms": True, "email": True},
+                "reminder_enable": True,
+                "callback_url": "http://127.0.0.1:8000/payment/callback/",
+                "callback_method": "get",
+                "reference_id": razorpay_order["id"]  # ✅ Store correct order ID
+            }
+
+            payment_link = razorpay_client.payment_link.create(payment_data)
+
+            # ✅ Save the order details in MongoDB (Explicitly store UUIDs as strings)
+            payment_collection.insert_one({
+                "payment_id": payment_id,  
+                "transaction_id": transaction_id,  
+                "booking_id": str(booking_id),  # ✅ Convert booking_id to string
+                "user_id": str(user_id),  # Ensure user_id is stored as a string
+                "apartment_id": str(apartment_id),  # Ensure apartment_id is stored as a string
+                "amount": amount,  
+                "razorpay_order_id": razorpay_order["id"],  
+                "razorpay_payment_id": None,  
+                "razorpay_signature": None,  
+                "payment_status": "pending",
+                "payment_method": "razorpay"
+            })
+
+            return JsonResponse({
+                "payment_url": payment_link["short_url"],
+                "razorpay_order_id": razorpay_order["id"],  
+                "transaction_id": transaction_id,  
+                "payment_id": payment_id,  
+                "booking_id": booking_id  
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+
+def check_payment_status(request, order_id):
+    try:
+        # Get payment details from Razorpay
+        payment = razorpay_client.order.fetch(order_id)
+        
+        if payment["status"] == "paid":
+            # Update payment status in your database
+            Payment.objects.filter(razorpay_order_id=order_id).update(
+                payment_status="paid",
+                razorpay_payment_id=payment["id"],
+                razorpay_signature=payment.get("signature", "")
+            )
+            return JsonResponse({"message": "Payment successful", "status": "paid"}, status=200)
+        else:
+            return JsonResponse({"message": "Payment pending", "status": "pending"}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
