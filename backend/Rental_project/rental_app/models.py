@@ -1,5 +1,6 @@
 from uuid import uuid4
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # User Manager
@@ -126,9 +127,10 @@ class Payment(models.Model):
     PAYMENT_METHOD_CHOICES = [('razorpay', 'Razorpay'), ('cash', 'Cash')]
 
     payment_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
+    transaction_id = models.UUIDField(editable=True)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
-    apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)
@@ -170,7 +172,7 @@ class Notification(models.Model):
     notification_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     message = models.TextField()
-    read_status = models.BooleanField(default=False)
+    read_status = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
     timestamp = models.DateTimeField(auto_now_add=True)
 
 class Admin(models.Model):

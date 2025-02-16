@@ -39,11 +39,11 @@ from .views import (
     payments_by_booking,
     payments_by_apartment,
     payments_by_user,
+    get_payment_by_transaction_id,
+    get_user_notifications,
+    mark_notification_as_read,
     register_admin,
     login_admin
-
-
-
 )
 
 urlpatterns = [
@@ -190,6 +190,13 @@ urlpatterns = [
         payments_by_user, 
         name='payments_by_user'),
     path(
+        'get-payment/transaction-id/<str:transaction_id>',
+        get_payment_by_transaction_id,
+        name='get_payment_by_transaction_id'
+        ),
+    path("get-notifications", get_user_notifications, name="get_user_notifications"),
+    path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),
+    path(
         'api/register-admin/', 
         register_admin, 
         name='register_admin'),
@@ -197,9 +204,5 @@ urlpatterns = [
         'api/login-admin/', 
         login_admin, 
         name='login_admin'),
-
-    
-
-
 
     ]
