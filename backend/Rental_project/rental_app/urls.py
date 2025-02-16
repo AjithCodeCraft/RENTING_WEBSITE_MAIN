@@ -30,7 +30,7 @@ from .views import (
     payment_callback,
     BookingCreateView,
     PaymentInitiateView,
-    generate_payment_url,\
+    generate_payment_url,
     check_payment_status,
     total_bookings,
     bookings_by_apartment,
