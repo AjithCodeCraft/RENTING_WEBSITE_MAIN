@@ -148,15 +148,13 @@ def add_apartment(request):
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Fix this apartment = Apartment.objects.get(pk=pk) ->
-# apartment = Apartment.objects.get(apartment_id=pk)
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
 def apartment_detail(request, pk):
     """Handles GET (Retrieve), PUT (Update), and DELETE for a specific Apartment."""
     
     try:
-        apartment = Apartment.objects.get(pk=pk)
+        apartment = Apartment.objects.get(apartment_id=pk)
     except Apartment.DoesNotExist:
         return Response({'error': 'Apartment not found'}, status=status.HTTP_404_NOT_FOUND)
 
