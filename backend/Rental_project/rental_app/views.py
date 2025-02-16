@@ -18,7 +18,8 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, Notification, Admin
+from .models import (HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
+                     Notification, Admin, Wishlist)
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password,check_password
@@ -26,7 +27,8 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
-                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer)
+                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
+                          WishlistSerializer)
 
 @api_view(['POST'])
 def register_user(request):
@@ -1040,4 +1042,74 @@ def login_admin(request):
 
     except Admin.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_item_wishlist(request, apartment_id):
+    apartment = Apartment.objects.get(apartment_id=apartment_id)
+    
+    if not apartment:
+        return Response(
+            {"message": "No apartment found with the give ID!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    wishlist_serializer = WishlistSerializer(data={"apartment": apartment_id})
+    
+    if wishlist_serializer.is_valid():
+        wishlist_serializer.save(user=request.user)
+        return Response(wishlist_serializer.data, status=status.HTTP_200_OK)
+    return Response(
+        {"message": wishlist_serializer.errors, "error": "Apartment already in Wishlist!"},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_wishlist(request):
+    wishlist = Wishlist.objects.filter(user=request.user)
+
+    if not wishlist:
+        return Response(
+            {"message": "Wish list is empty!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    serializer = WishlistSerializer(wishlist, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_item_wishlist_with_wishlist_id(request, wishlist_id):
+    try:
+        wishlist_item = Wishlist.objects.get(wishlist_id=wishlist_id)
+    except Wishlist.DoesNotExist:
+        return Response(
+            {"message": "No such item in wishlist"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    wishlist_item.delete()
+    return Response(
+        {"message": "Successfully removed item from wishlist"},
+        status=status.HTTP_200_OK
+    )
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_item_wishlist_with_apartment_id(request, apartment_id):
+    try:
+        wishlist_item = Wishlist.objects.get(apartment_id=apartment_id)
+    except Wishlist.DoesNotExist:
+        return Response(
+            {"message": "No such item in wishlist"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    wishlist_item.delete()
+    return Response(
+        {"message": "Successfully removed item from wishlist"},
+        status=status.HTTP_200_OK
+    )
+    
