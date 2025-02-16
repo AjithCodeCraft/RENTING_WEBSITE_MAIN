@@ -470,6 +470,32 @@ def get_user_notifications(request):
         
     serializer = NotificationSerializer(notification, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])        
+@permission_classes([IsAuthenticated])
+def mark_notification_as_read(request):
+    ids = request.data.get("ids", [])
+    
+    if not ids or not isinstance(ids, list):
+        return Response(
+            {"message": "Invalid or missing 'ids' list"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+    notifications = Notification.objects.filter(user=request.user, notification_id__in=ids)
+    
+    if not notifications:
+        return Response(
+            {"message": "Wrong matching notifications found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    notifications.update(read_status=1)
+    return Response(
+        {"message": "Notifications marked as read."},
+        status=status.HTTP_200_OK
+    )
     
     
     
