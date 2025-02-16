@@ -18,7 +18,7 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment
+from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, Notification
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
@@ -26,7 +26,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
-                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer)
+                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer)
 
 @api_view(['POST'])
 def register_user(request):
@@ -440,15 +440,37 @@ def send_message(request, receiver_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
+    notification_message = f"You have received a new message from {request.user.name}"
+    
     serializer = ChatSerializer(data=request.data)
-    if serializer.is_valid():
+    notification_serializer = NotificationSerializer(data={"user": receiver.id, "message": notification_message})
+    
+    if serializer.is_valid() and notification_serializer.is_valid():
         serializer.save(sender=request.user, receiver=receiver)
+        notification_serializer.save()
         return Response(
             {"message": "Message sent successfully!", "data": serializer.data},
             status=status.HTTP_201_CREATED
         )
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response({serializer.errors, notification_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])        
+@permission_classes([IsAuthenticated])
+def get_user_notifications(request):
+    
+    notification = Notification.objects.filter(user=request.user, read_status=0)
+    
+    if not notification:
+        return Response(
+            {"message": "No new notifications"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    serializer = NotificationSerializer(notification, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
     
     
 @api_view(['GET'])
@@ -645,8 +667,6 @@ def payments_by_user(request, user_id):
         "payments": serializer.data
     })
 
-from uuid import UUID
-from bson.binary import UUIDLegacy
 
 @api_view(['GET'])
 def get_payment_by_transaction_id(request, transaction_id):

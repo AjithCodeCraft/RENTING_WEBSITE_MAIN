@@ -39,7 +39,8 @@ from .views import (
     payments_by_booking,
     payments_by_apartment,
     payments_by_user,
-    get_payment_by_transaction_id
+    get_payment_by_transaction_id,
+    get_user_notifications
 )
 
 urlpatterns = [
@@ -189,5 +190,6 @@ urlpatterns = [
         'get-payment/transaction-id/<str:transaction_id>',
         get_payment_by_transaction_id,
         name='get_payment_by_transaction_id'
-        )
+        ),
+    path("get-notifications", get_user_notifications, name="get_user_notifications")
     ]

@@ -1,5 +1,6 @@
 from uuid import uuid4
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 # User Manager
@@ -171,7 +172,7 @@ class Notification(models.Model):
     notification_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     message = models.TextField()
-    read_status = models.BooleanField(default=False)
+    read_status = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(1)])
     timestamp = models.DateTimeField(auto_now_add=True)
 
 class Admin(models.Model):
