@@ -40,10 +40,15 @@ from .views import (
     payments_by_apartment,
     payments_by_user,
     get_payment_by_transaction_id,
+    get_payment_by_payment_id,
     get_user_notifications,
     mark_notification_as_read,
     register_admin,
-    login_admin
+    login_admin,
+    add_item_wishlist,
+    get_wishlist,
+    remove_item_wishlist_with_wishlist_id,
+    remove_item_wishlist_with_apartment_id
 )
 
 urlpatterns = [
@@ -194,6 +199,11 @@ urlpatterns = [
         get_payment_by_transaction_id,
         name='get_payment_by_transaction_id'
         ),
+    path(
+        'get-payment/payment-id/<str:payment_id>',
+        get_payment_by_payment_id,
+        name='get_payment_by_payment-id'
+        ),
     path("get-notifications", get_user_notifications, name="get_user_notifications"),
     path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),
     path(
@@ -204,5 +214,23 @@ urlpatterns = [
         'api/login-admin/', 
         login_admin, 
         name='login_admin'),
-
+    path(
+        'wishlist/add-item/<uuid:apartment_id>', 
+        add_item_wishlist, 
+        name='add_item_wishlist'),
+    path(
+        'wishlist/get-item', 
+        get_wishlist, 
+        name='get_wishlist'),
+    path(
+        'wishlist/delete-item/<uuid:wishlist_id>',
+        remove_item_wishlist_with_wishlist_id,
+        name="remove_item_wishlist_with_wishlist_id"
+    ),
+    path(
+        'wishlist/delete-item/apartment-id/<uuid:apartment_id>',
+        remove_item_wishlist_with_apartment_id,
+        name="remove_item_wishlist_with_apartment_id"
+    ),
+        
     ]
