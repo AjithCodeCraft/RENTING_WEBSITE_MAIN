@@ -38,7 +38,9 @@ from .views import (
     total_payments,
     payments_by_booking,
     payments_by_apartment,
-    payments_by_user
+    payments_by_user,
+    register_admin,
+    login_admin
 
 
 
@@ -187,6 +189,15 @@ urlpatterns = [
         'payments/user/<str:user_id>/', 
         payments_by_user, 
         name='payments_by_user'),
+    path(
+        'api/register-admin/', 
+        register_admin, 
+        name='register_admin'),
+    path(
+        'api/login-admin/', 
+        login_admin, 
+        name='login_admin'),
+
     
 
 
