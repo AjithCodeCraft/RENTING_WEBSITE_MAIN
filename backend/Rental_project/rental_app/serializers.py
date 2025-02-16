@@ -59,7 +59,7 @@ class ChatSerializer(serializers.ModelSerializer):
         model = Chat
         fields = ["chat_id", "sender", "receiver", "message"]
         extra_kwargs = {
-            "chat_id": {"required": False},
+            'chat_id': {"required": False},
             'sender': {"required": False},
             'receiver': {"required": False}
         }
@@ -80,5 +80,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = '__all__'
-        
+        fields = "__all__"
+        extra_kwargs = {
+            "user": {"required": False}
+        }

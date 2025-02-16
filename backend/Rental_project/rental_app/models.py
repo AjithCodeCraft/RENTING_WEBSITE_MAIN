@@ -126,9 +126,10 @@ class Payment(models.Model):
     PAYMENT_METHOD_CHOICES = [('razorpay', 'Razorpay'), ('cash', 'Cash')]
 
     payment_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
+    transaction_id = models.UUIDField(editable=True)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
-    apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     razorpay_order_id = models.CharField(max_length=100, null=True, blank=True)
     razorpay_payment_id = models.CharField(max_length=100, null=True, blank=True)

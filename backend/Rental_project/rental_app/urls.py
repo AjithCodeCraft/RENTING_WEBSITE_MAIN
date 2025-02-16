@@ -38,10 +38,8 @@ from .views import (
     total_payments,
     payments_by_booking,
     payments_by_apartment,
-    payments_by_user
-
-
-
+    payments_by_user,
+    get_payment_by_transaction_id
 )
 
 urlpatterns = [
@@ -187,8 +185,9 @@ urlpatterns = [
         'payments/user/<str:user_id>/', 
         payments_by_user, 
         name='payments_by_user'),
-    
-
-
-
+    path(
+        'get-payment/transaction-id/<str:transaction_id>',
+        get_payment_by_transaction_id,
+        name='get_payment_by_transaction_id'
+        )
     ]

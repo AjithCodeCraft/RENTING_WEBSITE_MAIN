@@ -4,7 +4,6 @@ from django.views.decorators.csrf import csrf_exempt
 import firebase_admin
 from rest_framework.views import APIView
 import json
-import uuid
 import os
 import json
 from bson import ObjectId  # If using MongoDB
@@ -646,7 +645,22 @@ def payments_by_user(request, user_id):
         "payments": serializer.data
     })
 
+from uuid import UUID
+from bson.binary import UUIDLegacy
 
+@api_view(['GET'])
+def get_payment_by_transaction_id(request, transaction_id):
+    payment = Payment.objects.filter(transaction_id=transaction_id).first()
+    
+    if not payment:
+        return Response (
+            {"message": "No payment with the given ID"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = PaymentSerializer(payment)
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 class PaymentInitiateView(APIView):
     def post(self, request, booking_id):
@@ -789,8 +803,8 @@ def generate_payment_url(request):
             amount_paise = int(float(amount) * 100)
 
             # ✅ Generate unique transaction and payment IDs (Convert UUIDs to strings)
-            transaction_id = str(uuid.uuid4())  
-            payment_id = str(uuid.uuid4())  
+            transaction_id = str(uuid.uuid4())
+            payment_id = str(uuid.uuid4())
 
             # ✅ Create an **order** in Razorpay
             order_data = {
@@ -816,28 +830,55 @@ def generate_payment_url(request):
             payment_link = razorpay_client.payment_link.create(payment_data)
 
             # ✅ Save the order details in MongoDB (Explicitly store UUIDs as strings)
-            payment_collection.insert_one({
-                "payment_id": payment_id,  
-                "transaction_id": transaction_id,  
-                "booking_id": str(booking_id),  # ✅ Convert booking_id to string
-                "user_id": str(user_id),  # Ensure user_id is stored as a string
-                "apartment_id": str(apartment_id),  # Ensure apartment_id is stored as a string
-                "amount": amount,  
-                "razorpay_order_id": razorpay_order["id"],  
+            
+            BookingInstance = Booking.objects.filter(booking_id=booking_id).first()
+            UserInstance = User.objects.filter(id=user_id).first()
+            ApartmentInstance = Apartment.objects.filter(apartment_id=apartment_id).first()
+            if not BookingInstance:
+                return Response(
+                    {"message": "No booking found with provided ID!"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            if not UserInstance:
+                return Response(
+                    {"message": "No user found with the provided ID!"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            if not ApartmentInstance:
+                return Response(
+                    {"message": "No apartment found with the provided ID!"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            serializer = PaymentSerializer(data={
+                "payment_id": payment_id,
+                "transaction_id": transaction_id,
+                "booking": str(BookingInstance.pk),
+                "user": str(UserInstance.pk),
+                "apartment": str(ApartmentInstance.pk),
+                "amount": float(amount),
+                "razorpay_order_id": razorpay_order["id"],
                 "razorpay_payment_id": None,  
                 "razorpay_signature": None,  
                 "payment_status": "pending",
                 "payment_method": "razorpay"
             })
-
-            return JsonResponse({
-                "payment_url": payment_link["short_url"],
-                "razorpay_order_id": razorpay_order["id"],  
-                "transaction_id": transaction_id,  
-                "payment_id": payment_id,  
-                "booking_id": booking_id  
-            }, status=200)
-
+            
+            if serializer.is_valid():
+                serializer.save()
+            
+                return JsonResponse({
+                    "payment_url": payment_link["short_url"],
+                    "razorpay_order_id": razorpay_order["id"],  
+                    "transaction_id": transaction_id,  
+                    "payment_id": payment_id,  
+                    "booking_id": booking_id  
+                }, status=200)
+            
+            return JsonResponse(serializer.errors, status=405)
+        
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
@@ -864,4 +905,3 @@ def check_payment_status(request, order_id):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
