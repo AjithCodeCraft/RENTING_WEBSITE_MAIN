@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HouseOwner, User, Apartment, ApartmentImage, Food, SearchFilter, Chat, Booking, Payment
+from .models import HouseOwner, User, Apartment, ApartmentImage, Food, SearchFilter, Chat, Booking, Payment, Notification
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,7 +65,6 @@ class ChatSerializer(serializers.ModelSerializer):
         }
 
 
-
 class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
@@ -76,3 +75,10 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = "__all__"
+        
+        
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = '__all__'
+        
