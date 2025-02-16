@@ -10,7 +10,7 @@ const hostels = [
   { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg", lng: 76.87899888341339, lat: 8.556990221115427, address: "XYZ Street, Your City" },
   { id: 3, name: "City Lights Hostel", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.87645772879704, lat: 8.558444894438177, address: "XYZ Street, Your City" },
   { id: 4, name: "Green View Hostel 2", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.87603094023191, lat: 8.555420290444625, address: "XYZ Street, Your City" },
-  { id: 5, name: "Sunset Residency 2", location: "Uptown", price: "$350/mo", image: "/loginhome.jpg", lng: 76.87802262020246, lat: 8.554576210624122, address: "XYZ Street, Your City" },
+  { id: 5, name: "Sunset Residency 2 ", location: "Uptown", price: "$350/mo", image: "/loginhome.jpg", lng: 76.87802262020246, lat: 8.554576210624122, address: "XYZ Street, Your City" },
   { id: 6, name: "City Lights Hostel 2", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.86806422034977, lat: 8.560906763671213, address: "XYZ Street, Your City" },
   { id: 1, name: "Green View Hostel", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.88013843230549, lat: 8.55855167721169, address: "XYZ Street, Your City" },
   { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg", lng: 76.87899888341339, lat: 8.556990221115427, address: "XYZ Street, Your City" },
