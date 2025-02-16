@@ -40,6 +40,7 @@ from .views import (
     payments_by_apartment,
     payments_by_user,
     get_payment_by_transaction_id,
+    get_payment_by_payment_id,
     get_user_notifications,
     mark_notification_as_read,
     register_admin,
@@ -193,6 +194,11 @@ urlpatterns = [
         'get-payment/transaction-id/<str:transaction_id>',
         get_payment_by_transaction_id,
         name='get_payment_by_transaction_id'
+        ),
+    path(
+        'get-payment/payment-id/<str:payment_id>',
+        get_payment_by_payment_id,
+        name='get_payment_by_payment-id'
         ),
     path("get-notifications", get_user_notifications, name="get_user_notifications"),
     path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),

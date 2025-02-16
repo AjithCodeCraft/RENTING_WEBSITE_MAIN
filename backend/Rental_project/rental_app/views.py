@@ -695,12 +695,28 @@ def payments_by_user(request, user_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_payment_by_transaction_id(request, transaction_id):
     payment = Payment.objects.filter(transaction_id=transaction_id).first()
     
     if not payment:
         return Response (
             {"message": "No payment with the given ID"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = PaymentSerializer(payment)
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_payment_by_payment_id(request, payment_id):
+    payment = Payment.objects.filter(payment_id=payment_id).first()
+    
+    if not payment:
+        return Response (
+            {"message": "No payment with the given ID."},
             status=status.HTTP_404_NOT_FOUND
         )
     
