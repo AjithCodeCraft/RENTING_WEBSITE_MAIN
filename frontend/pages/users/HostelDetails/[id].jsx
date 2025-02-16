@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import UserHeader from "../UserHeader"
 import { useState } from "react"
+import { Calendar } from "@/components/ui/calendar"
+import { addDays } from "date-fns" // Import addDays from date-fns
 
 // Dummy hostel data
 const hostel = {
@@ -59,19 +61,20 @@ const HostelDetails = () => {
   const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false)
   const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false)
   const [message, setMessage] = useState("")
-  const [selectedReview, setSelectedReview] = useState(null) // State to track the selected review
+  const [selectedReview, setSelectedReview] = useState(null)
+  const [duration, setDuration] = useState("short-term") // State for duration selection
+  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) }) // State for calendar dates
 
   const toggleMessagePopup = () => {
     setIsMessagePopupOpen(!isMessagePopupOpen)
   }
 
   const handleSendMessage = () => {
-    // Simulate sending a message (e.g., API call)
     setTimeout(() => {
-      setIsMessagePopupOpen(false) // Close the message popup
-      setIsSuccessPopupOpen(true) // Show the success popup
-      setMessage("") // Clear the message input
-    }, 1000) // Simulate a delay for sending the message
+      setIsMessagePopupOpen(false)
+      setIsSuccessPopupOpen(true)
+      setMessage("")
+    }, 1000)
   }
 
   const closeSuccessPopup = () => {
@@ -79,11 +82,30 @@ const HostelDetails = () => {
   }
 
   const handleReviewClick = (review) => {
-    setSelectedReview(review) // Set the selected review to show in the popup
+    setSelectedReview(review)
   }
 
   const closeReviewPopup = () => {
-    setSelectedReview(null) // Close the review popup
+    setSelectedReview(null)
+  }
+
+  // Calculate total amount based on duration
+  const calculateTotalAmount = () => {
+    const baseAmount = hostel.rent
+    if (duration === "short-term") {
+      return baseAmount * 7 // 1 week
+    } else {
+      return baseAmount * 30 // 1 month
+    }
+  }
+
+  // Handle date selection
+  const handleDateSelect = (date) => {
+    if (duration === "short-term") {
+      setSelectedDates({ from: date, to: addDays(date, 7) })
+    } else {
+      setSelectedDates({ from: date, to: addDays(date, 30) })
+    }
   }
 
   return (
@@ -216,8 +238,8 @@ const HostelDetails = () => {
             </div>
           </div>
 
-          {/* Right Side: Sticky Booking Card */}
-          <div className="lg:sticky lg:top-4 lg:self-start py-20">
+        {/* Right Side: Sticky Booking Card */}
+        <div className="lg:sticky lg:top-4 lg:self-start py-20">
             <Card className="p-6">
               <CardHeader className="p-0">
                 <CardTitle className="text-2xl font-bold">
@@ -232,32 +254,51 @@ const HostelDetails = () => {
               </CardHeader>
 
               <CardContent className="p-1 mt- space-y-4">
+                {/* Duration Selection */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="border rounded p-2">
-                    <div className="text-xs font-semibold">Check-in</div>
-                    <div>4/16/2025</div>
-                  </div>
-                  <div className="border rounded p-2">
-                    <div className="text-xs font-semibold">Checkout</div>
-                    <div>4/17/2025</div>
-                  </div>
+                  <Button
+                    variant={duration === "short-term" ? "default" : "outline"}
+                    onClick={() => setDuration("short-term")}
+                  >
+                    Short-term
+                  </Button>
+                  <Button
+                    variant={duration === "long-term" ? "default" : "outline"}
+                    onClick={() => setDuration("long-term")}
+                  >
+                    Long-term
+                  </Button>
                 </div>
+
+                {/* Calendar */}
+                <div className="border rounded p-2">
+                  <Calendar
+                    mode="range"
+                    selected={selectedDates}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={duration === "short-term" ? 1 : 2} // Show 1 month for short-term, 2 for long-term
+                  />
+                </div>
+
+                {/* Guests */}
                 <div className="border rounded p-2">
                   <div className="text-xs font-semibold">Guests</div>
                   <div>1 guest</div>
                 </div>
 
+                {/* Reserve Button */}
                 <Button className="w-full">Reserve</Button>
                 <p className="text-center text-sm text-muted-foreground">You won't be charged yet</p>
 
+                {/* Total Amount */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>₹{hostel.rent} x 1 night</span>
-                    <span>₹{hostel.rent}</span>
+                    <span>₹{hostel.rent} x {duration === "short-term" ? "7 nights" : "30 nights"}</span>
+                    <span>₹{calculateTotalAmount()}</span>
                   </div>
                   <div className="flex justify-between font-semibold">
                     <span>Total before taxes</span>
-                    <span>₹{hostel.rent}</span>
+                    <span>₹{calculateTotalAmount()}</span>
                   </div>
                 </div>
               </CardContent>
@@ -322,38 +363,6 @@ const HostelDetails = () => {
         </div>
       )}
 
-      {/* Review Popup */}
-      {/* {selectedReview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 p-2"
-              onClick={closeReviewPopup}
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-            <CardHeader>
-              <CardTitle>Review by {selectedReview.username}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                  <Image
-                    src={selectedReview.userImage || "/placeholder-user.jpg"}
-                    alt={`User ${selectedReview.username}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <span className="font-semibold">{selectedReview.username}</span>
-              </div>
-              <p className="text-muted-foreground mt-2">{selectedReview.review}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )} */}
     </>
   )
 }
