@@ -19,10 +19,10 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment
+from .models import HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment,Admin
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import make_password,check_password
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
@@ -865,3 +865,74 @@ def check_payment_status(request, order_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
+
+
+@api_view(['POST'])
+def register_admin(request):
+    email = request.data.get('email')
+    phone = request.data.get('phone')
+    password = request.data.get('password_hash')  # Use password_hash instead of password
+    name = request.data.get('name', '')
+
+    if not email or not phone or not password:
+        return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Create admin in Firebase
+        user_record = auth.create_user(email=email, password=password, phone_number=phone)
+
+        # Store admin in Django database with hashed password
+        admin = Admin.objects.create(
+            email=email,
+            phone=phone,
+            name=name,
+            password_hash=make_password(password)  # ✅ Hash the password before storing
+        )
+
+        return Response({'message': 'Admin created successfully', 'admin_id': str(admin.admin_id)}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def get_tokens_for_admin(admin):
+    """Manually generate JWT tokens for Admin"""
+    refresh = RefreshToken()
+    refresh["admin_id"] = str(admin.admin_id)  # Store admin_id in token
+    refresh["email"] = admin.email  # Store email in token
+    refresh["name"] = admin.name  # Store name in token
+
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }
+
+@api_view(['POST'])
+def login_admin(request):
+    email = request.data.get('email')
+    password = request.data.get('password_hash')  # Use password_hash for login
+
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Fetch admin from the database
+        admin = Admin.objects.get(email=email)
+
+        # Check password
+        if not check_password(password, admin.password_hash):
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # ✅ Generate custom JWT token
+        tokens = get_tokens_for_admin(admin)
+
+        return Response({
+            "access": tokens["access"],
+            "refresh": tokens["refresh"],
+            "admin_id": str(admin.admin_id),
+            "email": admin.email,
+            "name": admin.name
+        }, status=status.HTTP_200_OK)
+
+    except Admin.DoesNotExist:
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
