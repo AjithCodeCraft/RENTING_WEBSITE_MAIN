@@ -48,7 +48,10 @@ from .views import (
     add_item_wishlist,
     get_wishlist,
     remove_item_wishlist_with_wishlist_id,
-    remove_item_wishlist_with_apartment_id
+    remove_item_wishlist_with_apartment_id,
+    get_approved_apartments,
+    create_hostel_approval,
+    get_pending_apartments
 )
 
 urlpatterns = [
@@ -232,5 +235,17 @@ urlpatterns = [
         remove_item_wishlist_with_apartment_id,
         name="remove_item_wishlist_with_apartment_id"
     ),
+    path(
+        'hostel-approval/', 
+        create_hostel_approval, 
+        name='hostel-approval'),
+    path(
+        'apartments/approved/', 
+        get_approved_apartments, 
+        name='paid-apartments'),
+    path(
+        'get-pending-apartments/', 
+        get_pending_apartments, 
+        name='get_pending_apartments'),
         
     ]
