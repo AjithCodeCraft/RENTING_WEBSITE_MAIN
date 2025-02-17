@@ -48,7 +48,10 @@ from .views import (
     add_item_wishlist,
     get_wishlist,
     remove_item_wishlist_with_wishlist_id,
-    remove_item_wishlist_with_apartment_id
+    remove_item_wishlist_with_apartment_id,
+    get_approved_apartments,
+    create_hostel_approval,
+    get_pending_apartments
 )
 
 urlpatterns = [
@@ -62,17 +65,17 @@ urlpatterns = [
     path("apartments/add/", add_apartment, name="add-apartment"),
     path("apartments/<uuid:pk>/", apartment_detail, name="apartment-detail"),
     path(
-        "api/house-owner/by-id/<str:owner_id>/",
+        "house-owner/by-id/<str:owner_id>/",
         get_house_owner_by_id,
         name="get-house-owner-by-id",
     ),
     path(
-        "api/house-owner/by-ssn/<str:ssn>/",
+        "house-owner/by-ssn/<str:ssn>/",
         get_house_owner_by_ssn,
         name="get-house-owner-by-ssn",
     ),
     path(
-        "api/apartment/by-owner/<str:owner_id>/",
+        "apartment/by-owner/<str:owner_id>/",
         get_apartments_by_owner,
         name="get_apartments_by_owner",
     ),
@@ -207,11 +210,11 @@ urlpatterns = [
     path("get-notifications", get_user_notifications, name="get_user_notifications"),
     path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),
     path(
-        'api/register-admin/', 
+        'register-admin/', 
         register_admin, 
         name='register_admin'),
     path(
-        'api/login-admin/', 
+        'login-admin/', 
         login_admin, 
         name='login_admin'),
     path(
@@ -232,5 +235,17 @@ urlpatterns = [
         remove_item_wishlist_with_apartment_id,
         name="remove_item_wishlist_with_apartment_id"
     ),
+    path(
+        'hostel-approval/', 
+        create_hostel_approval, 
+        name='hostel-approval'),
+    path(
+        'apartments/approved/', 
+        get_approved_apartments, 
+        name='paid-apartments'),
+    path(
+        'get-pending-apartments/', 
+        get_pending_apartments, 
+        name='get_pending_apartments'),
         
     ]

@@ -1,3 +1,4 @@
+import datetime
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.views.decorators.csrf import csrf_exempt
@@ -5,6 +6,8 @@ import firebase_admin
 from rest_framework.views import APIView
 import json
 import os
+import jwt
+from rest_framework.parsers import JSONParser
 import json
 from bson import ObjectId  # If using MongoDB
 from django.http import JsonResponse
@@ -13,14 +16,15 @@ import uuid  # Import UUID
 import razorpay
 from pymongo import MongoClient
 from django.http import JsonResponse
+from .authentication import AdminAuthentication
 from django.conf import settings
 from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import (HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
+from .models import (HostelApproval, HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
                      Notification, Admin, Wishlist)
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password,check_password
 from decimal import Decimal
@@ -28,7 +32,8 @@ from bson.decimal128 import Decimal128
 from django.db.models import Q
 from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
-                          WishlistSerializer)
+                          WishlistSerializer,HostelApprovalSerializer)
+SECRET_KEY = settings.SECRET_KEY  
 
 @api_view(['POST'])
 def register_user(request):
@@ -81,7 +86,8 @@ def login_user(request):
             'refresh': str(refresh),
             'user_id': user.user_id,
             'email': user.email,
-            'name': user.name
+            'name': user.name,
+            'user_type':user.user_type
         }, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -144,10 +150,21 @@ def add_apartment(request):
 
     serializer = ApartmentSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        apartment = serializer.save()  # Save the apartment
+
+        # Create a HostelApproval record with 'pending' status for this apartment
+        HostelApproval.objects.create(
+            apartment=apartment,
+            admin=None,  # Initially, no admin assigned
+            status='pending',  # Set the status to 'pending'
+            comments='Approval pending.',  # You can add default comments or leave it blank
+        )
+
         return Response({'message': 'Apartment added successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
@@ -1001,40 +1018,45 @@ def register_admin(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
 def get_tokens_for_admin(admin):
-    """Manually generate JWT tokens for Admin"""
-    refresh = RefreshToken()
-    refresh["admin_id"] = str(admin.admin_id)  # Store admin_id in token
-    refresh["email"] = admin.email  # Store email in token
-    refresh["name"] = admin.name  # Store name in token
+    """Manually generate JWT token for Admin model"""
+    
+    payload = {
+        'admin_id': str(admin.admin_id),
+        'email': admin.email,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1),  # Expires in 1 hour
+        'iat': datetime.datetime.utcnow()
+    }
+    
+    access_token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
     return {
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
+        'access': access_token
     }
+
 
 @api_view(['POST'])
 def login_admin(request):
     email = request.data.get('email')
-    password = request.data.get('password_hash')  # Use password_hash for login
+    password = request.data.get('password_hash')  # Ensure this is hashed when stored
 
     if not email or not password:
         return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Fetch admin from the database
         admin = Admin.objects.get(email=email)
 
-        # Check password
+        # Verify password
         if not check_password(password, admin.password_hash):
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # ✅ Generate custom JWT token
+        # ✅ Generate custom JWT
         tokens = get_tokens_for_admin(admin)
 
         return Response({
             "access": tokens["access"],
-            "refresh": tokens["refresh"],
             "admin_id": str(admin.admin_id),
             "email": admin.email,
             "name": admin.name
@@ -1113,3 +1135,49 @@ def remove_item_wishlist_with_apartment_id(request, apartment_id):
         status=status.HTTP_200_OK
     )
     
+
+
+@api_view(['POST'])
+@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
+@permission_classes([IsAuthenticated])  # Ensure the user is authenticated
+def create_hostel_approval(request):
+    # Prepare data and associate the logged-in admin with the approval
+    data = request.data
+    data['admin'] = request.user.admin_id  # Use the custom admin_id field from the authenticated admin
+
+    serializer = HostelApprovalSerializer(data=data)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return JsonResponse(serializer.data, status=201)
+    
+    return JsonResponse(serializer.errors, status=400)
+
+
+
+
+@api_view(['GET'])
+@authentication_classes([AdminAuthentication])
+@permission_classes([IsAuthenticated])
+def get_approved_apartments(request):
+    approved_apartment_ids = HostelApproval.objects.filter(status='approved').values_list('apartment_id', flat=True)
+    
+    approved_apartments = Apartment.objects.filter(apartment_id__in=approved_apartment_ids)  # Use apartment_id instead of id
+    serializer = ApartmentSerializer(approved_apartments, many=True)
+    
+    return JsonResponse(serializer.data, safe=False)
+
+
+
+@api_view(['GET'])
+@authentication_classes([AdminAuthentication])
+@permission_classes([IsAuthenticated])
+def get_pending_apartments(request):
+   
+    pending_apartment_ids = HostelApproval.objects.filter(status='pending').values_list('apartment_id', flat=True)
+    
+    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids)  
+    
+    serializer = ApartmentSerializer(pending_apartments, many=True)
+    
+    return JsonResponse(serializer.data, safe=False)
