@@ -7,6 +7,7 @@ import Image from "next/image";
 import axios from "axios";
 import { useState } from "react";
 import Router from "next/router";
+import axiosInstance from "@/axios/axios";
 
 export default function LoginPage({ className, ...props }) {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export default function LoginPage({ className, ...props }) {
   
     try {
       // Send POST request to login
-      const response = await axios.post('http://127.0.0.1:8000/api/login/', {
+      const response = await axiosInstance.post('login/', {
         email: email,
         password_hash: password,
       });
