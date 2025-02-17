@@ -3,7 +3,7 @@ import Router from 'next/router';
 
 // Set the baseURL based on the environment
 const baseURL = process.env.NEXT_PUBLIC_ENV === 'development'
-  ? "http://0.0.0.0:8000/api/"
+  ? "http://127.0.0.1:8000/api/"
   : `${process.env.NEXT_PUBLIC_PRODUCTION_BASE_URL ? process.env.NEXT_PUBLIC_PRODUCTION_BASE_URL : ''}/api/`;
 
 // Handle undefined production baseURL with a fallback or error

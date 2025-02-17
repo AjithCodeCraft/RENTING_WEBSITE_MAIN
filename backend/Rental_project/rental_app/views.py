@@ -81,7 +81,8 @@ def login_user(request):
             'refresh': str(refresh),
             'user_id': user.user_id,
             'email': user.email,
-            'name': user.name
+            'name': user.name,
+            'user_type':user.user_type
         }, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)

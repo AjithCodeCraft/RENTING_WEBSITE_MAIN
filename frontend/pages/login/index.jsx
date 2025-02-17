@@ -15,22 +15,33 @@ export default function LoginPage({ className, ...props }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+  
     try {
+      // Send POST request to login
       const response = await axios.post('http://127.0.0.1:8000/api/login/', {
         email: email,
         password_hash: password,
       });
-
+  
       // Save the token to session storage
       sessionStorage.setItem("token", response.data.access);
-
-      // Redirect to the user's dashboard or home page
-      Router.push("/users"); // Replace with the correct route
+  
+      // Check the user_type and navigate accordingly
+      const userType = response.data.user_type;  // Assuming this is in the response
+  
+      // You can add different conditions for various user types
+      if (userType === 'owner') {
+        Router.push("/owner");  // Replace with actual admin route
+      } else if (userType === 'seeker') {
+        Router.push("/users");  // Replace with actual user route
+      } else {
+        console.log("Error") // Fallback route if user_type is unexpected
+      }
     } catch (error) {
       setErrorMessage(error.response?.data?.error || "An error occurred during login");
     }
   };
+  
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
