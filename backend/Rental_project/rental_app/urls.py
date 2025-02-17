@@ -249,3 +249,6 @@ urlpatterns = [
         name='get_pending_apartments'),
         
     ]
+
+
+
