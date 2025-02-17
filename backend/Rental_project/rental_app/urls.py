@@ -62,17 +62,17 @@ urlpatterns = [
     path("apartments/add/", add_apartment, name="add-apartment"),
     path("apartments/<uuid:pk>/", apartment_detail, name="apartment-detail"),
     path(
-        "api/house-owner/by-id/<str:owner_id>/",
+        "house-owner/by-id/<str:owner_id>/",
         get_house_owner_by_id,
         name="get-house-owner-by-id",
     ),
     path(
-        "api/house-owner/by-ssn/<str:ssn>/",
+        "house-owner/by-ssn/<str:ssn>/",
         get_house_owner_by_ssn,
         name="get-house-owner-by-ssn",
     ),
     path(
-        "api/apartment/by-owner/<str:owner_id>/",
+        "apartment/by-owner/<str:owner_id>/",
         get_apartments_by_owner,
         name="get_apartments_by_owner",
     ),
@@ -207,11 +207,11 @@ urlpatterns = [
     path("get-notifications", get_user_notifications, name="get_user_notifications"),
     path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),
     path(
-        'api/register-admin/', 
+        'register-admin/', 
         register_admin, 
         name='register_admin'),
     path(
-        'api/login-admin/', 
+        'login-admin/', 
         login_admin, 
         name='login_admin'),
     path(
