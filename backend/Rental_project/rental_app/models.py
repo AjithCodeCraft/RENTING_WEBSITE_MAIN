@@ -2,6 +2,8 @@ from uuid import uuid4
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
+from datetime import timedelta
 
 # User Manager
 class UserManager(BaseUserManager):
@@ -111,6 +113,8 @@ class SearchFilter(models.Model):
     parking_available = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
+def default_checkout_date():
+    return timezone.now() + timedelta(days=7)
 
 class Booking(models.Model):
     STATUS_CHOICES = [('active', 'Active'), ('cancelled', 'Cancelled'), ('completed', 'Completed')]
@@ -119,6 +123,7 @@ class Booking(models.Model):
     apartment = models.ForeignKey('Apartment', on_delete=models.CASCADE)
     user = models.ForeignKey('User', on_delete=models.CASCADE)
     booking_date = models.DateTimeField(auto_now_add=True)
+    checkout_date = models.DateTimeField(default=default_checkout_date)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
 
 
@@ -187,11 +192,11 @@ class Complaint(models.Model):
     STATUS_CHOICES = [('pending', 'Pending'), ('resolved', 'Resolved'), ('rejected', 'Rejected')]
     
     complaint_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    complainant = models.ForeignKey(User, on_delete=models.CASCADE, related_name="filed_complaints")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_complaints")
     apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     description = models.TextField()
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
-    admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
 
@@ -216,9 +221,7 @@ class HostelApproval(models.Model):
     approval_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     admin = models.ForeignKey(Admin, on_delete=models.CASCADE)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES,default='pending')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     comments = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
