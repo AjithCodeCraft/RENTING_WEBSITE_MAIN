@@ -44,7 +44,9 @@ const CardDemo = () => {
   const [map, setMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [selectedHostel, setSelectedHostel] = useState(null);
+  const [hoveredHostel, setHoveredHostel] = useState(null); // Track hovered hostel
   const [currentPage, setCurrentPage] = useState(1);
+  const [markers, setMarkers] = useState([]); // Store markers for later reference
   const detailsRef = useRef(null);
 
   // Calculate total pages
@@ -73,7 +75,7 @@ const CardDemo = () => {
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
     // Add markers for each hostel
-    hostels.forEach((hostel) => {
+    const markers = hostels.map((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.lng, hostel.lat])
         .setPopup(new maplibregl.Popup().setText(hostel.name))
@@ -83,7 +85,11 @@ const CardDemo = () => {
         e.stopPropagation();
         setSelectedHostel(hostel);
       });
+
+      return marker;
     });
+
+    setMarkers(markers); // Store markers in state
 
     // Get user location
     if (navigator.geolocation) {
@@ -119,6 +125,51 @@ const CardDemo = () => {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (selectedHostel && map) {
+      // Fly to the selected hostel's location
+      map.flyTo({
+        center: [selectedHostel.lng, selectedHostel.lat],
+        zoom: CLOSE_ZOOM,
+      });
+
+      // Highlight the corresponding marker
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        if (marker.getLngLat().lng === selectedHostel.lng && marker.getLngLat().lat === selectedHostel.lat) {
+          markerElement.style.width = "40px";
+          markerElement.style.height = "40px";
+        } else {
+          markerElement.style.width = "30px";
+          markerElement.style.height = "30px";
+        }
+      });
+    }
+  }, [selectedHostel, map, markers]);
+
+  // Highlight marker on hover
+  useEffect(() => {
+    if (hoveredHostel && map) {
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        if (marker.getLngLat().lng === hoveredHostel.lng && marker.getLngLat().lat === hoveredHostel.lat) {
+          markerElement.style.width = "40px";
+          markerElement.style.height = "40px";
+        } else {
+          markerElement.style.width = "30px";
+          markerElement.style.height = "30px";
+        }
+      });
+    } else if (!hoveredHostel && map) {
+      // Reset all markers to original size
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        markerElement.style.width = "30px";
+        markerElement.style.height = "30px";
+      });
+    }
+  }, [hoveredHostel, map, markers]);
 
   const handleGetDirections = () => {
     if (selectedHostel && userLocation) {
@@ -163,10 +214,15 @@ const CardDemo = () => {
             <Link
               key={hostel.id}
               href={`/users/HostelDetails/${hostel.id}`} passHref
-              className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
+              className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
+                selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
+              }`}
               style={{
                 backgroundImage: `url(${hostel.image})`,
               }}
+              onClick={() => setSelectedHostel(hostel)}
+              onMouseEnter={() => setHoveredHostel(hostel)} // Set hovered hostel
+              onMouseLeave={() => setHoveredHostel(null)} // Clear hovered hostel
             >
               <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
               <div className="flex flex-row items-center space-x-4 z-10">
