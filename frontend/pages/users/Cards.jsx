@@ -47,6 +47,8 @@ const CardDemo = () => {
   const [hoveredHostel, setHoveredHostel] = useState(null); // Track hovered hostel
   const [currentPage, setCurrentPage] = useState(1);
   const [markers, setMarkers] = useState([]); // Store markers for later reference
+  const [tapCount, setTapCount] = useState(0); // Track tap count for double tap
+  const [tapTimeout, setTapTimeout] = useState(null); // Track timeout for double tap
   const detailsRef = useRef(null);
 
   // Calculate total pages
@@ -205,22 +207,42 @@ const CardDemo = () => {
     setCurrentPage(page);
   };
 
+  // Handle double tap on hostel card
+  const handleHostelCardTap = (hostel) => {
+    if (tapCount === 0) {
+      // First tap: Focus on the hostel location
+      setSelectedHostel(hostel);
+      setTapCount(1);
+
+      // Set a timeout to reset the tap count
+      setTapTimeout(
+        setTimeout(() => {
+          setTapCount(0);
+        }, 300) // 300ms delay for double tap
+      );
+    } else if (tapCount === 1) {
+      // Second tap: Navigate to the hostel details page
+      clearTimeout(tapTimeout); // Clear the timeout
+      setTapCount(0); // Reset tap count
+      window.location.href = `/users/HostelDetails/${hostel.id}`; // Navigate to the details page
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full p-4">
       {/* Left Section - Hostel Listings */}
       <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {currentHostels.map((hostel) => (
-            <Link
+            <div
               key={hostel.id}
-              href={`/users/HostelDetails/${hostel.id}`} passHref
               className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
                 selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
               }`}
               style={{
                 backgroundImage: `url(${hostel.image})`,
               }}
-              onClick={() => setSelectedHostel(hostel)}
+              onClick={() => handleHostelCardTap(hostel)} // Handle double tap
               onMouseEnter={() => setHoveredHostel(hostel)} // Set hovered hostel
               onMouseLeave={() => setHoveredHostel(null)} // Clear hovered hostel
             >
@@ -248,7 +270,7 @@ const CardDemo = () => {
                   {hostel.price}
                 </p>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
 
