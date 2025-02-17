@@ -11,7 +11,8 @@ from .models import (
     Payment,
     Notification,
     Wishlist,
-    HostelApproval
+    HostelApproval,
+    Complaint
 )
 
 
@@ -113,7 +114,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
-        fields = ["wishlist_id", "user", "apartment", "created_at"]
+        fields = ["wishlist_id", "user", "owner", "description", "apartment", "created_at"]
         extra_kwargs = {
             "user": {"required": False},
             "apartment": {"required": False},
@@ -126,3 +127,16 @@ class HostelApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = HostelApproval
         fields = ['approval_id', 'apartment', 'admin', 'status', 'comments', 'created_at', 'updated_at']
+
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complaint
+        fields = ["complainant", "apartment", "description", "status", "resolved_at"]
+        extra_kwargs = {
+            "complainant": {"required": False},
+            "owner": {"required": False},
+            "apartment": {"required": False},
+            "status": {"required": False},
+            "resolved_at": {"required": False},
+        }

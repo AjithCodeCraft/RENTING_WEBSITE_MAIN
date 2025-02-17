@@ -23,7 +23,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from .models import (HostelApproval, HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
-                     Notification, Admin, Wishlist)
+                     Notification, Admin, Wishlist, Complaint)
 from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password,check_password
@@ -32,7 +32,7 @@ from bson.decimal128 import Decimal128
 from django.db.models import Q
 from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
-                          WishlistSerializer,HostelApprovalSerializer)
+                          WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
 SECRET_KEY = settings.SECRET_KEY  
 
 @api_view(['POST'])
@@ -467,7 +467,7 @@ def send_message(request, receiver_id):
     if serializer.is_valid() and notification_serializer.is_valid():
         serializer.save(sender=request.user, receiver=receiver)
         notification_serializer.save()
-        return Response(
+        return Response (
             {"message": "Message sent successfully!", "data": serializer.data},
             status=status.HTTP_201_CREATED
         )
@@ -1181,3 +1181,67 @@ def get_pending_apartments(request):
     serializer = ApartmentSerializer(pending_apartments, many=True)
     
     return JsonResponse(serializer.data, safe=False)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_complaint(request, apartment_id):
+    try:
+        apartment = Apartment.objects.get(apartment_id=apartment_id)
+    except Apartment.DoesNotExist:
+        return Response (
+            {"message": "No Apartment found with given ID!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+        
+    owner = apartment.owner.owner
+    
+
+    notification_message = f"You have received a complaint from {request.user.name}"
+    
+    complaint_serializer = ComplaintSerializer(data=request.data)
+    notification_serializer = NotificationSerializer(data={"user": owner.pk, "message": notification_message})
+    
+    if notification_serializer.is_valid():
+        if complaint_serializer.is_valid():
+                complaint_serializer.save(complainant=request.user, apartment=apartment, owner=owner)
+                notification_serializer.save()
+                return Response(complaint_serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(
+        {complaint_serializer.errors, notification_serializer.errors},
+        status=status.HTTP_400_BAD_REQUEST
+    )
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_complaints_with_apartment_id(request, apartment_id):
+    complaints = Complaint.objects.filter(apartment=apartment_id)
+    
+    if not complaints:
+        return Response (
+            {"message": "No complaints found with given ID!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    print(complaints.__dir__)
+    serializer = ComplaintSerializer(complaints, many=True)
+    return Response(
+        serializer.data,
+        status=status.HTTP_200_OK
+    )
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_complaints(request):
+    complaints = Complaint.objects.filter(owner=request.user)
+    
+    if not complaints:
+        return Response (
+            {"message": "No complaints found with given ID!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    serializer = ComplaintSerializer(complaints, many=True)
+    return Response(
+        serializer.data,
+        status=status.HTTP_200_OK
+    )
