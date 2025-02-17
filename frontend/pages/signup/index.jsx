@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -34,6 +35,7 @@ const Signup = () => {
   const [passwordMatchMessage, setPasswordMatchMessage] = useState("");
   const [passwordMatchColor, setPasswordMatchColor] = useState("text-gray-500");
   const [currentUser, setCurrentUser] = useState(null);
+  const [phoneNumber, setPhoneNumber] = useState("+91");
   const [userRole, setUserRole] = useState("seeker"); // Default role is "seeker"
 
   const searchParams = useSearchParams();
@@ -83,12 +85,19 @@ const Signup = () => {
     setIsSigningUp(true);
     setErrorMessage("");
 
-    const userData = {
-      email,
-      password_hash: password,
-      name: `${firstName} ${lastName}`,
-      user_type: userRole, // Set user_type based on selected role
-    };
+    // Remove spaces from phone number
+  const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
+
+  const userData = {
+    email,
+    phone: formattedPhoneNumber,
+    password_hash: password,
+    name: `${firstName}${lastName}`,
+    user_type: userRole,
+  };
+
+    console.log("Sending data:", userData);
+
 
     try {
       const response = await fetch("http://127.0.0.1:8000/api/signup/", {
@@ -98,6 +107,8 @@ const Signup = () => {
         },
         body: JSON.stringify(userData),
       });
+
+      
 
       const data = await response.json();
 
@@ -187,6 +198,10 @@ const Signup = () => {
                   className="rounded-[3px]"
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" type="tel" placeholder="+91XXXXXXXXXX" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
               </div>
               <div className="grid gap-2 relative">
                 <div className="flex items-center justify-between">

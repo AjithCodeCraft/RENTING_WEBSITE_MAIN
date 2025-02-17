@@ -57,7 +57,7 @@ def register_user(request):
             phone=phone,
             name=name,
             user_type=user_type,
-            password_hash=make_password(password)  # ✅ Hash the password before storing
+            password_hash=make_password(password) 
         )
 
         return Response({'message': 'User created successfully', 'user_id': user.user_id}, status=status.HTTP_201_CREATED)
