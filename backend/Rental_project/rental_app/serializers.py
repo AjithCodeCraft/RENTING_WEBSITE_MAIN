@@ -10,7 +10,8 @@ from .models import (
     Booking,
     Payment,
     Notification,
-    Wishlist
+    Wishlist,
+    HostelApproval
 )
 
 
@@ -119,3 +120,9 @@ class WishlistSerializer(serializers.ModelSerializer):
             "wishlist_id": {"read_only": True},
             "created_id": {"read_only": True}
         }
+
+
+class HostelApprovalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HostelApproval
+        fields = ['approval_id', 'apartment', 'admin', 'status', 'comments', 'created_at', 'updated_at']
