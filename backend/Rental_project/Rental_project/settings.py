@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers
 
 import os
 import firebase_admin
@@ -48,6 +49,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     '*'
+]
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',  # Your frontend URL
+]
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Authorization',
 ]
 
 
