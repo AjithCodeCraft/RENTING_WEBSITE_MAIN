@@ -180,9 +180,9 @@ export default function Searchbar() {
                       name="parkingAvailable"
                       checked={filters.parkingAvailable}
                       onChange={handleFilterChange}
-                      className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                      className="h-4 w-4 text-blue-500 rounded border-gray-300"
                     />
-                    <span className="text-sm text-gray-600">Parking Available</span>
+                    <span className="text-sm text-gray-700">Parking Available</span>
                   </label>
                 </div>
               </div>
