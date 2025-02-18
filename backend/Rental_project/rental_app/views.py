@@ -116,14 +116,14 @@ def get_house_owner(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  # ✅ Ensure authentication
+@permission_classes([IsAuthenticated])  #  Ensure authentication
 def add_house_owner(request):
     ssn = request.data.get('SSN')  # Get SSN
 
     if not ssn:
         return Response({'error': 'SSN is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = request.user  # ✅ Get authenticated user directly
+    user = request.user  # Get authenticated user directly
 
     if user.user_type != 'owner':
         return Response({'error': 'User is not a house owner'}, status=status.HTTP_403_FORBIDDEN)
@@ -149,14 +149,14 @@ def get_apartment_list(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  # ✅ Ensure only authenticated users can post
+@permission_classes([IsAuthenticated])  #  Ensure only authenticated users can post
 def add_apartment(request):
     user = request.user  
 
     if not hasattr(user, 'houseowner'):
         return Response({'error': 'Only house owners can add apartments'}, status=status.HTTP_403_FORBIDDEN)
 
-    request.data['owner'] = user.houseowner.owner  # ✅ Assign authenticated house owner
+    request.data['owner'] = user.houseowner.owner  # Assign authenticated house owner
 
     serializer = ApartmentSerializer(data=request.data)
     if serializer.is_valid():
