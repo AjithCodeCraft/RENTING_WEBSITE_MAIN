@@ -189,3 +189,5 @@ AUTH_USER_MODEL = 'rental_app.User'  # Ensure 'rental_app' is the actual app nam
  
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_SECRET_KEY = os.getenv("RAZORPAY_SECRET_KEY")
+
+
