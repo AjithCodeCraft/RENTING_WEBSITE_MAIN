@@ -7,12 +7,13 @@ import {
 import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getAuth, signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { auth} from "../../firebaseConfig";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -107,13 +108,25 @@ const Signup = () => {
         },
         body: JSON.stringify(userData),
       });
-
-      
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
-        router.push("/login"); // Redirect to login page after successful signup
+        // After successful signup, sign in the user
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, email, password); // Sign in the user
+  
+        const user = auth.currentUser; // Now the user should be available
+        console.log(user); // Check if user is signed in
+  
+        if (user) {
+          // Send email verification after signup and sign-in
+          await sendEmailVerification(user);
+          console.log("Verification email sent.");
+  
+          // Redirect to the email verification page
+          router.push("/email_verification");
+        }
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }
@@ -123,6 +136,7 @@ const Signup = () => {
       setIsSigningUp(false);
     }
   };
+  
 
   useEffect(() => {
     if (showTooltip) {

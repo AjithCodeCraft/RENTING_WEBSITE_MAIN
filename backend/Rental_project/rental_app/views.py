@@ -35,6 +35,9 @@ from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSeriali
                           WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
 SECRET_KEY = settings.SECRET_KEY  
 
+
+
+
 @api_view(['POST'])
 def register_user(request):
     email = request.data.get('email')
@@ -43,27 +46,34 @@ def register_user(request):
     name = request.data.get('name', '')
     user_type = request.data.get('user_type', 'seeker')
 
+    # Validate that required fields are provided
     if not email or not phone or not password:
         return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if email already exists in the MongoDB database
+    if User.objects.filter(email=email).exists():
+        return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         # Create user in Firebase
         user_record = auth.create_user(email=email, password=password, phone_number=phone)
-        
-        # Store user in Django database with hashed password
+
+        # Store user in MongoDB database with hashed password
         user = User.objects.create(
             user_id=user_record.uid,  # Firebase UID
             email=email,
             phone=phone,
             name=name,
             user_type=user_type,
-            password_hash=make_password(password) 
+            password_hash=make_password(password)  # Ensure the password is hashed before saving
         )
 
-        return Response({'message': 'User created successfully', 'user_id': user.user_id}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'User created successfully', 'user_id': user.user_id,
+                        'user_type': user.user_type}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 
 
 
