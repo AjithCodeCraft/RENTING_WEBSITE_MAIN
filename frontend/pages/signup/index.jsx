@@ -97,7 +97,7 @@ const Signup = () => {
     user_type: userRole,
   };
 
-    console.log("Sending data:", userData);
+    // console.log("Sending data:", userData);
 
 
     try {
@@ -112,21 +112,30 @@ const Signup = () => {
       const data = await response.json();
   
       if (response.ok) {
+        const { user_type, access_token } = data; // Extract user type and token
+  
+        // Store access_token for future API calls (e.g., localStorage)
+        localStorage.setItem("user_type", data.user_type);
+
+        localStorage.setItem("access_token", access_token);
+        localStorage.setItem("email", email); 
+        localStorage.setItem("password", password);
+  
         // After successful signup, sign in the user
         const auth = getAuth();
         await signInWithEmailAndPassword(auth, email, password); // Sign in the user
   
-        const user = auth.currentUser; // Now the user should be available
-        console.log(user); // Check if user is signed in
+        const user = auth.currentUser; // Get the authenticated user
+       
   
         if (user) {
-          // Send email verification after signup and sign-in
+          // Send email verification
           await sendEmailVerification(user);
           console.log("Verification email sent.");
-  
-          // Redirect to the email verification page
-          router.push("/email_verification");
         }
+
+          router.push("/email_verification"); 
+        
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }
