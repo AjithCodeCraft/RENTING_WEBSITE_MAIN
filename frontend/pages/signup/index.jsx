@@ -120,17 +120,6 @@ const Signup = () => {
     user_type: userRole,
   };
 
-    // console.log("Sending data:", userData);
-    const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
-
-    const userData = {
-      email,
-      phone: formattedPhoneNumber,
-      password_hash: password,
-      name: `${firstName}${lastName}`,
-      user_type: userRole,
-    };
-
     try {
       const response = await fetch("http://127.0.0.1:8000/api/signup/", {
         method: "POST",
