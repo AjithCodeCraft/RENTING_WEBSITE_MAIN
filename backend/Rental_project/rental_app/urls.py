@@ -264,8 +264,7 @@ urlpatterns = [
         'get-complaints',
         get_all_complaints,
         name="get_all_complaints"
-    ),
-    
+    )
     ]
 
 

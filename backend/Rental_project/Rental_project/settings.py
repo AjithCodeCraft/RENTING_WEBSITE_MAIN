@@ -191,3 +191,13 @@ RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_SECRET_KEY = os.getenv("RAZORPAY_SECRET_KEY")
 
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "alameena068@gmail.com"  # Replace with your email
+EMAIL_HOST_PASSWORD = "syfierjooftkjocz"  # Use an App Password (Not your email password)
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+
