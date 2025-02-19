@@ -54,7 +54,8 @@ from .views import (
     get_pending_apartments,
     add_complaint,
     get_complaints_with_apartment_id,
-    get_all_complaints
+    get_all_complaints,
+    get_csrf_token
 )
 
 urlpatterns = [
@@ -264,7 +265,12 @@ urlpatterns = [
         'get-complaints',
         get_all_complaints,
         name="get_all_complaints"
-    )
+    ),
+    path(
+        'get-csrf-token/',
+        get_csrf_token,
+        name="get_csrf_token"
+    ),
     ]
 
 

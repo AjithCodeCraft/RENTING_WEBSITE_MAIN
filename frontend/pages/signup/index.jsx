@@ -109,6 +109,18 @@ const Signup = () => {
     setIsSigningUp(true);
     setErrorMessage("");
 
+    // Remove spaces from phone number
+  const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
+
+  const userData = {
+    email,
+    phone: formattedPhoneNumber,
+    password_hash: password,
+    name: `${firstName} ${lastName}`,
+    user_type: userRole,
+  };
+
+    // console.log("Sending data:", userData);
     const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
 
     const userData = {
@@ -140,7 +152,7 @@ const Signup = () => {
 
         const auth = getAuth();
         await signInWithEmailAndPassword(auth, email, password);
-
+        
         router.push("/dashboard"); // Redirect to dashboard or any other page
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");

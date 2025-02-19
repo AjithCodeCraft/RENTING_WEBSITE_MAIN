@@ -6,19 +6,51 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GalleryVerticalEnd } from "lucide-react";
 import Image from "next/image";
+import axios from 'axios';
 
 export default function AdminLogin({ className, ...props }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
+  const [emailValidityMessage, setEmailValidityMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [emailMessageStyle, setEmailMessageStyle] = useState('hidden');
+  const [errorMessageStyle, setErrorMessageStyle] = useState('hidden');
+  const route = useRouter();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Dummy credentials
-    if (email === 'admin@example.com' && password === 'admin@123') {
-      router.push('/admin/dashboard');
+  const isValidEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (emailRegex.test(email)) {
+      setEmailMessageStyle("text-green-500");
+      setEmailValidityMessage("Valid email format.");
     } else {
-      alert('Invalid credentials');
+      setEmailMessageStyle("text-red-500");
+      setEmailValidityMessage("Invalid email format.");
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const API_URL = "http://127.0.0.1:8000/api/login-admin/";
+
+    const login_credentials = {
+      email: email,
+      password_hash: password
+    };
+    try {
+      setErrorMessageStyle("hidden");
+      const response = await axios.post(API_URL, login_credentials, {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      localStorage.setItem("access_token", response.data.access);
+      route.push("/admin/dashboard");
+    } catch(error) {
+      setErrorMessage(error.response.data.error);
+      setErrorMessageStyle("");
+      console.log(error);
     }
   };
 
@@ -34,15 +66,15 @@ export default function AdminLogin({ className, ...props }) {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">
+          <div className="w-full max-w-[65%]">
             <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", className)} {...props}>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Login to your account</h1>
                 <p className="text-balance text-sm text-muted-foreground">
-                  Enter your email below to login to your account
+                  Enter your email below to login to your admin account
                 </p>
               </div>
-              <div className="grid gap-6">
+              <div className="grid gap-6 max-w-xs">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -51,8 +83,9 @@ export default function AdminLogin({ className, ...props }) {
                     placeholder="m@example.com"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); isValidEmail(e.target.value); }}
                   />
+                  <p className={`mt-1 text-xs ${emailMessageStyle}`}>{emailValidityMessage}</p>
                 </div>
                 <div className="grid gap-2">
                   <div className="flex items-center">
@@ -69,6 +102,7 @@ export default function AdminLogin({ className, ...props }) {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
+                <p className={`mt-1 text-xs text-red-500 ${errorMessageStyle}`}>{errorMessage}</p>
                 <Button type="submit" className="w-full">
                   Login
                 </Button>
