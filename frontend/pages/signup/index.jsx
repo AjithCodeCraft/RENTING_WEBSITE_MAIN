@@ -7,19 +7,31 @@ import {
 import { CircleAlert } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getAuth, signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { auth} from "../../firebaseConfig";
+import { auth } from "../../firebaseConfig";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const Signup = () => {
   const router = useRouter();
@@ -37,7 +49,13 @@ const Signup = () => {
   const [passwordMatchColor, setPasswordMatchColor] = useState("text-gray-500");
   const [currentUser, setCurrentUser] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("+91");
-  const [userRole, setUserRole] = useState("seeker"); // Default role is "seeker"
+  const [userRole, setUserRole] = useState("seeker");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [countdown, setCountdown] = useState(0); // Start with 0, no countdown initially
+  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -83,22 +101,23 @@ const Signup = () => {
       return;
     }
 
+    if (!otpVerified) {
+      setErrorMessage("Please verify your email with OTP.");
+      return;
+    }
+
     setIsSigningUp(true);
     setErrorMessage("");
 
-    // Remove spaces from phone number
-  const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
+    const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
 
-  const userData = {
-    email,
-    phone: formattedPhoneNumber,
-    password_hash: password,
-    name: `${firstName}${lastName}`,
-    user_type: userRole,
-  };
-
-    // console.log("Sending data:", userData);
-
+    const userData = {
+      email,
+      phone: formattedPhoneNumber,
+      password_hash: password,
+      name: `${firstName}${lastName}`,
+      user_type: userRole,
+    };
 
     try {
       const response = await fetch("http://127.0.0.1:8000/api/signup/", {
@@ -108,34 +127,21 @@ const Signup = () => {
         },
         body: JSON.stringify(userData),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
-        const { user_type, access_token } = data; // Extract user type and token
-  
-        // Store access_token for future API calls (e.g., localStorage)
+        const { user_type, access_token } = data;
+
         localStorage.setItem("user_type", data.user_type);
-
         localStorage.setItem("access_token", access_token);
-        localStorage.setItem("email", email); 
+        localStorage.setItem("email", email);
         localStorage.setItem("password", password);
-  
-        // After successful signup, sign in the user
-        const auth = getAuth();
-        await signInWithEmailAndPassword(auth, email, password); // Sign in the user
-  
-        const user = auth.currentUser; // Get the authenticated user
-       
-  
-        if (user) {
-          // Send email verification
-          await sendEmailVerification(user);
-          console.log("Verification email sent.");
-        }
 
-          router.push("/email_verification"); 
-        
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, email, password);
+
+        router.push("/dashboard"); // Redirect to dashboard or any other page
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }
@@ -145,7 +151,43 @@ const Signup = () => {
       setIsSigningUp(false);
     }
   };
-  
+
+  const handleGetOtp = async () => {
+    // Simulate sending OTP
+    setOtpSent(true);
+    setIsOtpDialogOpen(true);
+    setCountdown(45); // Start the countdown
+    // You can add your OTP sending logic here
+  };
+
+  const handleVerifyOtp = () => {
+    // Check if all OTP slots are filled
+    if (otp.length !== 6) {
+      setOtpError("Please fill all OTP fields.");
+      return;
+    }
+
+    // Simulate OTP verification
+    if (otp === "123456") { // Replace with actual OTP verification logic
+      setOtpVerified(true);
+      setIsOtpDialogOpen(false);
+      setOtpError("");
+    } else {
+      setOtpError("Invalid OTP. Please try again.");
+    }
+  };
+
+  const handleResendOtp = () => {
+    setCountdown(45); // Reset the countdown
+    // You can add your OTP resending logic here
+  };
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   useEffect(() => {
     if (showTooltip) {
@@ -158,9 +200,9 @@ const Signup = () => {
 
   return (
     <TooltipProvider>
-      <div className="w-full lg:grid lg:h-screen lg:grid-cols-2 xl:h-screen bg-white text-gray-900 ">
+      <div className="w-full lg:grid lg:h-screen lg:grid-cols-2 xl:h-screen bg-white text-gray-900">
         {/* Dropdown for Role Selection */}
-        <div className="absolute top-4 left-4 ">
+        <div className="absolute top-4 left-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="rounded-[3px]">
@@ -212,15 +254,24 @@ const Signup = () => {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter Your Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="rounded-[3px]"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter Your Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="rounded-[3px]"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleGetOtp}
+                    className="rounded-[3px]"
+                  >
+                    {countdown > 0 ? `Resend OTP in ${countdown}s` : "Get OTP"}
+                  </Button>
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="phone">Phone Number</Label>
@@ -287,7 +338,7 @@ const Signup = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isSigningUp}
+                disabled={isSigningUp || !otpVerified}
               >
                 {isSigningUp ? "Signing Up..." : "Create an account"}
               </Button>
@@ -312,8 +363,47 @@ const Signup = () => {
           />
         </div>
       </div>
+
+      {/* OTP Dialog */}
+      <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter OTP</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-gray-600">OTP sent to: {email}</p>
+            <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)}>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+              <InputOTPGroup>
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+            {otpError && <span className="text-red-600 text-sm">{otpError}</span>}
+            <div className="flex justify-between w-full">
+              <Button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={countdown > 0}
+                variant="outline"
+              >
+                Resend OTP {countdown > 0 ? `(${countdown}s)` : ""}
+              </Button>
+              <Button type="button" onClick={handleVerifyOtp}>
+                Verify OTP
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 };
 
-export default Signup; 
+export default Signup;
