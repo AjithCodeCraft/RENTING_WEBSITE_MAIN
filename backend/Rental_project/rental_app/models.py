@@ -225,3 +225,13 @@ class HostelApproval(models.Model):
     comments = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+
+class OTPVerification(models.Model):
+    email = models.EmailField(unique=True)
+    otp = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email
