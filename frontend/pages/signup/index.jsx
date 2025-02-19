@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { auth} from "../../firebaseConfig";
+import { auth } from "../../firebaseConfig";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -93,7 +93,7 @@ const Signup = () => {
     email,
     phone: formattedPhoneNumber,
     password_hash: password,
-    name: `${firstName}${lastName}`,
+    name: `${firstName} ${lastName}`,
     user_type: userRole,
   };
 
@@ -110,7 +110,7 @@ const Signup = () => {
       });
   
       const data = await response.json();
-  
+      
       if (response.ok) {
         const { user_type, access_token } = data; // Extract user type and token
   
@@ -134,7 +134,7 @@ const Signup = () => {
           console.log("Verification email sent.");
         }
 
-          router.push("/email_verification"); 
+        router.push("/email_verification");
         
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
