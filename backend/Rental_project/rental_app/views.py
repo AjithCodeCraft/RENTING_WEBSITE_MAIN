@@ -1,4 +1,5 @@
 import datetime
+import random
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.views.decorators.csrf import csrf_exempt
@@ -7,6 +8,8 @@ from rest_framework.views import APIView
 import json
 import os
 import jwt
+from django.core.mail import send_mail
+import urllib.parse
 from rest_framework.parsers import JSONParser
 import json
 from bson import ObjectId  # If using MongoDB
@@ -15,6 +18,8 @@ from rental_app.models import Booking  # Import Booking model
 import uuid  # Import UUID
 import razorpay
 from pymongo import MongoClient
+import datetime
+from django.utils import timezone
 from django.http import JsonResponse
 from .authentication import AdminAuthentication
 from django.conf import settings
@@ -22,7 +27,7 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import (HostelApproval, HouseOwner, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
+from .models import ( HostelApproval, HouseOwner, OTPVerification, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
                      Notification, Admin, Wishlist, Complaint)
 from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.permissions import IsAuthenticated
@@ -37,45 +42,109 @@ from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSeriali
 SECRET_KEY = settings.SECRET_KEY  
 
 
-
-
 @api_view(['POST'])
 def register_user(request):
-    email = request.data.get('email')
-    phone = request.data.get('phone')
-    password = request.data.get('password_hash')  # Use password_hash instead of password
-    name = request.data.get('name', '')
-    user_type = request.data.get('user_type', 'seeker')
+    method = request.data.get("method")
 
-    # Validate that required fields are provided
-    if not email or not phone or not password:
-        return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+    if method == "register":
+        email = request.data.get('email')
+        phone = request.data.get('phone')
+        password = request.data.get('password_hash')
+        name = request.data.get('name', '')
+        user_type = request.data.get('user_type', 'seeker')
 
-    # Check if email already exists in the MongoDB database
-    if User.objects.filter(email=email).exists():
-        return Response({'error': 'Email already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        # Validate required fields
+        if not email or not phone or not password:
+            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        # Create user in Firebase
-        user_record = auth.create_user(email=email, password=password, phone_number=phone)
+        # Check if email already exists in MongoDB
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'Email already exists in MongoDB'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Store user in MongoDB database with hashed password
-        user = User.objects.create(
-            user_id=user_record.uid,  # Firebase UID
+        # Generate a 6-digit OTP
+        otp = random.randint(100000, 999999)
+
+        # Store OTP in MongoDB (Temporary Storage)
+        OTPVerification.objects.update_or_create(
             email=email,
-            phone=phone,
-            name=name,
-            user_type=user_type,
-            password_hash=make_password(password)  # Ensure the password is hashed before saving
+            defaults={"otp": otp, "created_at": timezone.now()}  # Use timezone-aware timestamp
         )
 
-        return Response({'message': 'User created successfully', 'user_id': user.user_id,
-                        'user_type': user.user_type}, status=status.HTTP_201_CREATED)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Send OTP via email
+        try:
+            send_mail(
+                subject="Your OTP for Registration",
+                message=f"Your OTP is: {otp}. It is valid for 5 minutes.",
+                from_email="alameena068@gmail.com",
+                recipient_list=[email],
+            )
 
+            return Response({'message': 'OTP sent. Verify OTP to complete registration.'}, status=status.HTTP_200_OK)
 
+        except Exception as e:
+            return Response({'error': f'Error sending OTP email: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    elif method == "verify":
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+        password = request.data.get('password_hash')
+        name = request.data.get('name')
+        phone = request.data.get('phone')
+        user_type = request.data.get('user_type', 'seeker')
+
+        if not email or not otp:
+            return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if OTP is valid
+        try:
+            otp_entry = OTPVerification.objects.get(email=email)
+            otp_created_time = otp_entry.created_at  # Already timezone-aware
+            current_time = timezone.now()  # Ensure timezone awareness
+
+            # Check OTP expiry (valid for 5 minutes)
+            if (current_time - otp_created_time).total_seconds() > 300:
+                return Response({'error': 'OTP expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check OTP correctness
+            if otp_entry.otp != int(otp):
+                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+        except OTPVerification.DoesNotExist:
+            return Response({'error': 'OTP not found or already used'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Create user in Firebase
+            new_user = auth.create_user(
+                email=email,
+                password=password,
+                email_verified=True
+            )
+
+            # Store user details in MongoDB
+            user = User.objects.create(
+                user_id=new_user.uid,
+                email=email,
+                phone=phone,
+                name=name,
+                user_type=user_type,
+                password_hash=make_password(password)
+            )
+
+            # Delete the OTP entry (no longer needed)
+            otp_entry.delete()
+
+            return Response({
+                "message": "User created successfully",
+                "user_id": new_user.uid
+            }, status=status.HTTP_201_CREATED)
+
+        except auth.EmailAlreadyExistsError:
+            return Response({'error': 'Email already exists in Firebase'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Unexpected error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    else:
+        return Response({'error': 'Invalid method. Use "register" or "verify".'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -117,14 +186,14 @@ def get_house_owner(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  # ✅ Ensure authentication
+@permission_classes([IsAuthenticated])  #  Ensure authentication
 def add_house_owner(request):
     ssn = request.data.get('SSN')  # Get SSN
 
     if not ssn:
         return Response({'error': 'SSN is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = request.user  # ✅ Get authenticated user directly
+    user = request.user  # Get authenticated user directly
 
     if user.user_type != 'owner':
         return Response({'error': 'User is not a house owner'}, status=status.HTTP_403_FORBIDDEN)
@@ -150,14 +219,14 @@ def get_apartment_list(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  # ✅ Ensure only authenticated users can post
+@permission_classes([IsAuthenticated])  #  Ensure only authenticated users can post
 def add_apartment(request):
     user = request.user  
 
     if not hasattr(user, 'houseowner'):
         return Response({'error': 'Only house owners can add apartments'}, status=status.HTTP_403_FORBIDDEN)
 
-    request.data['owner'] = user.houseowner.owner  # ✅ Assign authenticated house owner
+    request.data['owner'] = user.houseowner.owner  # Assign authenticated house owner
 
     serializer = ApartmentSerializer(data=request.data)
     if serializer.is_valid():
