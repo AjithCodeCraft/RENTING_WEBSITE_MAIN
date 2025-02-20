@@ -140,3 +140,7 @@ class ComplaintSerializer(serializers.ModelSerializer):
             "status": {"required": False},
             "resolved_at": {"required": False},
         }
+
+
+class CheckOwnerVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()

@@ -47,7 +47,6 @@ const Signup = () => {
   const [passwordStrengthColor, setPasswordStrengthColor] = useState("text-gray-500");
   const [passwordMatchMessage, setPasswordMatchMessage] = useState("");
   const [passwordMatchColor, setPasswordMatchColor] = useState("text-gray-500");
-  const [currentUser, setCurrentUser] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("+91");
   const [userRole, setUserRole] = useState("seeker");
   const [otp, setOtp] = useState("");
@@ -56,6 +55,8 @@ const Signup = () => {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(0); // Start with 0, no countdown initially
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
+  const [otpButtonText, setOtpButtonText] = useState("Get OTP");
+  const [otpButtonColor, setOtpButtonColor] = useState("bg-blue-500");
 
   const searchParams = useSearchParams();
 
@@ -112,6 +113,15 @@ const Signup = () => {
     // Remove spaces from phone number
   const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
 
+
+    const userData = {
+      email,
+      phone: formattedPhoneNumber,
+      password_hash: password,
+      name: `${firstName} ${lastName}`,
+      user_type: userRole,
+    };
+
   const userData = {
     email,
     phone: formattedPhoneNumber,
@@ -121,7 +131,7 @@ const Signup = () => {
   };
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/signup/", {
+      const response = await fetch("http://localhost:8000/api/signup/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,17 +142,41 @@ const Signup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        const { user_type, access_token } = data;
+        // Call login API to get access token
+        const loginResponse = await fetch("http://localhost:8000/api/login/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password_hash: password }),
+        });
 
-        localStorage.setItem("user_type", data.user_type);
-        localStorage.setItem("access_token", access_token);
-        localStorage.setItem("email", email);
-        localStorage.setItem("password", password);
+        const loginData = await loginResponse.json();
+
+        if (loginResponse.ok) {
+
+          localStorage.setItem("user_type", loginData.user_type);
+          localStorage.setItem("access_token", loginData.access);
+          localStorage.setItem("email", email);
+
+          const auth = getAuth();
+          await signInWithEmailAndPassword(auth, email, password);
+
+          // Redirect based on user type
+          if (loginData.user_type === "owner") {
+            router.push("/addapp");
+          } else {
+            router.push("/login");
+          }
+        } else {
+          setErrorMessage(loginData.message || "Login failed. Please try again.");
+        }
 
         const auth = getAuth();
         await signInWithEmailAndPassword(auth, email, password);
         
         router.push("/dashboard"); // Redirect to dashboard or any other page
+
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }
@@ -154,33 +188,73 @@ const Signup = () => {
   };
 
   const handleGetOtp = async () => {
-    // Simulate sending OTP
-    setOtpSent(true);
-    setIsOtpDialogOpen(true);
-    setCountdown(45); // Start the countdown
-    // You can add your OTP sending logic here
+    const userData = {
+      email,
+    };
+
+    try {
+      const response = await fetch("http://localhost:8000/api/send_otp/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setOtpSent(true);
+        setIsOtpDialogOpen(true);
+        setCountdown(45); // Start the countdown
+      } else {
+        setErrorMessage(data.message || "Failed to send OTP. Please try again.");
+      }
+    } catch (error) {
+      setErrorMessage("An error occurred. Please try again.");
+    }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     // Check if all OTP slots are filled
     if (otp.length !== 6) {
       setOtpError("Please fill all OTP fields.");
       return;
     }
 
-    // Simulate OTP verification
-    if (otp === "123456") { // Replace with actual OTP verification logic
-      setOtpVerified(true);
-      setIsOtpDialogOpen(false);
-      setOtpError("");
-    } else {
-      setOtpError("Invalid OTP. Please try again.");
+    const userData = {
+      email,
+      otp,
+    };
+
+    try {
+      const response = await fetch("http://localhost:8000/api/verify_otp/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setOtpVerified(true);
+        setIsOtpDialogOpen(false);
+        setOtpError("");
+        setOtpButtonText("Verified");
+        setOtpButtonColor("bg-green-500");
+      } else {
+        setOtpError(data.message || "Invalid OTP. Please try again.");
+      }
+    } catch (error) {
+      setOtpError("An error occurred. Please try again.");
     }
   };
 
-  const handleResendOtp = () => {
-    setCountdown(45); // Reset the countdown
-    // You can add your OTP resending logic here
+  const handleResendOtp = async () => {
+    setCountdown(300); // Reset the countdown
+    await handleGetOtp(); // Resend OTP
   };
 
   useEffect(() => {
@@ -268,9 +342,10 @@ const Signup = () => {
                   <Button
                     type="button"
                     onClick={handleGetOtp}
-                    className="rounded-[3px]"
+                    className={`rounded-[3px] ${otpButtonColor}`}
+                    disabled={otpVerified}
                   >
-                    {countdown > 0 ? `Resend OTP in ${countdown}s` : "Get OTP"}
+                    {otpButtonText}
                   </Button>
                 </div>
               </div>
