@@ -60,7 +60,8 @@ from .views import (
     verify_otp,
     get_csrf_token,
     get_hostel_approval,
-    delete_pending
+    delete_pending,
+    approve_hostel
 )
 
 
@@ -249,6 +250,10 @@ urlpatterns = [
         'hostel-approval/', 
         create_hostel_approval, 
         name='hostel-approval'),
+    path(
+        'approve-hostel/<uuid:apartment_id>', 
+        approve_hostel, 
+        name='approve_hostel'),
     path(
         'apartments/approved/', 
         get_approved_apartments, 

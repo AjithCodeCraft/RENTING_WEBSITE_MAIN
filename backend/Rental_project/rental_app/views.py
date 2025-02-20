@@ -267,6 +267,7 @@ def add_apartment(request):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
+@authentication_classes([AdminAuthentication])  
 @permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
 def apartment_detail(request, pk):
     """Handles GET (Retrieve), PUT (Update), and DELETE for a specific Apartment."""
@@ -296,7 +297,7 @@ def apartment_detail(request, pk):
 # Get House Owner by Owner ID
 @api_view(['GET'])
 @authentication_classes([AdminAuthentication])  
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_house_owner_by_id(request, owner_id):
     try:
         user = User.objects.get(id=owner_id)
@@ -1378,6 +1379,22 @@ def create_hostel_approval(request):
     
     return JsonResponse(serializer.errors, status=400)
 
+@api_view(['PATCH'])
+@authentication_classes([AdminAuthentication])
+def approve_hostel(request, apartment_id):
+    updated_count = HostelApproval.objects.filter(apartment_id=apartment_id).update(status="approved")
+    
+    if updated_count == 0:
+        return Response(
+            {"message": "No aparment found with the given ID!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    else:
+        return Response(
+            {"message": "Successfully approved hostel!"},
+            status=status.HTTP_200_OK
+        )
+
 @api_view(['GET'])
 #@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
 @permission_classes([IsAuthenticated])  # Ensure the user is authenticated
@@ -1410,7 +1427,7 @@ def get_pending_apartments(request):
    
     pending_apartment_ids = HostelApproval.objects.filter(status='pending').values_list('apartment_id', flat=True)
     
-    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids)  
+    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')  
     
     serializer = ApartmentSerializer(pending_apartments, many=True)
     
