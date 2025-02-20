@@ -1,17 +1,8 @@
 import { CircleAlert } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import AdminSignupComponent from "@/components/signup-form";
 import axios from "axios";
-//   import { doCreateStudentWithEmailAndPassword } from "@/firebase/auth";
-//   import { getFirestore } from "firebase/firestore";
-//   import { doc, getDoc } from "firebase/firestore";
-//   import axiosInstance from "@/axios/axios";
 
 const AdminSignup = () => {
   const [firstName, setFirstName] = useState("");
@@ -32,32 +23,9 @@ const AdminSignup = () => {
   const [phoneNumberMessage, setPhoneNumberMessage] = useState("");
   const [phoneNumberMatchColor, setphoneNumberMatchColor] =
     useState("text-gray-500");
-  const [csrfToken, setCsrfToken] = useState("");
-  const isFirstRender = useRef(true);
+
   const route = useRouter();
-  useEffect(() => {
-    
-  if (isFirstRender.current) {
-    isFirstRender.current = false;
-    return;
-  }
-    let isMounted = true;
-    async function fetchCsrfToken() {
-      try {
-        const response = await axios.get (
-          "http://127.0.0.1:8000/api/get-csrf-token/", {
-            withCredentials: true,
-          }
-        );
-        console.log("CSRF Token fetched:", response.data.csrfToken);
-        setCsrfToken(response.data.csrfToken);
-      } catch (error) {
-        console.log("Error fetching csrf token");
-      }
-    }
-    fetchCsrfToken();
-    return () => { isMounted = false; };
-  }, []);
+
 
   const validatePassword = (password) => {
     const lengthValid = password.length >= 8 && password.length <= 30;
@@ -116,9 +84,8 @@ const AdminSignup = () => {
     setIsSigningUp(true);
     setErrorMessage("");
 
-    const formattedPhoneNumber = phoneNumber.replace(/[\s]/g, "");
-    const API_URL_SIGNUP = "http://127.0.0.1:8000/api/register-admin/";
-    const API_URL_LOGIN = "http://127.0.0.1:8000/api/login-admin/";
+    const API_URL_SIGNUP = `${process.env.NEXT_PUBLIC_API_URL}/register-admin/`;
+    const API_URL_LOGIN = `${process.env.NEXT_PUBLIC_API_URL}/login-admin/`;
 
     const adminSignUpFormData = {
       email: email,

@@ -1,5 +1,5 @@
 // pages/admin/index.js
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../.../../../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../.../../../../components/ui/tabs';
 import { 
@@ -11,9 +11,13 @@ import PendingApprovalsList from './PendingApprovalsList';
 import RecentActivityList from './RecentActivityList';
 import StatCard from './StatCard';
 import AdminLayout from './adminsidebar';
+import { useAdminContext } from '../context/AdminContext';
+import { AdminProvider } from '../context/AdminContext';
 
 const AdminDashboard = () => {
+
   return (
+    <AdminProvider>
     <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
@@ -117,6 +121,7 @@ const AdminDashboard = () => {
         </Tabs>
       </div>
     </AdminLayout>
+    </AdminProvider>
   );
 };
 
