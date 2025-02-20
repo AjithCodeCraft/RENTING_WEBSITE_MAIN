@@ -14,11 +14,43 @@ export default function AddApartmentForm() {
   const [isAadharValid, setIsAadharValid] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [imagePaths, setImagePaths] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [selectedFood, setSelectedFood] = useState([]);
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    control,
+    formState: { errors },
+  } = useForm();
+
+  // Watch all required fields
+  const watchedFields = watch([
+    "title",
+    "description",
+    "rent",
+    "bhk",
+    "available_beds",
+    "total_beds",
+    "room_sharing_type",
+    "location",
+    "latitude",
+    "longitude",
+    "hostel_type",
+    "duration",
+  ]);
+
+  // Check if all required fields are filled
+  const isFormValid = () => {
+    return (
+      watchedFields.every((field) => field !== undefined && field !== "") && // Check if all fields are filled
+      isAadharValid && // Aadhar must be valid
+      isVerified // User must be verified
+    );
+  };
 
   // Check verification status on component mount
   useEffect(() => {
@@ -102,6 +134,9 @@ export default function AddApartmentForm() {
       return;
     }
 
+    // Ensure `food` is always an array
+    const foodOptions = data.food || [];
+
     const apartmentData = {
       title: data.title,
       description: data.description,
@@ -113,13 +148,14 @@ export default function AddApartmentForm() {
       location: data.location,
       latitude: parseFloat(data.latitude),
       longitude: parseFloat(data.longitude),
-      food: data.food.map(Number),
+      food: foodOptions.map(Number), // Map only if `foodOptions` is defined
       parking_available: data.parking_available || false,
       hostel_type: data.hostel_type,
       duration: data.duration,
     };
 
     try {
+      // Step 1: Add the apartment
       const response = await fetch("http://localhost:8000/api/apartments/add/", {
         method: "POST",
         headers: {
@@ -131,14 +167,63 @@ export default function AddApartmentForm() {
 
       const result = await response.json();
 
-      if (response.ok) {
-        console.log("Apartment added successfully!");
-        router.push("/owner");
-      } else {
-        setErrorMessage(result.error || "Failed to add apartment");
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to add apartment");
       }
+
+      console.log("Apartment added successfully:", result);
+      const apartmentId = result.data.apartment_id; // Get the apartment ID from the response
+
+      // Step 2: Upload images using the apartment ID
+      if (imageFiles.length > 0) {
+        await Promise.all(
+          imageFiles.map((file) => uploadImage(file, apartmentId))
+        );
+      }
+
+      // Redirect to the owner dashboard
+      router.push("/owner");
     } catch (error) {
-      setErrorMessage("Network error");
+      console.error("Error submitting form:", error);
+      setErrorMessage(error.message || "Failed to submit form");
+    }
+  };
+
+  // Upload image to the server
+  const uploadImage = async (file, apartmentId) => {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      setErrorMessage("Authentication token not found");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file); // Append the image file
+    formData.append("apartment_uuid", apartmentId); // Append the apartment UUID
+
+    try {
+      const response = await fetch("http://localhost:8000/api/apartment-images/add/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`, // Include the access token
+        },
+        body: formData, // Send the form data
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Image upload successful:", result);
+
+      // Return the result (e.g., gridfs_id or other metadata)
+      return result;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setErrorMessage(error.message || "Failed to upload image");
+      throw error;
     }
   };
 
@@ -146,57 +231,16 @@ export default function AddApartmentForm() {
   const handleFileChange = (e) => {
     const files = e.target.files;
     setImageFiles([...imageFiles, ...files]); // Store the selected files in state for preview
-
-    // Upload each file and get the image path
-    Array.from(files).forEach(uploadImage);
-  };
-
-  // Upload image to the server
-  const uploadImage = async (file) => {
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) {
-      setErrorMessage("Authentication token not found");
-      return;
-    }
-
-    const apartmentId = "apartment_uuid_here"; // Replace with the actual apartment ID you're working with
-
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("apartment", apartmentId); // Include the apartment ID
-    formData.append("image_path", ""); // Initially set to an empty value; will be filled by the server if necessary
-
-    try {
-      const response = await fetch("http://localhost:8000/api/apartment-images/add/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      console.log("Image upload response:", result);
-
-      if (response.ok) {
-        setImagePaths((prevPaths) => [...prevPaths, result.image_path]);
-      } else {
-        setErrorMessage(result.error || "Failed to upload image");
-      }
-    } catch (error) {
-      setErrorMessage("Network error");
-      console.error("Network error:", error);
-    }
   };
 
   // Handle food selection
   const handleFoodSelection = (value) => {
     const updatedFood = selectedFood.includes(value)
-      ? selectedFood.filter((food) => food !== value)
-      : [...selectedFood, value];
+      ? selectedFood.filter((food) => food !== value) // Remove if already selected
+      : [...selectedFood, value]; // Add if not selected
+
     setSelectedFood(updatedFood);
-    setValue("food", updatedFood);
+    setValue("food", updatedFood); // Update the form value
   };
 
   return (
@@ -223,20 +267,22 @@ export default function AddApartmentForm() {
             <div>
               <Label>Title</Label>
               <Input
-                {...register("title")}
+                {...register("title", { required: true })}
                 placeholder="Enter apartment title"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.title && <p className="text-sm text-red-500">Title is required</p>}
             </div>
 
             {/* Description */}
             <div>
               <Label>Description</Label>
               <Textarea
-                {...register("description")}
+                {...register("description", { required: true })}
                 placeholder="Describe the apartment"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.description && <p className="text-sm text-red-500">Description is required</p>}
             </div>
 
             {/* Rent */}
@@ -244,10 +290,11 @@ export default function AddApartmentForm() {
               <Label>Rent (per month)</Label>
               <Input
                 type="number"
-                {...register("rent")}
+                {...register("rent", { required: true })}
                 placeholder="Enter rent amount"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.rent && <p className="text-sm text-red-500">Rent is required</p>}
             </div>
 
             {/* BHK */}
@@ -256,6 +303,7 @@ export default function AddApartmentForm() {
               <Controller
                 name="bhk"
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
                     <SelectTrigger>
@@ -269,6 +317,7 @@ export default function AddApartmentForm() {
                   </Select>
                 )}
               />
+              {errors.bhk && <p className="text-sm text-red-500">BHK is required</p>}
             </div>
 
             {/* Room Sharing Type */}
@@ -277,6 +326,7 @@ export default function AddApartmentForm() {
               <Controller
                 name="room_sharing_type"
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
                     <SelectTrigger>
@@ -289,6 +339,7 @@ export default function AddApartmentForm() {
                   </Select>
                 )}
               />
+              {errors.room_sharing_type && <p className="text-sm text-red-500">Room sharing type is required</p>}
             </div>
 
             {/* Available Beds */}
@@ -296,10 +347,11 @@ export default function AddApartmentForm() {
               <Label>Available Beds</Label>
               <Input
                 type="number"
-                {...register("available_beds")}
+                {...register("available_beds", { required: true })}
                 placeholder="Available beds"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.available_beds && <p className="text-sm text-red-500">Available beds is required</p>}
             </div>
 
             {/* Total Beds */}
@@ -307,10 +359,11 @@ export default function AddApartmentForm() {
               <Label>Total Beds</Label>
               <Input
                 type="number"
-                {...register("total_beds")}
+                {...register("total_beds", { required: true })}
                 placeholder="Total beds"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.total_beds && <p className="text-sm text-red-500">Total beds is required</p>}
             </div>
 
             {/* Food Options */}
@@ -339,10 +392,11 @@ export default function AddApartmentForm() {
             <div>
               <Label>Location</Label>
               <Input
-                {...register("location")}
+                {...register("location", { required: true })}
                 placeholder="Enter location"
                 disabled={!isAadharValid && !isVerified}
               />
+              {errors.location && <p className="text-sm text-red-500">Location is required</p>}
             </div>
 
             {/* Latitude and Longitude */}
@@ -351,19 +405,21 @@ export default function AddApartmentForm() {
                 <Label>Latitude</Label>
                 <Input
                   type="text"
-                  {...register("latitude")}
+                  {...register("latitude", { required: true })}
                   placeholder="Enter latitude"
                   disabled={!isAadharValid && !isVerified}
                 />
+                {errors.latitude && <p className="text-sm text-red-500">Latitude is required</p>}
               </div>
               <div>
                 <Label>Longitude</Label>
                 <Input
                   type="text"
-                  {...register("longitude")}
+                  {...register("longitude", { required: true })}
                   placeholder="Enter longitude"
                   disabled={!isAadharValid && !isVerified}
                 />
+                {errors.longitude && <p className="text-sm text-red-500">Longitude is required</p>}
               </div>
             </div>
 
@@ -373,6 +429,7 @@ export default function AddApartmentForm() {
               <Controller
                 name="hostel_type"
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
                     <SelectTrigger>
@@ -385,6 +442,7 @@ export default function AddApartmentForm() {
                   </Select>
                 )}
               />
+              {errors.hostel_type && <p className="text-sm text-red-500">Hostel type is required</p>}
             </div>
 
             {/* Duration */}
@@ -393,6 +451,7 @@ export default function AddApartmentForm() {
               <Controller
                 name="duration"
                 control={control}
+                rules={{ required: true }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
                     <SelectTrigger>
@@ -405,6 +464,7 @@ export default function AddApartmentForm() {
                   </Select>
                 )}
               />
+              {errors.duration && <p className="text-sm text-red-500">Duration is required</p>}
             </div>
 
             {/* Parking Available */}
@@ -442,29 +502,10 @@ export default function AddApartmentForm() {
                   </div>
                 )}
               </div>
-              <div className="mt-4">
-                {imagePaths.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-lg">Uploaded Images</h4>
-                    <div className="flex flex-wrap gap-4 mt-2">
-                      {imagePaths.map((imagePath, index) => (
-                        <div key={index} className="w-32 h-32">
-                          <img
-                            src={imagePath}
-                            alt={`uploaded-${index}`}
-                            className="object-cover w-full h-full rounded-md"
-                          />
-                          <p className="text-xs text-center mt-2">Uploaded {index + 1}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" disabled={!isAadharValid && !isVerified}>
+            <Button type="submit" disabled={!isFormValid()}>
               Submit
             </Button>
           </form>

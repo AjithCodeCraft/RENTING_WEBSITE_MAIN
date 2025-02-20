@@ -1362,12 +1362,12 @@ def remove_item_wishlist_with_apartment_id(request, apartment_id):
 
 
 @api_view(['POST'])
-@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
-@permission_classes([IsAuthenticated])  # Ensure the user is authenticated
+@authentication_classes([AdminAuthentication]) 
+@permission_classes([IsAuthenticated])  
 def create_hostel_approval(request):
-    # Prepare data and associate the logged-in admin with the approval
+    
     data = request.data
-    data['admin'] = request.user.admin_id  # Use the custom admin_id field from the authenticated admin
+    data['admin'] = request.user.admin_id 
 
     serializer = HostelApprovalSerializer(data=data)
     

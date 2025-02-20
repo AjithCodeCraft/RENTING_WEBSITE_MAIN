@@ -442,7 +442,7 @@ const Signup = () => {
           <Image
             src={userRole === "seeker" ? "/tree-house.jpg" : "/forent.png"}
             alt={userRole === "seeker" ? "Seeker Image" : "Owner Image"}
-            layout="fill"
+            fill
             objectFit=""
           />
         </div>
