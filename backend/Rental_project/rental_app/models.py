@@ -54,7 +54,7 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 class HouseOwner(models.Model):
     owner = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    verified = models.BooleanField(default=False)
+    verified = models.BooleanField(default=True)
     SSN = models.CharField(max_length=20, unique=True, null=True, blank=True)
 
 

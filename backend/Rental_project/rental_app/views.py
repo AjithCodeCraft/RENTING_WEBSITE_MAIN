@@ -1,3 +1,4 @@
+import base64
 import datetime
 import random
 from django.shortcuts import get_object_or_404
@@ -9,6 +10,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import json
 import os
+from gridfs import GridFS
 import jwt
 from django.core.mail import send_mail
 import urllib.parse
@@ -366,10 +368,21 @@ def get_apartments_by_owner(request, owner_id):
 
 
     
+MONGO_URI = os.getenv("MONGO_HOST")  
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  
+
+# Connect to MongoDB
+client = MongoClient(MONGO_URI)  
+db = client[MONGO_DB_NAME]  
+
+# Initialize GridFS correctly
+fs = GridFS(db) 
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_apartment_image(request):
-    """Add an image to an apartment."""
+    """Upload an image to MongoDB GridFS and link it to an apartment."""
     apartment_uuid = request.data.get('apartment_uuid')
     file = request.FILES.get('image')
 
@@ -377,26 +390,23 @@ def add_apartment_image(request):
         return JsonResponse({'error': 'Missing apartment UUID or image file'}, status=400)
 
     try:
-        # Get the Apartment object using the provided UUID
         apartment = Apartment.objects.get(apartment_id=apartment_uuid)
     except Apartment.DoesNotExist:
         return JsonResponse({'error': 'Apartment not found'}, status=404)
 
-    # Generate a unique file name for the uploaded image
-    file_extension = file.name.split('.')[-1]
-    file_name = f"{uuid.uuid4()}.{file_extension}"
-    file_path = default_storage.save(file_name, ContentFile(file.read()))
- 
-    # Create a new ApartmentImage instance and link it to the Apartment
+    # Store file in GridFS
+    file_id = fs.put(file.read(), filename=file.name, content_type=file.content_type)
+
+    # Save reference in ApartmentImage model
     apartment_image = ApartmentImage.objects.create(
-        apartment=apartment,  # Link to the apartment
-        image_path=file_path  # Save the file path
+        apartment=apartment,
+        image_path=str(file_id)  # Store GridFS file ID
     )
 
     return JsonResponse({
         'message': 'Image uploaded successfully',
-        'image_id': str(apartment_image.image_id),  # Return the image ID
-        'image_path': file_path
+        'image_id': str(apartment_image.image_id),
+        'gridfs_id': str(file_id)
     }, status=201)
 
 
@@ -405,55 +415,148 @@ def add_apartment_image(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_apartment_images(request, apartment_id):
-    """Retrieve all images for a specific apartment."""
+    """Retrieve all images for a specific apartment from ApartmentImage model & GridFS."""
     try:
-        images = ApartmentImage.objects.filter(apartment_id=apartment_id)
-        serializer = ApartmentImageSerializer(images, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except ApartmentImage.DoesNotExist:
-        return Response({'error': 'No images found for this apartment'}, status=status.HTTP_404_NOT_FOUND)
+        # Ensure apartment_id is a string before using it
+        if isinstance(apartment_id, uuid.UUID):
+            apartment_id = str(apartment_id)  # Convert UUID object to string
+        
+        print(f"Received apartment_id: {apartment_id}")  # Debugging
+
+        # Fetch images from ApartmentImage model
+        apartment_images = ApartmentImage.objects.filter(apartment_id=apartment_id)
+        
+        if not apartment_images.exists():
+            return JsonResponse({'error': 'No images found for this apartment'}, status=404)
+
+        image_list = []
+
+        for img in apartment_images:
+            try:
+                # Get the image from GridFS using image_path (GridFS file ID)
+                gridfs_file = fs.get(ObjectId(img.image_path))
+                image_data = gridfs_file.read()  # Read binary data
+                
+                image_list.append({
+                    "gridfs_id": str(gridfs_file._id),
+                    "image_id": str(img.image_id),
+                    "filename": gridfs_file.filename,
+                    "image_data": image_data.hex(),  # Convert binary to hex string
+                    "is_primary": img.is_primary
+                })
+            except Exception as e:
+                print(f"Error retrieving image from GridFS: {e}")
+
+        return JsonResponse({"images": image_list}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_apartment_image(request, image_id):
-    """Retrieve a single apartment image by image ID."""
+    """Retrieve a single apartment image from ApartmentImage model & GridFS and return it as base64 JSON."""
     try:
-        image = ApartmentImage.objects.get(image_id=image_id)
-        serializer = ApartmentImageSerializer(image)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Fetch the ApartmentImage record from the database
+        apartment_image = ApartmentImage.objects.get(image_id=image_id)
+
+        # Retrieve the image from GridFS using its stored `image_path` (GridFS file ID)
+        file_obj = fs.get(ObjectId(apartment_image.image_path))
+        image_data = file_obj.read()  # Read the binary image data
+        base64_image = base64.b64encode(image_data).decode('utf-8')  # Convert binary to base64
+
+        return JsonResponse({
+            "gridfs_id": str(file_obj._id),
+            "image_id": str(apartment_image.image_id),
+            "filename": file_obj.filename,
+            "content_type": file_obj.content_type,
+            "is_primary": apartment_image.is_primary,
+            "image_base64": base64_image  # Send base64 encoded image
+        }, status=200)
+
     except ApartmentImage.DoesNotExist:
-        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'error': 'Image record not found in ApartmentImage model'}, status=404)
+
+    except fs.errors.NoFile:
+        return JsonResponse({'error': 'Image file not found in GridFS'}, status=404)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_apartment_image(request, image_id):
-    """Update an apartment image (e.g., set as primary)."""
+    """Replace an apartment image in GridFS and update the reference in the database."""
     try:
+        # Get the existing image record
         image = ApartmentImage.objects.get(image_id=image_id)
-        serializer = ApartmentImageSerializer(image, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the new image file from request
+        new_image_file = request.FILES.get('image')
+
+        if not new_image_file:
+            return JsonResponse({'error': 'No new image file provided'}, status=400)
+
+        # Delete the old image from GridFS if it exists
+        if image.image_path:
+            try:
+                fs.delete(ObjectId(image.image_path))  # Remove from GridFS
+            except fs.errors.NoFile:
+                pass  # Ignore if file doesn't exist
+
+        # Save the new image to GridFS
+        new_file_id = fs.put(new_image_file.read(), filename=new_image_file.name, content_type=new_image_file.content_type)
+
+        # Update the database record with the new image path
+        image.image_path = str(new_file_id)
+        image.save()
+
+        return JsonResponse({
+            "message": "Image updated successfully",
+            "image_id": str(image.image_id),
+            "new_image_path": str(new_file_id)
+        }, status=200)
+
     except ApartmentImage.DoesNotExist:
-        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'error': 'Image not found'}, status=404)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_apartment_image(request, image_id):
-    """Delete an apartment image."""
+    """Delete an apartment image from GridFS and database."""
     try:
         image = ApartmentImage.objects.get(image_id=image_id)
+
+        # Delete from GridFS
+        if image.image_path:
+            try:
+                fs.delete(ObjectId(image.image_path))  # Remove from GridFS
+            except fs.errors.NoFile:
+                pass  # Ignore if file doesn't exist
+
+        # Delete from Database
         image.delete()
-        return Response({'message': 'Image deleted successfully'}, status=status.HTTP_200_OK)
+        
+        return JsonResponse({'message': 'Image deleted successfully'}, status=200)
+
     except ApartmentImage.DoesNotExist:
-        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'error': 'Image not found'}, status=404)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
 
 # Make sure that decimal values like rent_min, rent_max are not in quotes when making a request
 @api_view(['POST'])

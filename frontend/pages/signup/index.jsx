@@ -4,7 +4,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { CircleAlert } from "lucide-react";
+import { CircleAlert, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
@@ -56,7 +56,9 @@ const Signup = () => {
   const [countdown, setCountdown] = useState(0); // Start with 0, no countdown initially
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
   const [otpButtonText, setOtpButtonText] = useState("Get OTP");
-  const [otpButtonColor, setOtpButtonColor] = useState("bg-blue-500");
+  const [otpButtonColor, setOtpButtonColor] = useState("bg-green-500");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -111,8 +113,7 @@ const Signup = () => {
     setErrorMessage("");
 
     // Remove spaces from phone number
-  const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
-
+    const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
 
     const userData = {
       email,
@@ -121,8 +122,6 @@ const Signup = () => {
       name: `${firstName} ${lastName}`,
       user_type: userRole,
     };
-
-
 
     try {
       const response = await fetch("http://localhost:8000/api/signup/", {
@@ -148,7 +147,6 @@ const Signup = () => {
         const loginData = await loginResponse.json();
 
         if (loginResponse.ok) {
-
           localStorage.setItem("user_type", loginData.user_type);
           localStorage.setItem("access_token", loginData.access);
           localStorage.setItem("email", email);
@@ -165,11 +163,6 @@ const Signup = () => {
         } else {
           setErrorMessage(loginData.message || "Login failed. Please try again.");
         }
-
-        const auth = getAuth();
-        await signInWithEmailAndPassword(auth, email, password);
-        
-        router.push("/dashboard"); // Redirect to dashboard or any other page
 
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
@@ -202,7 +195,11 @@ const Signup = () => {
         setIsOtpDialogOpen(true);
         setCountdown(45); // Start the countdown
       } else {
-        setErrorMessage(data.message || "Failed to send OTP. Please try again.");
+        if (data.message === "Email already exists") {
+          setErrorMessage("Account already exists. Please log in.");
+        } else {
+          setErrorMessage(data.message || "Failed to send OTP. Please try again.");
+        }
       }
     } catch (error) {
       setErrorMessage("An error occurred. Please try again.");
@@ -237,7 +234,7 @@ const Signup = () => {
         setIsOtpDialogOpen(false);
         setOtpError("");
         setOtpButtonText("Verified");
-        setOtpButtonColor("bg-green-500");
+        setOtpButtonColor("bg-blue-500");
       } else {
         setOtpError(data.message || "Invalid OTP. Please try again.");
       }
@@ -374,32 +371,50 @@ const Signup = () => {
                     </Tooltip>
                   </Label>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  className="rounded-[3px]"
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    validatePassword(e.target.value);
-                  }}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    className="rounded-[3px] pr-10"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      validatePassword(e.target.value);
+                    }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
+                  </button>
+                </div>
                 <p className={`mt-1 ${passwordStrengthColor} text-xs`}>{passwordValidationMessage}</p>
               </div>
               <div className="grid gap-2 relative">
                 <Label htmlFor="confirm-password">Re-enter Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  className="rounded-[3px]"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    validatePasswordMatch(e.target.value);
-                  }}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    className="rounded-[3px] pr-10"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      validatePasswordMatch(e.target.value);
+                    }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
+                  </button>
+                </div>
                 <p className={`mt-1 ${passwordMatchColor} text-xs`}>{passwordMatchMessage}</p>
               </div>
               {errorMessage && (
@@ -435,8 +450,8 @@ const Signup = () => {
       </div>
 
       {/* OTP Dialog */}
-      <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen} >
+        <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
             <DialogTitle>Enter OTP</DialogTitle>
           </DialogHeader>

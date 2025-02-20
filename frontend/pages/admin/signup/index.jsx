@@ -84,9 +84,8 @@ const AdminSignup = () => {
     setIsSigningUp(true);
     setErrorMessage("");
 
-    const formattedPhoneNumber = phoneNumber.replace(/[\s]/g, "");
-    const API_URL_SIGNUP = "http://127.0.0.1:8000/api/register-admin/";
-    const API_URL_LOGIN = "http://127.0.0.1:8000/api/login-admin/";
+    const API_URL_SIGNUP = `${process.env.NEXT_PUBLIC_API_URL}/register-admin/`;
+    const API_URL_LOGIN = `${process.env.NEXT_PUBLIC_API_URL}/login-admin/`;
 
     const adminSignUpFormData = {
       email: email,
