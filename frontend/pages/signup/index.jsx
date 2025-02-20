@@ -437,7 +437,6 @@ const Signup = () => {
           </p>
         </div>
 
-        {/* Dynamic Image Based on Role */}
         <div className="relative hidden bg-muted lg:block">
           <div className="absolute inset-y-0 left-0 w-px bg-border"></div>
           <Image
