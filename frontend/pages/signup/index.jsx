@@ -110,7 +110,9 @@ const Signup = () => {
     setIsSigningUp(true);
     setErrorMessage("");
 
-    const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
+    // Remove spaces from phone number
+  const formattedPhoneNumber = phoneNumber.replace(/\s+/g, "");
+
 
     const userData = {
       email,
@@ -119,6 +121,14 @@ const Signup = () => {
       name: `${firstName} ${lastName}`,
       user_type: userRole,
     };
+
+  const userData = {
+    email,
+    phone: formattedPhoneNumber,
+    password_hash: password,
+    name: `${firstName} ${lastName}`,
+    user_type: userRole,
+  };
 
     try {
       const response = await fetch("http://localhost:8000/api/signup/", {
@@ -161,6 +171,12 @@ const Signup = () => {
         } else {
           setErrorMessage(loginData.message || "Login failed. Please try again.");
         }
+
+        const auth = getAuth();
+        await signInWithEmailAndPassword(auth, email, password);
+        
+        router.push("/dashboard"); // Redirect to dashboard or any other page
+
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }

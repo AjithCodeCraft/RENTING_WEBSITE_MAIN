@@ -37,7 +37,12 @@ from django.contrib.auth.hashers import make_password,check_password
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
+
 from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+=======
+from django.middleware.csrf import get_token
+from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
                           WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
 SECRET_KEY = settings.SECRET_KEY  
@@ -1130,10 +1135,9 @@ def register_admin(request):
             name=name,
             password_hash=make_password(password)  # ✅ Hash the password before storing
         )
-
         return Response({'message': 'Admin created successfully', 'admin_id': str(admin.admin_id)}, status=status.HTTP_201_CREATED)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -1347,6 +1351,7 @@ def get_complaints_with_apartment_id(request, apartment_id):
         status=status.HTTP_200_OK
     )
     
+@csrf_exempt
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_complaints(request):
@@ -1367,6 +1372,7 @@ def get_all_complaints(request):
 
 
 
+
 @api_view(['POST'])
 def check_owner_verification(request):
     serializer = CheckOwnerVerificationSerializer(data=request.data)
@@ -1381,3 +1387,12 @@ def check_owner_verification(request):
         except HouseOwner.DoesNotExist:
             return Response({'error': 'House owner not found'}, status=status.HTTP_404_NOT_FOUND)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+=======
+@api_view(['GET'])
+def get_csrf_token(request):
+    csrf_token = request.COOKIES.get("csrftoken") or get_token(request)
+    response = JsonResponse({"csrfToken": csrf_token})
+    response['X-CSRFToken'] = csrf_token
+    response.set_cookie("csrftoken", csrf_token, httponly=False, samesite="None", secure=False)
+    return response
+

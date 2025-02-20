@@ -57,8 +57,9 @@ from .views import (
     add_complaint,
     get_complaints_with_apartment_id,
     get_all_complaints,
-    verify_otp
-)
+    verify_otp,
+    get_csrf_token
+
 
 urlpatterns = [
     path("signup/", register_user, name="register_user"),  # 🔹 User Registration
@@ -266,6 +267,7 @@ urlpatterns = [
     path(
         'get-complaints',
         get_all_complaints,
+
         name="get_all_complaints",
     ),
     path(
@@ -280,6 +282,14 @@ urlpatterns = [
         'check-owner-verification/', 
         check_owner_verification, 
         name='check-owner-verification')
+
+        name="get_all_complaints"
+    ),
+    path(
+        'get-csrf-token/',
+        get_csrf_token,
+        name="get_csrf_token"
+    ),
     ]
 
 
