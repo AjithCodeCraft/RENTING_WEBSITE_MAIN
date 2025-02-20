@@ -293,7 +293,8 @@ def apartment_detail(request, pk):
 
 # Get House Owner by Owner ID
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@authentication_classes([AdminAuthentication])  
+#@permission_classes([IsAuthenticated])
 def get_house_owner_by_id(request, owner_id):
     try:
         user = User.objects.get(id=owner_id)
@@ -1274,6 +1275,15 @@ def create_hostel_approval(request):
     
     return JsonResponse(serializer.errors, status=400)
 
+@api_view(['GET'])
+#@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
+@permission_classes([IsAuthenticated])  # Ensure the user is authenticated
+def get_hostel_approval(request):
+    approval = HostelApproval.objects.all()
+    
+    serializer = HostelApprovalSerializer(approval, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 
@@ -1302,6 +1312,13 @@ def get_pending_apartments(request):
     serializer = ApartmentSerializer(pending_apartments, many=True)
     
     return JsonResponse(serializer.data, safe=False)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_pending(request, owner_id):
+    pending = Apartment.objects.filter(owner_id=owner_id)
+    pending.delete()
+    return Response({"message": "Deleted"}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1369,9 +1386,6 @@ def get_all_complaints(request):
     )
 
 
-
-
-
 @api_view(['POST'])
 def check_owner_verification(request):
     serializer = CheckOwnerVerificationSerializer(data=request.data)
@@ -1386,6 +1400,7 @@ def check_owner_verification(request):
         except HouseOwner.DoesNotExist:
             return Response({'error': 'House owner not found'}, status=status.HTTP_404_NOT_FOUND)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 def get_csrf_token(request):

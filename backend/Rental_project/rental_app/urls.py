@@ -58,7 +58,9 @@ from .views import (
     get_complaints_with_apartment_id,
     get_all_complaints,
     verify_otp,
-    get_csrf_token
+    get_csrf_token,
+    get_hostel_approval,
+    delete_pending
 )
 
 
@@ -295,6 +297,15 @@ urlpatterns = [
         'get-csrf-token/',
         get_csrf_token,
         name="get_csrf_token"
+    ),
+    path(
+        'get-hostel-approval/',
+        get_hostel_approval,
+        name="get_hostel_approval"
+    ),
+    path('delete-pending/<str:owner_id>',
+         delete_pending,
+         name="delete_pending"
     ),
 ]
 
