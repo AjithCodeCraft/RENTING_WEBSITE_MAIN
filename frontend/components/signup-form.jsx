@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GalleryVerticalEnd } from "lucide-react";
 import Image from "next/image";
 
 export default function AdminSignupComponent({ props: props }) {
@@ -183,7 +182,7 @@ export default function AdminSignupComponent({ props: props }) {
           </p>
         </div>
 
-        {/* Dynamic Image Based on Role */}
+        {/* Signup Cover Image */}
         <div className="relative hidden bg-muted lg:block">
           <div className="absolute inset-y-0 left-0 w-px bg-border"></div>
           <Image
