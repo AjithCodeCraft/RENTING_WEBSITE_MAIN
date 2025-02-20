@@ -112,7 +112,7 @@ export default function AddApartmentForm() {
       parking_available: data.parking_available || false,
       hostel_type: data.hostel_type,
       duration: data.duration,
-      image_paths: imagePaths, // Include image paths in the apartment data
+
     };
 
     try {
@@ -141,25 +141,25 @@ export default function AddApartmentForm() {
   const handleFileChange = (e) => {
     const files = e.target.files;
     setImageFiles([...imageFiles, ...files]); // Store the selected files in state for preview
-  
+
     // Upload each file and get the image path
     Array.from(files).forEach(uploadImage);
   };
-  
+
   const uploadImage = async (file) => {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) {
       setErrorMessage("Authentication token not found");
       return;
     }
-  
+
     const apartmentId = "apartment_uuid_here"; // Replace with the actual apartment ID you're working with
-  
+
     const formData = new FormData();
     formData.append("image", file);
     formData.append("apartment", apartmentId); // Include the apartment ID
     formData.append("image_path", ""); // Initially set to an empty value; will be filled by the server if necessary
-  
+
     try {
       const response = await fetch("http://localhost:8000/api/apartment-images/add/", {
         method: "POST",
@@ -168,11 +168,11 @@ export default function AddApartmentForm() {
         },
         body: formData,
       });
-  
+
       const result = await response.json();
-  
+
       console.log("Image upload response:", result);
-  
+
       if (response.ok) {
         setImagePaths((prevPaths) => [...prevPaths, result.image_path]);
       } else {
@@ -183,8 +183,8 @@ export default function AddApartmentForm() {
       console.error("Network error:", error);
     }
   };
-  
-  
+
+
 
   return (
     <div className="max-w-3xl mx-auto my-8">
@@ -261,13 +261,21 @@ export default function AddApartmentForm() {
             <div>
               <Label>Food Options</Label>
               <div className="flex gap-4">
-                {["1", "2"].map((food) => (
-                  <div key={food} className="flex items-center gap-2">
-                    <Checkbox value={food} onCheckedChange={(checked) => {
-                      const currentFood = watch("food") || [];
-                      setValue("food", checked ? [...currentFood, food] : currentFood.filter((f) => f !== food));
-                    }} disabled={!isAadharValid && !isVerified} />
-                    <Label>{food}</Label>
+                {[
+                  { label: "Breakfast", value: "1" },
+                  { label: "Lunch", value: "2" },
+                  { label: "Dinner", value: "3" }
+                ].map((food) => (
+                  <div key={food.value} className="flex items-center gap-2">
+                    <Checkbox
+                      value={food.value}
+                      onCheckedChange={(checked) => {
+                        const currentFood = watch("food") || [];
+                        setValue("food", checked ? [...currentFood, food.value] : currentFood.filter((f) => f !== food.value));
+                      }}
+                      disabled={!isAadharValid && !isVerified}
+                    />
+                    <Label>{food.label}</Label>
                   </div>
                 ))}
               </div>
@@ -299,7 +307,6 @@ export default function AddApartmentForm() {
                 <SelectContent>
                   <SelectItem value="boys">Boys</SelectItem>
                   <SelectItem value="girls">Girls</SelectItem>
-                  <SelectItem value="co-ed">Co-ed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -331,49 +338,49 @@ export default function AddApartmentForm() {
             </div>
 
             <div>
-  <Label>Apartment Images</Label>
-  <Input
-    type="file"
-    multiple
-    onChange={handleFileChange}
-    disabled={!isAadharValid && !isVerified}
-  />
-  <div className="mt-4">
-    {imageFiles.length > 0 && (
-      <div className="flex flex-wrap gap-4">
-        {imageFiles.map((file, index) => (
-          <div key={index} className="w-32 h-32">
-            <img
-              src={URL.createObjectURL(file)} // Show image preview
-              alt={`preview-${index}`}
-              className="object-cover w-full h-full rounded-md"
-            />
-            <p className="text-xs text-center mt-2">{file.name}</p>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-  <div className="mt-4">
-    {imagePaths.length > 0 && (
-      <div>
-        <h4 className="font-semibold text-lg">Uploaded Images</h4>
-        <div className="flex flex-wrap gap-4 mt-2">
-          {imagePaths.map((imagePath, index) => (
-            <div key={index} className="w-32 h-32">
-              <img
-                src={imagePath} // Show image from server (after upload)
-                alt={`uploaded-${index}`}
-                className="object-cover w-full h-full rounded-md"
+              <Label>Apartment Images</Label>
+              <Input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                disabled={!isAadharValid && !isVerified}
               />
-              <p className="text-xs text-center mt-2">Uploaded {index + 1}</p>
+              <div className="mt-4">
+                {imageFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-4">
+                    {imageFiles.map((file, index) => (
+                      <div key={index} className="w-32 h-32">
+                        <img
+                          src={URL.createObjectURL(file)} // Show image preview
+                          alt={`preview-${index}`}
+                          className="object-cover w-full h-full rounded-md"
+                        />
+                        <p className="text-xs text-center mt-2">{file.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4">
+                {imagePaths.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-lg">Uploaded Images</h4>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      {imagePaths.map((imagePath, index) => (
+                        <div key={index} className="w-32 h-32">
+                          <img
+                            src={imagePath} // Show image from server (after upload)
+                            alt={`uploaded-${index}`}
+                            className="object-cover w-full h-full rounded-md"
+                          />
+                          <p className="text-xs text-center mt-2">Uploaded {index + 1}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
-</div>
 
             <Button type="submit" disabled={!isAadharValid && !isVerified}>Submit</Button>
           </form>

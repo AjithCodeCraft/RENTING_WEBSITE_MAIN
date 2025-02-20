@@ -166,11 +166,6 @@ const Signup = () => {
           setErrorMessage(loginData.message || "Login failed. Please try again.");
         }
 
-        const auth = getAuth();
-        await signInWithEmailAndPassword(auth, email, password);
-        
-        router.push("/dashboard"); // Redirect to dashboard or any other page
-
       } else {
         setErrorMessage(data.message || "Signup failed. Please try again.");
       }
