@@ -38,10 +38,9 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 
-from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
-=======
+
 from django.middleware.csrf import get_token
-from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer,HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
                           WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
@@ -1387,7 +1386,7 @@ def check_owner_verification(request):
         except HouseOwner.DoesNotExist:
             return Response({'error': 'House owner not found'}, status=status.HTTP_404_NOT_FOUND)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-=======
+
 @api_view(['GET'])
 def get_csrf_token(request):
     csrf_token = request.COOKIES.get("csrftoken") or get_token(request)

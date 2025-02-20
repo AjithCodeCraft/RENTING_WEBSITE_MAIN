@@ -59,6 +59,7 @@ from .views import (
     get_all_complaints,
     verify_otp,
     get_csrf_token
+)
 
 
 urlpatterns = [
@@ -281,16 +282,21 @@ urlpatterns = [
     path(
         'check-owner-verification/', 
         check_owner_verification, 
-        name='check-owner-verification')
+        name='check-owner-verification'),
 
-        name="get_all_complaints"
-    ),
+    path(
+        'get-complaints/',
+        get_all_complaints,
+        name="get_all_complaints",
+        
+    ),      
+   
     path(
         'get-csrf-token/',
         get_csrf_token,
         name="get_csrf_token"
     ),
-    ]
+]
 
 
 

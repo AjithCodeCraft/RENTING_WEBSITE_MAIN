@@ -122,13 +122,7 @@ const Signup = () => {
       user_type: userRole,
     };
 
-  const userData = {
-    email,
-    phone: formattedPhoneNumber,
-    password_hash: password,
-    name: `${firstName} ${lastName}`,
-    user_type: userRole,
-  };
+
 
     try {
       const response = await fetch("http://localhost:8000/api/signup/", {
