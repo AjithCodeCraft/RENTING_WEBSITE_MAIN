@@ -1,6 +1,6 @@
 
 // components/dashboard/PendingApprovalsList.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
@@ -8,14 +8,16 @@ import axios from 'axios';
 import { ownerDocument } from '@mui/material';
 import { useAdminContext } from '../context/AdminContext';
 
-const PendingApprovalsList = ({ limit }) => {
+const PendingApprovalsList = ({ limit, setPendingCount }) => {
 
   const {
     unapprovedAppartments,
     setUnapprovedApartments,
-    pendingCount, 
-    setPendingCount
   } = useAdminContext();
+
+  const [approvals, setApprovals] = useState([]);
+
+  const reveal_all = useRef(false);
 
   const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/get-pending-apartments/`;
   const API_URL_GET_OWNER = `${process.env.NEXT_PUBLIC_API_URL}/house-owner/by-id`;
@@ -63,9 +65,13 @@ const PendingApprovalsList = ({ limit }) => {
           urgent: true,
         };
       }));
-      console.log(API_URL);
       setUnapprovedApartments(data);
       setPendingCount(data.length);
+      if (limit < data.length) {
+        setApprovals(data.slice(0, limit));
+      } else {
+        setApprovals(data);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -75,9 +81,37 @@ const PendingApprovalsList = ({ limit }) => {
     get_pending_data();
   }, []);
 
-  console.log(unapprovedAppartments);
+  const handleReject = async (apartment_id) => {
+    const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/apartments/${apartment_id}`;
+    try {
+      const response = await axios.delete(API_URL, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+      get_pending_data();
+    } catch(error) {
+      console.log(error);
+    }
+  }
 
-  const approvals = limit ? unapprovedAppartments.slice(0, limit) : unapprovedAppartments;
+  const handleApprove = async (apartment_id) => {
+    const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/approve-hostel/${apartment_id}`;
+    try {
+      const response = await axios.patch(API_URL, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+      get_pending_data();
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -98,11 +132,11 @@ const PendingApprovalsList = ({ limit }) => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" className="flex items-center gap-2">
+            <Button type="button" size="sm" className="flex items-center gap-2" onClick={() => handleApprove(approval.id)}>
               <CheckCircle className="h-4 w-4" />
               Approve
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" className="flex items-center gap-2" onClick={() => handleReject(approval.id)}>
               <XCircle className="h-4 w-4" />
               Reject
             </Button>
@@ -110,8 +144,17 @@ const PendingApprovalsList = ({ limit }) => {
         </div>
       ))}
       {approvals.length == 0 && "Such emptiness..."}
-      {limit && unapprovedAppartments.length > limit && (
-        <Button variant="link" className="w-full">View all {unapprovedAppartments.length} pending approvals</Button>
+      {!reveal_all.current && (
+        <Button variant="link" className="w-full" onClick={() => { 
+          setApprovals(unapprovedAppartments); reveal_all.current = true; }}>
+            View all {unapprovedAppartments.length} pending approvals
+        </Button>
+      )}
+      {reveal_all.current && (
+        <Button variant="link" className="w-full" onClick={() => { 
+          setApprovals(unapprovedAppartments.slice(0, limit)); reveal_all.current = false; }}>
+            Show Less pending approvals
+        </Button>
       )}
     </div>
   );

@@ -227,7 +227,6 @@ class HostelApproval(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-
 class OTPVerification(models.Model):
     email = models.EmailField(unique=True)
     otp = models.IntegerField()
