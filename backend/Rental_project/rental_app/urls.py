@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     add_house_owner,
+    check_owner_verification,
     get_apartments_by_owner,
     get_house_owner_by_id,
     get_house_owner_by_ssn,
@@ -10,6 +11,7 @@ from .views import (
     add_apartment_image,
     get_apartment_images,
     get_apartment_image,
+    send_otp,
     update_apartment_image,
     delete_apartment_image,
     get_house_owner,
@@ -54,7 +56,8 @@ from .views import (
     get_pending_apartments,
     add_complaint,
     get_complaints_with_apartment_id,
-    get_all_complaints
+    get_all_complaints,
+    verify_otp
 )
 
 urlpatterns = [
@@ -263,8 +266,20 @@ urlpatterns = [
     path(
         'get-complaints',
         get_all_complaints,
-        name="get_all_complaints"
-    )
+        name="get_all_complaints",
+    ),
+    path(
+        'send_otp/', 
+        send_otp, 
+        name='send_otp'),
+    path(
+        'verify_otp/', 
+        verify_otp, 
+        name='verify_otp'),
+    path(
+        'check-owner-verification/', 
+        check_owner_verification, 
+        name='check-owner-verification')
     ]
 
 

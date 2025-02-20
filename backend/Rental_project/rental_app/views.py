@@ -5,6 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.views.decorators.csrf import csrf_exempt
 import firebase_admin
 from rest_framework.views import APIView
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 import json
 import os
 import jwt
@@ -35,115 +37,128 @@ from django.contrib.auth.hashers import make_password,check_password
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
-from .serializers import (ApartmentSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
                           WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
 SECRET_KEY = settings.SECRET_KEY  
 
 
 @api_view(['POST'])
-def register_user(request):
-    method = request.data.get("method")
+def send_otp(request):
+    email = request.data.get('email')
 
-    if method == "register":
-        email = request.data.get('email')
-        phone = request.data.get('phone')
-        password = request.data.get('password_hash')
-        name = request.data.get('name', '')
-        user_type = request.data.get('user_type', 'seeker')
+    # Validate required fields
+    if not email:
+        return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate required fields
-        if not email or not phone or not password:
-            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+    # Check if email already exists in MongoDB
+    if User.objects.filter(email=email).exists():
+        return Response({'error': 'Email already exists in MongoDB'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if email already exists in MongoDB
-        if User.objects.filter(email=email).exists():
-            return Response({'error': 'Email already exists in MongoDB'}, status=status.HTTP_400_BAD_REQUEST)
+    # Generate a 6-digit OTP
+    otp = random.randint(100000, 999999)
 
-        # Generate a 6-digit OTP
-        otp = random.randint(100000, 999999)
+    # Store OTP in MongoDB (Temporary Storage)
+    OTPVerification.objects.update_or_create(
+        email=email,
+        defaults={"otp": otp, "created_at": timezone.now()}  # Use timezone-aware timestamp
+    )
 
-        # Store OTP in MongoDB (Temporary Storage)
-        OTPVerification.objects.update_or_create(
-            email=email,
-            defaults={"otp": otp, "created_at": timezone.now()}  # Use timezone-aware timestamp
+    # Send OTP via email
+    try:
+        send_mail(
+            subject="Your OTP for Registration",
+            message=f"Your OTP is: {otp}. It is valid for 5 minutes.",
+            from_email="alameena068@gmail.com",
+            recipient_list=[email],
         )
 
-        # Send OTP via email
-        try:
-            send_mail(
-                subject="Your OTP for Registration",
-                message=f"Your OTP is: {otp}. It is valid for 5 minutes.",
-                from_email="alameena068@gmail.com",
-                recipient_list=[email],
-            )
+        return Response({'message': 'OTP sent. Verify OTP to complete registration.'}, status=status.HTTP_200_OK)
 
-            return Response({'message': 'OTP sent. Verify OTP to complete registration.'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': f'Error sending OTP email: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        except Exception as e:
-            return Response({'error': f'Error sending OTP email: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@api_view(['POST'])
+def verify_otp(request):
+    email = request.data.get('email')
+    otp = request.data.get('otp')
 
-    elif method == "verify":
-        email = request.data.get('email')
-        otp = request.data.get('otp')
-        password = request.data.get('password_hash')
-        name = request.data.get('name')
-        phone = request.data.get('phone')
-        user_type = request.data.get('user_type', 'seeker')
+    if not email or not otp:
+        return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not email or not otp:
-            return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+    # Check if OTP is valid
+    try:
+        otp_entry = OTPVerification.objects.get(email=email)
+        otp_created_time = otp_entry.created_at  # Already timezone-aware
+        current_time = timezone.now()  # Ensure timezone awareness
 
-        # Check if OTP is valid
-        try:
-            otp_entry = OTPVerification.objects.get(email=email)
-            otp_created_time = otp_entry.created_at  # Already timezone-aware
-            current_time = timezone.now()  # Ensure timezone awareness
+        # Check OTP expiry (valid for 5 minutes)
+        if (current_time - otp_created_time).total_seconds() > 300:
+            return Response({'error': 'OTP expired'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check OTP expiry (valid for 5 minutes)
-            if (current_time - otp_created_time).total_seconds() > 300:
-                return Response({'error': 'OTP expired'}, status=status.HTTP_400_BAD_REQUEST)
+        # Check OTP correctness
+        if otp_entry.otp != int(otp):
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check OTP correctness
-            if otp_entry.otp != int(otp):
-                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'OTP verified successfully'}, status=status.HTTP_200_OK)
 
-        except OTPVerification.DoesNotExist:
-            return Response({'error': 'OTP not found or already used'}, status=status.HTTP_400_BAD_REQUEST)
+    except OTPVerification.DoesNotExist:
+        return Response({'error': 'OTP not found or already used'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            # Create user in Firebase
-            new_user = auth.create_user(
-                email=email,
-                password=password,
-                email_verified=True
-            )
+@api_view(['POST'])
+def register_user(request):
+    email = request.data.get('email')
+    password = request.data.get('password_hash')
+    name = request.data.get('name')
+    phone = request.data.get('phone')
+    user_type = request.data.get('user_type', 'seeker')
 
-            # Store user details in MongoDB
-            user = User.objects.create(
-                user_id=new_user.uid,
-                email=email,
-                phone=phone,
-                name=name,
-                user_type=user_type,
-                password_hash=make_password(password)
-            )
+    if not email or not password or not phone:
+        return Response({'error': 'Email, password, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Delete the OTP entry (no longer needed)
-            otp_entry.delete()
+    # Check if email already exists in Firebase
+    try:
+        auth.get_user_by_email(email)
+        return Response({'error': 'Email already exists in Firebase'}, status=status.HTTP_400_BAD_REQUEST)
+    except auth.UserNotFoundError:
+        pass
 
-            return Response({
-                "message": "User created successfully",
-                "user_id": new_user.uid
-            }, status=status.HTTP_201_CREATED)
+    # Check if email already exists in MongoDB
+    if User.objects.filter(email=email).exists():
+        return Response({'error': 'Email already exists in MongoDB'}, status=status.HTTP_400_BAD_REQUEST)
 
-        except auth.EmailAlreadyExistsError:
-            return Response({'error': 'Email already exists in Firebase'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': f'Unexpected error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    try:
+        # Create user in Firebase
+        new_user = auth.create_user(
+            email=email,
+            password=password,
+            email_verified=True
+        )
 
-    else:
-        return Response({'error': 'Invalid method. Use "register" or "verify".'}, status=status.HTTP_400_BAD_REQUEST)
+        # Update user profile to include phone number
+        auth.update_user(
+            new_user.uid,
+            phone_number=phone
+        )
+
+        # Store user details in MongoDB
+        user = User.objects.create(
+            user_id=new_user.uid,
+            email=email,
+            phone=phone,
+            name=name,
+            user_type=user_type,
+            password_hash=make_password(password)
+        )
+
+        return Response({
+            "message": "User created successfully",
+            "user_id": new_user.uid
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({'error': f'Unexpected error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['POST'])
@@ -350,11 +365,35 @@ def get_apartments_by_owner(request, owner_id):
 @permission_classes([IsAuthenticated])
 def add_apartment_image(request):
     """Add an image to an apartment."""
-    serializer = ApartmentImageSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    apartment_uuid = request.data.get('apartment_uuid')
+    file = request.FILES.get('image')
+
+    if not apartment_uuid or not file:
+        return JsonResponse({'error': 'Missing apartment UUID or image file'}, status=400)
+
+    try:
+        # Get the Apartment object using the provided UUID
+        apartment = Apartment.objects.get(apartment_id=apartment_uuid)
+    except Apartment.DoesNotExist:
+        return JsonResponse({'error': 'Apartment not found'}, status=404)
+
+    # Generate a unique file name for the uploaded image
+    file_extension = file.name.split('.')[-1]
+    file_name = f"{uuid.uuid4()}.{file_extension}"
+    file_path = default_storage.save(file_name, ContentFile(file.read()))
+ 
+    # Create a new ApartmentImage instance and link it to the Apartment
+    apartment_image = ApartmentImage.objects.create(
+        apartment=apartment,  # Link to the apartment
+        image_path=file_path  # Save the file path
+    )
+
+    return JsonResponse({
+        'message': 'Image uploaded successfully',
+        'image_id': str(apartment_image.image_id),  # Return the image ID
+        'image_path': file_path
+    }, status=201)
+
 
 
 
@@ -1324,3 +1363,21 @@ def get_all_complaints(request):
         serializer.data,
         status=status.HTTP_200_OK
     )
+
+
+
+
+@api_view(['POST'])
+def check_owner_verification(request):
+    serializer = CheckOwnerVerificationSerializer(data=request.data)
+    if serializer.is_valid():
+        email = serializer.validated_data['email']
+        try:
+            user = User.objects.get(email=email)
+            house_owner = HouseOwner.objects.get(owner=user)
+            return Response({'verified': house_owner.verified}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except HouseOwner.DoesNotExist:
+            return Response({'error': 'House owner not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

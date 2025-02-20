@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,43 @@ export default function AddApartmentForm() {
   const [isAadharValid, setIsAadharValid] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [imagePaths, setImagePaths] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    const checkVerificationStatus = async () => {
+      const accessToken = localStorage.getItem("access_token");
+      if (!accessToken) {
+        setErrorMessage("Authentication token not found");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:8000/api/check-owner-verification/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ email: localStorage.getItem("email") }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setIsVerified(data.verified);
+          setIsAadharValid(data.verified); // If the owner is verified, Aadhar is also considered valid
+        } else {
+          setErrorMessage(data.error || "Failed to check verification status");
+        }
+      } catch (error) {
+        setErrorMessage("Network error");
+      }
+    };
+
+    checkVerificationStatus();
+  }, []);
 
   const handleValidate = async () => {
     const aadharNumber = watch("aadharNumber");
@@ -54,8 +90,6 @@ export default function AddApartmentForm() {
     }
   };
 
-
-
   const onSubmit = async (data) => {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) {
@@ -78,6 +112,7 @@ export default function AddApartmentForm() {
       parking_available: data.parking_available || false,
       hostel_type: data.hostel_type,
       duration: data.duration,
+      image_paths: imagePaths, // Include image paths in the apartment data
     };
 
     try {
@@ -87,16 +122,14 @@ export default function AddApartmentForm() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(apartmentData),  // Ensure direct JSON structure
+        body: JSON.stringify(apartmentData),
       });
-
-      console.log("Apartment Data being sent:", apartmentData);
 
       const result = await response.json();
 
       if (response.ok) {
         console.log("Apartment added successfully!");
-        router.push("/apartments");
+        router.push("/owner");
       } else {
         setErrorMessage(result.error || "Failed to add apartment");
       }
@@ -105,17 +138,65 @@ export default function AddApartmentForm() {
     }
   };
 
+  const handleFileChange = (e) => {
+    const files = e.target.files;
+    setImageFiles([...imageFiles, ...files]); // Store the selected files in state for preview
+  
+    // Upload each file and get the image path
+    Array.from(files).forEach(uploadImage);
+  };
+  
+  const uploadImage = async (file) => {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      setErrorMessage("Authentication token not found");
+      return;
+    }
+  
+    const apartmentId = "apartment_uuid_here"; // Replace with the actual apartment ID you're working with
+  
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("apartment", apartmentId); // Include the apartment ID
+    formData.append("image_path", ""); // Initially set to an empty value; will be filled by the server if necessary
+  
+    try {
+      const response = await fetch("http://localhost:8000/api/apartment-images/add/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+  
+      const result = await response.json();
+  
+      console.log("Image upload response:", result);
+  
+      if (response.ok) {
+        setImagePaths((prevPaths) => [...prevPaths, result.image_path]);
+      } else {
+        setErrorMessage(result.error || "Failed to upload image");
+      }
+    } catch (error) {
+      setErrorMessage("Network error");
+      console.error("Network error:", error);
+    }
+  };
+  
+  
 
   return (
     <div className="max-w-3xl mx-auto my-8">
-      {/* Aadhar Number Input */}
-      <div className="mb-4">
-        <Label htmlFor="aadharNumber">Aadhar Number</Label>
-        <Input id="aadharNumber" {...register("aadharNumber")} placeholder="Enter 12-digit Aadhar number" />
-        <Button onClick={handleValidate} className="mt-2">Validate</Button>
-        {isVerified && <p className="text-sm text-green-500 mt-2">Aadhar Verified</p>}
-        {errorMessage && <p className="text-sm text-red-500 mt-2">{errorMessage}</p>}
-      </div>
+      {!isVerified && (
+        <div className="mb-4">
+          <Label htmlFor="aadharNumber">Aadhar Number</Label>
+          <Input id="aadharNumber" {...register("aadharNumber")} placeholder="Enter 12-digit Aadhar number" />
+          <Button onClick={handleValidate} className="mt-2">Validate</Button>
+          {isVerified && <p className="text-sm text-green-500 mt-2">Aadhar Verified</p>}
+          {errorMessage && <p className="text-sm text-red-500 mt-2">{errorMessage}</p>}
+        </div>
+      )}
 
       {/* Apartment Form - Disabled if Aadhar is not valid */}
       <Card className="max-w-3xl mx-auto my-8">
@@ -127,22 +208,22 @@ export default function AddApartmentForm() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <Label>Title</Label>
-              <Input {...register("title")} placeholder="Enter apartment title" disabled={!isAadharValid} />
+              <Input {...register("title")} placeholder="Enter apartment title" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>Description</Label>
-              <Textarea {...register("description")} placeholder="Describe the apartment" disabled={!isAadharValid} />
+              <Textarea {...register("description")} placeholder="Describe the apartment" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>Rent (per month)</Label>
-              <Input type="number" {...register("rent")} placeholder="Enter rent amount" disabled={!isAadharValid} />
+              <Input type="number" {...register("rent")} placeholder="Enter rent amount" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>BHK</Label>
-              <Select onValueChange={(value) => setValue("bhk", value)} disabled={!isAadharValid}>
+              <Select onValueChange={(value) => setValue("bhk", value)} disabled={!isAadharValid && !isVerified}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select BHK" />
                 </SelectTrigger>
@@ -156,7 +237,7 @@ export default function AddApartmentForm() {
 
             <div>
               <Label>Room Sharing Type</Label>
-              <Select onValueChange={(value) => setValue("room_sharing_type", value)} disabled={!isAadharValid}>
+              <Select onValueChange={(value) => setValue("room_sharing_type", value)} disabled={!isAadharValid && !isVerified}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select sharing type" />
                 </SelectTrigger>
@@ -169,12 +250,12 @@ export default function AddApartmentForm() {
 
             <div>
               <Label>Available Beds</Label>
-              <Input type="number" {...register("available_beds")} placeholder="Available beds" disabled={!isAadharValid} />
+              <Input type="number" {...register("available_beds")} placeholder="Available beds" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>Total Beds</Label>
-              <Input type="number" {...register("total_beds")} placeholder="Total beds" disabled={!isAadharValid} />
+              <Input type="number" {...register("total_beds")} placeholder="Total beds" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
@@ -185,7 +266,7 @@ export default function AddApartmentForm() {
                     <Checkbox value={food} onCheckedChange={(checked) => {
                       const currentFood = watch("food") || [];
                       setValue("food", checked ? [...currentFood, food] : currentFood.filter((f) => f !== food));
-                    }} disabled={!isAadharValid} />
+                    }} disabled={!isAadharValid && !isVerified} />
                     <Label>{food}</Label>
                   </div>
                 ))}
@@ -193,26 +274,26 @@ export default function AddApartmentForm() {
             </div>
             <div>
               <Label>Location</Label>
-              <Input {...register("location")} placeholder="Enter location" disabled={!isAadharValid} />
+              <Input {...register("location")} placeholder="Enter location" disabled={!isAadharValid && !isVerified} />
             </div>
             <div>
               <Label>Latitude</Label>
-              <Input type="text" {...register("latitude")} placeholder="Enter latitude" disabled={!isAadharValid} />
+              <Input type="text" {...register("latitude")} placeholder="Enter latitude" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>Longitude</Label>
-              <Input type="text" {...register("longitude")} placeholder="Enter longitude" disabled={!isAadharValid} />
+              <Input type="text" {...register("longitude")} placeholder="Enter longitude" disabled={!isAadharValid && !isVerified} />
             </div>
 
             <div>
               <Label>Hostel Type</Label>
               <Select
-                onValueChange={(value) => setValue("hostel_type", value)} //  Manually set value
-                disabled={!isAadharValid}>
+                onValueChange={(value) => setValue("hostel_type", value)}
+                disabled={!isAadharValid && !isVerified}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Hostel Type">
-                    {watch("hostel_type")} {/* Display selected value */}
+                    {watch("hostel_type")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -223,16 +304,15 @@ export default function AddApartmentForm() {
               </Select>
             </div>
 
-            {/* Duration Dropdown */}
             <div>
               <Label>Duration</Label>
               <Select
                 onValueChange={(value) => setValue("duration", value)}
-                disabled={!isAadharValid}
+                disabled={!isAadharValid && !isVerified}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Duration">
-                    {watch("duration")} {/*  Display selected value */}
+                    {watch("duration")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -243,23 +323,59 @@ export default function AddApartmentForm() {
             </div>
             <div className="flex items-center gap-2">
               <Checkbox
-                checked={watch("parking_available") || false} // 
-                onCheckedChange={(checked) => setValue("parking_available", checked)} // 
-                disabled={!isAadharValid}
+                checked={watch("parking_available") || false}
+                onCheckedChange={(checked) => setValue("parking_available", checked)}
+                disabled={!isAadharValid && !isVerified}
               />
               <Label>Parking Available</Label>
             </div>
 
             <div>
-              <Label>Apartment Image Paths (Comma Separated)</Label>
-              <Input
-                type="text"
-                placeholder="Enter image paths, separated by commas"
-                onChange={(e) => setImagePaths(e.target.value.split(",").map(path => path.trim()))}
-                disabled={!isAadharValid}
+  <Label>Apartment Images</Label>
+  <Input
+    type="file"
+    multiple
+    onChange={handleFileChange}
+    disabled={!isAadharValid && !isVerified}
+  />
+  <div className="mt-4">
+    {imageFiles.length > 0 && (
+      <div className="flex flex-wrap gap-4">
+        {imageFiles.map((file, index) => (
+          <div key={index} className="w-32 h-32">
+            <img
+              src={URL.createObjectURL(file)} // Show image preview
+              alt={`preview-${index}`}
+              className="object-cover w-full h-full rounded-md"
+            />
+            <p className="text-xs text-center mt-2">{file.name}</p>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+  <div className="mt-4">
+    {imagePaths.length > 0 && (
+      <div>
+        <h4 className="font-semibold text-lg">Uploaded Images</h4>
+        <div className="flex flex-wrap gap-4 mt-2">
+          {imagePaths.map((imagePath, index) => (
+            <div key={index} className="w-32 h-32">
+              <img
+                src={imagePath} // Show image from server (after upload)
+                alt={`uploaded-${index}`}
+                className="object-cover w-full h-full rounded-md"
               />
+              <p className="text-xs text-center mt-2">Uploaded {index + 1}</p>
             </div>
-            <Button type="submit" disabled={!isAadharValid}>Submit</Button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+
+            <Button type="submit" disabled={!isAadharValid && !isVerified}>Submit</Button>
           </form>
         </CardContent>
       </Card>
