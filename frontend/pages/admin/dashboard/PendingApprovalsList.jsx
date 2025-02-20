@@ -1,74 +1,87 @@
 
 // components/dashboard/PendingApprovalsList.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
+import axios from 'axios';
+import { ownerDocument } from '@mui/material';
+import { useAdminContext } from '../context/AdminContext';
 
 const PendingApprovalsList = ({ limit }) => {
-  // Mock data - in a real app, this would come from an API
-  const mockApprovals = [
-    {
-      id: 1,
-      name: "Sunny Side Hostel",
-      owner: "John Doe",
-      location: "New York, NY",
-      submittedDate: "2023-05-15",
-      status: "pending",
-      urgent: true,
-    },
-    {
-      id: 2,
-      name: "Mountain View Lodge",
-      owner: "Jane Smith",
-      location: "Denver, CO",
-      submittedDate: "2023-05-14",
-      status: "pending",
-      urgent: false,
-    },
-    {
-      id: 3,
-      name: "Beachfront Bungalows",
-      owner: "Mike Johnson",
-      location: "Miami, FL",
-      submittedDate: "2023-05-13",
-      status: "pending",
-      urgent: true,
-    },
-    {
-      id: 4,
-      name: "City Center Suites",
-      owner: "Sarah Williams",
-      location: "Chicago, IL",
-      submittedDate: "2023-05-12",
-      status: "pending",
-      urgent: false,
-    },
-    {
-      id: 5,
-      name: "Lakeside Retreat",
-      owner: "David Brown",
-      location: "Seattle, WA",
-      submittedDate: "2023-05-11",
-      status: "pending",
-      urgent: false,
-    },
-    {
-      id: 6,
-      name: "Downtown Lofts",
-      owner: "Emily Davis",
-      location: "San Francisco, CA",
-      submittedDate: "2023-05-10",
-      status: "pending",
-      urgent: true,
-    },
-  ];
 
-  const approvals = limit ? mockApprovals.slice(0, limit) : mockApprovals;
+  const {
+    unapprovedAppartments,
+    setUnapprovedApartments,
+    pendingCount, 
+    setPendingCount
+  } = useAdminContext();
+
+  const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/get-pending-apartments/`;
+  const API_URL_GET_OWNER = `${process.env.NEXT_PUBLIC_API_URL}/house-owner/by-id`;
+  const unique_ids = {};
+
+  const get_owner_name = async (owner_id) => {
+    if (unique_ids.hasOwnProperty(owner_id)) {
+      return unique_ids[owner_id];
+    }
+    try{
+      const owner_data = await axios.get(`${API_URL_GET_OWNER}/${owner_id}`, {
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+      });
+      unique_ids[owner_id] = owner_data.data.user_details.name;
+      return owner_data.data.user_details.name;
+    } catch(error) {
+      console.log(error);
+      return "Unknown owner";
+    }
+  }
+  const get_pending_data = async () => {
+    try {
+      const response = await axios.get(API_URL, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+      const data = await Promise.all(
+      response.data.map(async (item) => {
+        const ownerName = await get_owner_name(item.owner);
+        const date = new Date(item.created_at).toLocaleDateString();
+        return {
+          id: item.apartment_id,
+          name: item.title,
+          owner: ownerName,
+          location: item.location,
+          submittedDate: date,
+          status: "pending",
+          urgent: true,
+        };
+      }));
+      console.log(API_URL);
+      setUnapprovedApartments(data);
+      setPendingCount(data.length);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    get_pending_data();
+  }, []);
+
+  console.log(unapprovedAppartments);
+
+  const approvals = limit ? unapprovedAppartments.slice(0, limit) : unapprovedAppartments;
 
   return (
     <div className="space-y-4">
-      {approvals.map((approval) => (
+      {approvals.length > 0 && approvals.map((approval) => (
         <div key={approval.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg">
           <div className="space-y-2 mb-4 sm:mb-0">
             <div className="flex items-center gap-2">
@@ -96,11 +109,12 @@ const PendingApprovalsList = ({ limit }) => {
           </div>
         </div>
       ))}
-      {limit && mockApprovals.length > limit && (
-        <Button variant="link" className="w-full">View all {mockApprovals.length} pending approvals</Button>
+      {approvals.length == 0 && "Such emptiness..."}
+      {limit && unapprovedAppartments.length > limit && (
+        <Button variant="link" className="w-full">View all {unapprovedAppartments.length} pending approvals</Button>
       )}
     </div>
   );
 };
 
-export default PendingApprovalsList;
+export default PendingApprovalsList;4
