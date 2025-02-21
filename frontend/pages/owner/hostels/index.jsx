@@ -1,5 +1,4 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -15,18 +14,12 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 
-// Dummy data for owner's hostels
-const ownerHostels = [
-  { id: 1, name: "Green View Hostel", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.88013843230549, lat: 8.55855167721169, address: "XYZ Street, Your City" },
-  { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg", lng: 76.87899888341339, lat: 8.556990221115427, address: "XYZ Street, Your City" },
-  { id: 3, name: "City Lights Hostel", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.87645772879704, lat: 8.558444894438177, address: "XYZ Street, Your City" },
-];
-
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
 const HOSTEL_ICON_URL = "/hostel.png"; // Ensure the path is correct
 const USER_ICON_URL = "/user.png"; // Ensure the path is correct
 const ITEMS_PER_PAGE = 6; // Number of hostels per page
+const DEFAULT_THUMBNAIL = "/default-image.jpg"; // Default thumbnail image
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
   const el = document.createElement("div");
@@ -37,22 +30,89 @@ const createCustomMarker = (iconUrl, size = [30, 30]) => {
   return el;
 };
 
+// Function to convert hex to Base64
+const hexToBase64 = (hex) => {
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+  return Buffer.from(bytes).toString("base64");
+};
+
 const OwnerHostels = () => {
   const [map, setMap] = useState(null);
   const [selectedHostel, setSelectedHostel] = useState(null);
-  const [userLocation, setUserLocation] = useState(null); // Add user location state
+  const [userLocation, setUserLocation] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pendingApartments, setPendingApartments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch pending apartments and their images
+  useEffect(() => {
+    const fetchPendingApartments = async () => {
+      try {
+        const accessToken = localStorage.getItem("access_token");
+        if (!accessToken) {
+          throw new Error("No access token found");
+        }
+
+        // Fetch pending apartments
+        const apartmentsResponse = await fetch("http://localhost:8000/api/pending_apartments_for_owner/", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (!apartmentsResponse.ok) {
+          throw new Error("Failed to fetch pending apartments");
+        }
+        const apartmentsData = await apartmentsResponse.json();
+
+        // Fetch images for each apartment
+        const apartmentsWithImages = await Promise.all(
+          apartmentsData.map(async (apartment) => {
+            try {
+              const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${apartment.apartment_id}/`, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
+
+              if (!imagesResponse.ok) {
+                // If no images are found, use the default thumbnail
+                return { ...apartment, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+              }
+
+              const imagesData = await imagesResponse.json();
+              return { ...apartment, images: imagesData.images };
+            } catch (error) {
+              console.error(`Error fetching images for apartment ${apartment.apartment_id}:`, error);
+              // If there's an error, use the default thumbnail
+              return { ...apartment, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+            }
+          })
+        );
+
+        setPendingApartments(apartmentsWithImages);
+        setLoading(false);
+      } catch (error) {
+        setError(error.message);
+        setLoading(false);
+      }
+    };
+
+    fetchPendingApartments();
+  }, []);
 
   // Calculate total pages
-  const totalPages = Math.ceil(ownerHostels.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(pendingApartments.length / ITEMS_PER_PAGE);
 
   // Get hostels for the current page
-  const currentHostels = ownerHostels.slice(
+  const currentHostels = pendingApartments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
   useEffect(() => {
+    if (pendingApartments.length === 0) return;
+
     const mapInstance = new maplibregl.Map({
       container: "map",
       style: "https://tiles.openfreemap.org/styles/liberty",
@@ -69,15 +129,15 @@ const OwnerHostels = () => {
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
     // Add markers for each hostel
-    ownerHostels.forEach((hostel) => {
+    pendingApartments.forEach((apartment) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
-        .setLngLat([hostel.lng, hostel.lat])
-        .setPopup(new maplibregl.Popup().setText(hostel.name))
+        .setLngLat([apartment.longitude, apartment.latitude])
+        .setPopup(new maplibregl.Popup().setText(apartment.name))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
         e.stopPropagation();
-        setSelectedHostel(hostel);
+        setSelectedHostel(apartment);
       });
     });
 
@@ -106,7 +166,7 @@ const OwnerHostels = () => {
     return () => {
       mapInstance.remove(); // Clean up the map instance
     };
-  }, []);
+  }, [pendingApartments]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -129,6 +189,14 @@ const OwnerHostels = () => {
     }
   };
 
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full p-4">
       {/* Left Section - Hostel Listings */}
@@ -142,40 +210,47 @@ const OwnerHostels = () => {
           </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {currentHostels.map((hostel) => (
-            <div
-              key={hostel.id}
-              className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
-              style={{
-                backgroundImage: `url(${hostel.image})`,
-              }}
-            >
-              <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-              <div className="flex flex-row items-center space-x-4 z-10">
-                <Image
-                  height="100"
-                  width="100"
-                  alt="Avatar"
-                  src="/manu.png"
-                  className="h-10 w-10 rounded-full border-2 object-cover"
-                />
-                <div className="flex flex-col">
-                  <p className="font-normal text-base text-gray-50 relative z-10">
-                    {hostel.name}
+          {currentHostels.map((apartment) => {
+            const imageData = apartment.images[0]?.image_data;
+            const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
+              ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
+              : imageData;
+
+            return (
+              <div
+                key={apartment.apartment_id}
+                className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                }}
+              >
+                <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
+                <div className="flex flex-row items-center space-x-4 z-10">
+                  <Image
+                    height="100"
+                    width="100"
+                    alt="Avatar"
+                    src="/manu.png"
+                    className="h-10 w-10 rounded-full border-2 object-cover"
+                  />
+                  <div className="flex flex-col">
+                    <p className="font-normal text-base text-gray-50 relative z-10">
+                      {apartment.name}
+                    </p>
+                    <p className="text-sm text-gray-400">{apartment.location}</p>
+                  </div>
+                </div>
+                <div className="text content">
+                  <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
+                    {apartment.name}
+                  </h1>
+                  <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
+                    {apartment.rent}
                   </p>
-                  <p className="text-sm text-gray-400">{hostel.location}</p>
                 </div>
               </div>
-              <div className="text content">
-                <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                  {hostel.name}
-                </h1>
-                <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                  {hostel.price}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Pagination */}
@@ -228,7 +303,7 @@ const OwnerHostels = () => {
               <div className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
                 <h3 className="text-md font-semibold">{selectedHostel.name}</h3>
                 <p className="text-xs text-gray-600">{selectedHostel.address}</p>
-                <p className="text-xs text-green-600 font-medium">Price: {selectedHostel.price}</p>
+                <p className="text-xs text-green-600 font-medium">Price: {selectedHostel.rent}</p>
               </div>
             )}
           </div>
