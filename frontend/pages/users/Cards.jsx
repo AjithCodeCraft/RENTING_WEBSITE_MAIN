@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,10 @@ import Link from "next/link";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
-const HOSTEL_ICON_URL = "hostel.png";
-const USER_ICON_URL = "user.png";
-const ITEMS_PER_PAGE = 9;
-const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
+const HOSTEL_ICON_URL = "/hostel.png"; // Ensure the path is correct
+const USER_ICON_URL = "/user.png"; // Ensure the path is correct
+const ITEMS_PER_PAGE = 6; // Number of hostels per page
+const DEFAULT_THUMBNAIL = "/default-image.jpg"; // Default thumbnail image
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
   const el = document.createElement("div");
@@ -36,23 +36,16 @@ const hexToBase64 = (hex) => {
   return Buffer.from(bytes).toString("base64");
 };
 
-const CardDemo = () => {
+const UserHostels = () => {
   const [map, setMap] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
   const [selectedHostel, setSelectedHostel] = useState(null);
-  const [hoveredHostel, setHoveredHostel] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [markers, setMarkers] = useState([]);
-  const [tapCount, setTapCount] = useState(0);
-  const [tapTimeout, setTapTimeout] = useState(null);
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [hostelImages, setHostelImages] = useState({}); // Store images for each hostel
-  const mapContainerRef = useRef(null); // Ref for the map container
-  const detailsRef = useRef(null);
 
-  // Fetch hostels with authentication
+  // Fetch hostels for users
   useEffect(() => {
     const fetchHostels = async () => {
       try {
@@ -61,62 +54,46 @@ const CardDemo = () => {
           throw new Error("No access token found");
         }
 
-        const response = await fetch("http://localhost:8000/api/apartments/approved/", {
+        // Fetch hostels for users
+        const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           },
         });
-
-        if (response.status === 401) {
-          // Handle unauthorized access
-          throw new Error("Unauthorized access. Please login again.");
+        if (!hostelsResponse.ok) {
+          throw new Error("Failed to fetch hostels");
         }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(data);
-        setHostels(data);
+        const hostelsData = await hostelsResponse.json();
 
         // Fetch images for each hostel
-        const images = {};
-        for (const hostel of data) {
-          try {
-            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            });
+        const hostelsWithImages = await Promise.all(
+          hostelsData.map(async (hostel) => {
+            try {
+              const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                },
+              });
 
-            if (!imagesResponse.ok) {
-              // If no images are found, use the default thumbnail
-              images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
-              continue;
+              if (!imagesResponse.ok) {
+                // If no images are found, use the default thumbnail
+                return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+              }
+
+              const imagesData = await imagesResponse.json();
+              return { ...hostel, images: imagesData.images };
+            } catch (error) {
+              console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
+              // If there's an error, use the default thumbnail
+              return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
             }
+          })
+        );
 
-            const imagesData = await imagesResponse.json();
-            images[hostel.id] = imagesData.images;
-          } catch (error) {
-            console.error(`Error fetching images for hostel ${hostel.id}:`, error);
-            // If there's an error, use the default thumbnail
-            images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
-          }
-        }
-
-        setHostelImages(images);
+        setHostels(hostelsWithImages);
+        setLoading(false);
       } catch (error) {
-        console.error("Fetch error:", error);
         setError(error.message);
-
-        // Redirect to login if unauthorized
-        if (error.message.includes("Unauthorized")) {
-          sessionStorage.removeItem("access_token");
-          window.location.href = "/login";
-        }
-      } finally {
         setLoading(false);
       }
     };
@@ -133,41 +110,37 @@ const CardDemo = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Initialize the map after the component is mounted
+  // Initialize the map
   useEffect(() => {
-    if (!mapContainerRef.current || hostels.length === 0) return;
+    if (hostels.length === 0) return;
 
     const mapInstance = new maplibregl.Map({
-      container: mapContainerRef.current, // Use the ref to the map container
+      container: "map",
       style: "https://tiles.openfreemap.org/styles/liberty",
-      center: [76.8801, 8.5585],
+      center: [76.8801, 8.5585], // Default center
       zoom: DEFAULT_ZOOM,
     });
 
     setMap(mapInstance);
 
     mapInstance.on("load", () => {
-      mapInstance._controlContainer.children[2]?.remove();
+      mapInstance._controlContainer.children[2]?.remove(); // Remove unnecessary controls
     });
 
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
     // Add markers for each hostel
-    const markers = hostels.map((hostel) => {
+    hostels.forEach((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.longitude, hostel.latitude])
-        .setPopup(new maplibregl.Popup().setText(hostel.title))
+        .setPopup(new maplibregl.Popup().setText(hostel.name))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
         e.stopPropagation();
         setSelectedHostel(hostel);
       });
-
-      return marker;
     });
-
-    setMarkers(markers);
 
     // Get user location
     if (navigator.geolocation) {
@@ -176,11 +149,13 @@ const CardDemo = () => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
+          // Add a marker for the user's location
           const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
             .setLngLat([longitude, latitude])
             .setPopup(new maplibregl.Popup().setText("Your Location"))
             .addTo(mapInstance);
 
+          // Center the map on the user's location
           mapInstance.setCenter([longitude, latitude]);
           mapInstance.setZoom(CLOSE_ZOOM);
         },
@@ -189,85 +164,25 @@ const CardDemo = () => {
       );
     }
 
-    // Handle clicks outside the details popup
-    const handleClickOutside = (event) => {
-      if (detailsRef.current && !detailsRef.current.contains(event.target)) {
-        setSelectedHostel(null);
-      }
-    };
-
-    document.addEventListener("click", handleClickOutside);
-
     return () => {
       mapInstance.remove(); // Clean up the map instance
-      document.removeEventListener("click", handleClickOutside);
     };
   }, [hostels]);
 
-  useEffect(() => {
-    if (selectedHostel && map) {
-      map.flyTo({
-        center: [selectedHostel.longitude, selectedHostel.latitude],
-        zoom: CLOSE_ZOOM,
-      });
-
-      markers.forEach((marker) => {
-        const markerElement = marker.getElement();
-        if (marker.getLngLat().lng === selectedHostel.longitude && marker.getLngLat().lat === selectedHostel.latitude) {
-          markerElement.style.width = "40px";
-          markerElement.style.height = "40px";
-        } else {
-          markerElement.style.width = "30px";
-          markerElement.style.height = "30px";
-        }
-      });
-    }
-  }, [selectedHostel, map, markers]);
-
-  useEffect(() => {
-    if (hoveredHostel && map) {
-      markers.forEach((marker) => {
-        const markerElement = marker.getElement();
-        if (marker.getLngLat().lng === hoveredHostel.longitude && marker.getLngLat().lat === hoveredHostel.latitude) {
-          markerElement.style.width = "40px";
-          markerElement.style.height = "40px";
-        } else {
-          markerElement.style.width = "30px";
-          markerElement.style.height = "30px";
-        }
-      });
-    } else if (!hoveredHostel && map) {
-      markers.forEach((marker) => {
-        const markerElement = marker.getElement();
-        markerElement.style.width = "30px";
-        markerElement.style.height = "30px";
-      });
-    }
-  }, [hoveredHostel, map, markers]);
-
-  const handleGetDirections = () => {
-    if (selectedHostel && userLocation) {
-      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.latitude},${selectedHostel.longitude}`;
-      window.open(url, "_blank");
-    }
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const locateUser = () => {
-    if (navigator.geolocation) {
+    if (navigator.geolocation && map) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
-          if (map) {
-            const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
-              .setLngLat([longitude, latitude])
-              .setPopup(new maplibregl.Popup().setText("Your Location"))
-              .addTo(map);
-
-            map.setCenter([longitude, latitude]);
-            map.setZoom(CLOSE_ZOOM);
-          }
+          // Center the map on the user's location
+          map.setCenter([longitude, latitude]);
+          map.setZoom(CLOSE_ZOOM);
         },
         (error) => console.error("Geolocation error:", error),
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -275,44 +190,12 @@ const CardDemo = () => {
     }
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleHostelCardTap = (hostel) => {
-    if (tapCount === 0) {
-      setSelectedHostel(hostel);
-      setTapCount(1);
-
-      setTapTimeout(
-        setTimeout(() => {
-          setTapCount(0);
-        }, 300)
-      );
-    } else if (tapCount === 1) {
-      clearTimeout(tapTimeout);
-      setTapCount(0);
-      window.location.href = `/users/HostelDetails/${hostel.id}`;
-    }
-  };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-red-500 text-center">
-          <p className="text-xl font-semibold">Error</p>
-          <p>{error}</p>
-        </div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
   }
 
   return (
@@ -321,23 +204,18 @@ const CardDemo = () => {
       <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {currentHostels.map((hostel) => {
-            const imageData = hostelImages[hostel.id]?.[0]?.image_data;
-            const imageUrl = imageData?.startsWith("ffd8") // Check if it's a hex string
+            const imageData = hostel.images[0]?.image_data;
+            const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
               ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
-              : imageData || DEFAULT_THUMBNAIL;
+              : imageData;
 
             return (
               <div
-                key={hostel.id}
-                className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
-                  selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
-                }`}
+                key={hostel.apartment_id}
+                className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
                 style={{
                   backgroundImage: `url(${imageUrl})`,
                 }}
-                onClick={() => handleHostelCardTap(hostel)}
-                onMouseEnter={() => setHoveredHostel(hostel)}
-                onMouseLeave={() => setHoveredHostel(null)}
               >
                 <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
                 <div className="flex flex-row items-center space-x-4 z-10">
@@ -350,17 +228,17 @@ const CardDemo = () => {
                   />
                   <div className="flex flex-col">
                     <p className="font-normal text-base text-gray-50 relative z-10">
-                      {hostel.title}
+                      {hostel.name}
                     </p>
                     <p className="text-sm text-gray-400">{hostel.location}</p>
                   </div>
                 </div>
                 <div className="text content">
                   <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                    {hostel.title}
+                    {hostel.name}
                   </h1>
                   <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                    ₹{hostel.rent}
+                    {hostel.rent}
                   </p>
                 </div>
               </div>
@@ -405,22 +283,20 @@ const CardDemo = () => {
       <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
-            {/* Use the ref for the map container */}
-            <div id="map" ref={mapContainerRef} className="w-full h-full rounded-xl" />
+            <div id="map" className="w-full h-full rounded-xl" />
+            {/* Locate User Button */}
             <button
               className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
               onClick={locateUser}
             >
               <LocateFixed className="w-5 h-5 text-blue-500" />
             </button>
+            {/* Selected Hostel Details */}
             {selectedHostel && (
-              <div ref={detailsRef} className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
-                <h3 className="text-md font-semibold">{selectedHostel.title}</h3>
-                <p className="text-xs text-gray-600">{selectedHostel.location}</p>
-                <p className="text-xs text-green-600 font-medium">Price: ₹{selectedHostel.rent}</p>
-                <Button className="mt-2 w-full bg-blue-500 text-white text-xs py-1" onClick={handleGetDirections}>
-                  Get Directions
-                </Button>
+              <div className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
+                <h3 className="text-md font-semibold">{selectedHostel.name}</h3>
+                <p className="text-xs text-gray-600">{selectedHostel.address}</p>
+                <p className="text-xs text-green-600 font-medium">Price: {selectedHostel.rent}</p>
               </div>
             )}
           </div>
@@ -430,4 +306,4 @@ const CardDemo = () => {
   );
 };
 
-export default CardDemo;
+export default UserHostels;
