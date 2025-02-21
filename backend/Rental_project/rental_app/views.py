@@ -412,7 +412,6 @@ def add_apartment_image(request):
 
 
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_apartment_images(request, apartment_id):
@@ -425,7 +424,7 @@ def get_apartment_images(request, apartment_id):
         print(f"Received apartment_id: {apartment_id}")  # Debugging
 
         # Fetch images from ApartmentImage model
-        apartment_images = ApartmentImage.objects.filter(apartment_id=apartment_id)
+        apartment_images = ApartmentImage.objects.filter(apartment__apartment_id=apartment_id)
         
         if not apartment_images.exists():
             return JsonResponse({'error': 'No images found for this apartment'}, status=404)
@@ -1408,15 +1407,43 @@ def get_hostel_approval(request):
 
 
 @api_view(['GET'])
-@authentication_classes([AdminAuthentication])
 @permission_classes([IsAuthenticated])
 def get_approved_apartments(request):
+    # Get approved apartment IDs
     approved_apartment_ids = HostelApproval.objects.filter(status='approved').values_list('apartment_id', flat=True)
     
-    approved_apartments = Apartment.objects.filter(apartment_id__in=approved_apartment_ids)  # Use apartment_id instead of id
-    serializer = ApartmentSerializer(approved_apartments, many=True)
+    # Fetch approved apartments
+    approved_apartments = Apartment.objects.filter(apartment_id__in=approved_apartment_ids)
+    serialized_apartments = ApartmentSerializer(approved_apartments, many=True).data
     
-    return JsonResponse(serializer.data, safe=False)
+  
+    for apartment in serialized_apartments:
+        apartment_id = apartment['apartment_id']  # Ensure this matches your Apartment model's field
+
+       
+        apartment_images = ApartmentImage.objects.filter(apartment_id=apartment_id)
+        image_list = []
+
+        for img in apartment_images:
+            try:
+                
+                gridfs_file = fs.get(ObjectId(img.image_path))
+                image_data = base64.b64encode(gridfs_file.read()).decode('utf-8')  # Convert to base64
+
+                image_list.append({
+                    "gridfs_id": str(gridfs_file._id),
+                    "image_id": str(img.image_id),
+                    "filename": gridfs_file.filename,
+                    "image_data": image_data, 
+                    "is_primary": img.is_primary
+                })
+            except Exception as e:
+                print(f"Error retrieving image from GridFS: {e}")
+
+        # Attach image list to the apartment data
+        apartment["hostel_images"] = image_list
+
+    return JsonResponse(serialized_apartments, safe=False)
 
 
 

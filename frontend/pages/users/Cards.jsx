@@ -15,21 +15,11 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 
-// Merged hostels array with location data
-const hostels = [
-  { id: 1, name: "Green View Hostel", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.88013843230549, lat: 8.55855167721169, address: "XYZ Street, Your City" },
-  { id: 2, name: "Sunset Residency", location: "Uptown", price: "$350/mo", image: "/tree-house.jpg", lng: 76.87899888341339, lat: 8.556990221115427, address: "XYZ Street, Your City" },
-  { id: 3, name: "City Lights Hostel", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.87645772879704, lat: 8.558444894438177, address: "XYZ Street, Your City" },
-  { id: 4, name: "Green View Hostel 2", location: "Downtown", price: "$300/mo", image: "/download.png", lng: 76.87603094023191, lat: 8.555420290444625, address: "XYZ Street, Your City" },
-  { id: 5, name: "Sunset Residency 2", location: "Uptown", price: "$350/mo", image: "/loginhome.jpg", lng: 76.87802262020246, lat: 8.554576210624122, address: "XYZ Street, Your City" },
-  { id: 6, name: "City Lights Hostel 2", location: "Midtown", price: "$400/mo", image: "/loginhome.jpg", lng: 76.86806422034977, lat: 8.560906763671213, address: "XYZ Street, Your City" },
-];
-
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
 const HOSTEL_ICON_URL = "hostel.png";
 const USER_ICON_URL = "user.png";
-const ITEMS_PER_PAGE = 9; // Number of hostels per page
+const ITEMS_PER_PAGE = 9;
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
   const el = document.createElement("div");
@@ -44,12 +34,60 @@ const CardDemo = () => {
   const [map, setMap] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [selectedHostel, setSelectedHostel] = useState(null);
-  const [hoveredHostel, setHoveredHostel] = useState(null); // Track hovered hostel
+  const [hoveredHostel, setHoveredHostel] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [markers, setMarkers] = useState([]); // Store markers for later reference
-  const [tapCount, setTapCount] = useState(0); // Track tap count for double tap
-  const [tapTimeout, setTapTimeout] = useState(null); // Track timeout for double tap
+  const [markers, setMarkers] = useState([]);
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTimeout, setTapTimeout] = useState(null);
+  const [hostels, setHostels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const detailsRef = useRef(null);
+
+  // Fetch hostels with authentication
+  useEffect(() => {
+    const fetchHostels = async () => {
+      try {
+        const accessToken = sessionStorage.getItem("access_token");
+        if (!accessToken) {
+          throw new Error("No access token found");
+        }
+
+        const response = await fetch("http://localhost:8000/api/apartments/approved/", {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          // Handle unauthorized access
+          throw new Error("Unauthorized access. Please login again.");
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data)
+        setHostels(data);
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setError(error.message);
+        
+        // Redirect to login if unauthorized
+        if (error.message.includes("Unauthorized")) {
+          sessionStorage.removeItem("access_token");
+          window.location.href = "/login";
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHostels();
+  }, []);
 
   // Calculate total pages
   const totalPages = Math.ceil(hostels.length / ITEMS_PER_PAGE);
@@ -61,6 +99,8 @@ const CardDemo = () => {
   );
 
   useEffect(() => {
+    if (hostels.length === 0) return;
+
     const mapInstance = new maplibregl.Map({
       container: "map",
       style: "https://tiles.openfreemap.org/styles/liberty",
@@ -79,8 +119,8 @@ const CardDemo = () => {
     // Add markers for each hostel
     const markers = hostels.map((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
-        .setLngLat([hostel.lng, hostel.lat])
-        .setPopup(new maplibregl.Popup().setText(hostel.name))
+        .setLngLat([hostel.longitude, hostel.latitude])
+        .setPopup(new maplibregl.Popup().setText(hostel.title))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
@@ -91,7 +131,7 @@ const CardDemo = () => {
       return marker;
     });
 
-    setMarkers(markers); // Store markers in state
+    setMarkers(markers);
 
     // Get user location
     if (navigator.geolocation) {
@@ -126,20 +166,18 @@ const CardDemo = () => {
       mapInstance.remove();
       document.removeEventListener("click", handleClickOutside);
     };
-  }, []);
+  }, [hostels]);
 
   useEffect(() => {
     if (selectedHostel && map) {
-      // Fly to the selected hostel's location
       map.flyTo({
-        center: [selectedHostel.lng, selectedHostel.lat],
+        center: [selectedHostel.longitude, selectedHostel.latitude],
         zoom: CLOSE_ZOOM,
       });
 
-      // Highlight the corresponding marker
       markers.forEach((marker) => {
         const markerElement = marker.getElement();
-        if (marker.getLngLat().lng === selectedHostel.lng && marker.getLngLat().lat === selectedHostel.lat) {
+        if (marker.getLngLat().lng === selectedHostel.longitude && marker.getLngLat().lat === selectedHostel.latitude) {
           markerElement.style.width = "40px";
           markerElement.style.height = "40px";
         } else {
@@ -150,12 +188,11 @@ const CardDemo = () => {
     }
   }, [selectedHostel, map, markers]);
 
-  // Highlight marker on hover
   useEffect(() => {
     if (hoveredHostel && map) {
       markers.forEach((marker) => {
         const markerElement = marker.getElement();
-        if (marker.getLngLat().lng === hoveredHostel.lng && marker.getLngLat().lat === hoveredHostel.lat) {
+        if (marker.getLngLat().lng === hoveredHostel.longitude && marker.getLngLat().lat === hoveredHostel.latitude) {
           markerElement.style.width = "40px";
           markerElement.style.height = "40px";
         } else {
@@ -164,7 +201,6 @@ const CardDemo = () => {
         }
       });
     } else if (!hoveredHostel && map) {
-      // Reset all markers to original size
       markers.forEach((marker) => {
         const markerElement = marker.getElement();
         markerElement.style.width = "30px";
@@ -175,7 +211,7 @@ const CardDemo = () => {
 
   const handleGetDirections = () => {
     if (selectedHostel && userLocation) {
-      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.lat},${selectedHostel.lng}`;
+      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.latitude},${selectedHostel.longitude}`;
       window.open(url, "_blank");
     }
   };
@@ -207,26 +243,41 @@ const CardDemo = () => {
     setCurrentPage(page);
   };
 
-  // Handle double tap on hostel card
   const handleHostelCardTap = (hostel) => {
     if (tapCount === 0) {
-      // First tap: Focus on the hostel location
       setSelectedHostel(hostel);
       setTapCount(1);
 
-      // Set a timeout to reset the tap count
       setTapTimeout(
         setTimeout(() => {
           setTapCount(0);
-        }, 300) // 300ms delay for double tap
+        }, 300)
       );
     } else if (tapCount === 1) {
-      // Second tap: Navigate to the hostel details page
-      clearTimeout(tapTimeout); // Clear the timeout
-      setTapCount(0); // Reset tap count
-      window.location.href = `/users/HostelDetails/${hostel.id}`; // Navigate to the details page
+      clearTimeout(tapTimeout);
+      setTapCount(0);
+      window.location.href = `/users/HostelDetails/${hostel.id}`;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-red-500 text-center">
+          <p className="text-xl font-semibold">Error</p>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full p-4">
@@ -240,11 +291,11 @@ const CardDemo = () => {
                 selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
               }`}
               style={{
-                backgroundImage: `url(${hostel.image})`,
+                backgroundImage: `url(${hostel.image_path || "/default-hostel.jpg"})`,
               }}
-              onClick={() => handleHostelCardTap(hostel)} // Handle double tap
-              onMouseEnter={() => setHoveredHostel(hostel)} // Set hovered hostel
-              onMouseLeave={() => setHoveredHostel(null)} // Clear hovered hostel
+              onClick={() => handleHostelCardTap(hostel)}
+              onMouseEnter={() => setHoveredHostel(hostel)}
+              onMouseLeave={() => setHoveredHostel(null)}
             >
               <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
               <div className="flex flex-row items-center space-x-4 z-10">
@@ -257,17 +308,17 @@ const CardDemo = () => {
                 />
                 <div className="flex flex-col">
                   <p className="font-normal text-base text-gray-50 relative z-10">
-                    {hostel.name}
+                    {hostel.title}
                   </p>
                   <p className="text-sm text-gray-400">{hostel.location}</p>
                 </div>
               </div>
               <div className="text content">
                 <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                  {hostel.name}
+                  {hostel.title}
                 </h1>
                 <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                  {hostel.price}
+                  ₹{hostel.rent}
                 </p>
               </div>
             </div>
@@ -278,7 +329,6 @@ const CardDemo = () => {
         <div className="mt-8 mb-8">
           <Pagination>
             <PaginationContent>
-              {/* Hide "Previous" button on the first page */}
               {currentPage > 1 && (
                 <PaginationItem>
                   <PaginationPrevious
@@ -296,7 +346,6 @@ const CardDemo = () => {
                   </PaginationLink>
                 </PaginationItem>
               ))}
-              {/* Hide "Next" button on the last page */}
               {currentPage < totalPages && (
                 <PaginationItem>
                   <PaginationNext
@@ -310,7 +359,7 @@ const CardDemo = () => {
       </div>
 
       {/* Right Section - Map */}
-      <div className="md:w-2/5  items-center justify-center rounded-xl  md:mt-0">
+      <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
             <div id="map" className="w-full h-full rounded-xl" />
@@ -322,9 +371,9 @@ const CardDemo = () => {
             </button>
             {selectedHostel && (
               <div ref={detailsRef} className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
-                <h3 className="text-md font-semibold">{selectedHostel.name}</h3>
-                <p className="text-xs text-gray-600">{selectedHostel.address}</p>
-                <p className="text-xs text-green-600 font-medium">Price: {selectedHostel.price}</p>
+                <h3 className="text-md font-semibold">{selectedHostel.title}</h3>
+                <p className="text-xs text-gray-600">{selectedHostel.location}</p>
+                <p className="text-xs text-green-600 font-medium">Price: ₹{selectedHostel.rent}</p>
                 <Button className="mt-2 w-full bg-blue-500 text-white text-xs py-1" onClick={handleGetDirections}>
                   Get Directions
                 </Button>

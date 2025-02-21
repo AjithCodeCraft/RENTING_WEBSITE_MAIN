@@ -18,30 +18,43 @@ export default function LoginPage({ className, ...props }) {
     e.preventDefault();
   
     try {
-      // Send POST request to login
-      const response = await axiosInstance.post('login/', {
-        email: email,
-        password_hash: password,
+      const response = await fetch("http://localhost:8000/api/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password_hash: password, // Ensure this matches the expected field in the backend
+        }),
       });
   
+      // Parse JSON response
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+  
       // Save the token to session storage
-      sessionStorage.setItem("token", response.data.access);
+      sessionStorage.setItem("access_token", data.access);
   
-      // Check the user_type and navigate accordingly
-      const userType = response.data.user_type;  // Assuming this is in the response
+      // Check user_type and navigate accordingly
+      const userType = data.user_type; // Assuming user_type is in the response
   
-      // You can add different conditions for various user types
-      if (userType === 'owner') {
-        Router.push("/owner");  // Replace with actual admin route
-      } else if (userType === 'seeker') {
-        Router.push("/users");  // Replace with actual user route
+      if (userType === "owner") {
+        Router.push("/owner"); // Replace with actual owner route
+      } else if (userType === "seeker") {
+        Router.push("/users"); // Replace with actual user route
       } else {
-        console.log("Error") // Fallback route if user_type is unexpected
+        console.log("Error: Unexpected user type");
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.error || "An error occurred during login");
+      console.error("Login error:", error);
+      setErrorMessage(error.message || "An error occurred during login");
     }
   };
+  
   
 
   return (
