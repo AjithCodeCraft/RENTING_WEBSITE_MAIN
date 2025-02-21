@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -24,74 +24,145 @@ const dummyContacts = [
   },
 ];
 
-const dummyMessages = {
-  "1": [
-    {
-      id: "1",
-      content: "Hey there! How's it going?",
-      sender: "Alice Johnson",
-      isCurrentUser: false,
-      timestamp: "10:00 AM",
-    },
-    {
-      id: "2",
-      content: "Hi Alice! I'm doing well, thanks for asking. How about you?",
-      sender: "You",
-      isCurrentUser: true,
-      timestamp: "10:02 AM",
-    },
-  ],
-  "2": [
-    {
-      id: "1",
-      content: "Hi, can you send me the report when you get a chance?",
-      sender: "Bob Smith",
-      isCurrentUser: false,
-      timestamp: "Yesterday, 3:30 PM",
-    },
-    {
-      id: "2",
-      content: "Sure, I'll send it over right away. Is there anything specific you need from it?",
-      sender: "You",
-      isCurrentUser: true,
-      timestamp: "Yesterday, 3:35 PM",
-    },
-  ],
-};
-
 function ChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState("1");
   const [selectedContactName, setSelectedContactName] = useState("Alice Johnson");
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState(dummyMessages[selectedContactId] || []);
+  const [messages, setMessages] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
+  // Fetch messages for the selected contact
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const accessToken = localStorage.getItem("access_token");
+        const response = await fetch(
+          `http://localhost:8000/api/get_all_send_received_messages_with/${selectedContactId}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch messages");
+        }
+
+        const data = await response.json();
+        setMessages(data);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedContactId]);
+
+  // Fetch notifications for the current user
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const accessToken = localStorage.getItem("access_token");
+        const response = await fetch("http://localhost:8000/api/get_user_notifications/", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch notifications");
+        }
+
+        const data = await response.json();
+        setNotifications(data);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
+  // Mark notifications as read
+  const markNotificationsAsRead = async (notificationIds) => {
+    try {
+      const accessToken = localStorage.getItem("access_token");
+      const response = await fetch("http://localhost:8000/api/mark_notification_as_read/", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: notificationIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to mark notifications as read");
+      }
+
+      // Remove the read notifications from the state
+      setNotifications((prevNotifications) =>
+        prevNotifications.filter((notification) => !notificationIds.includes(notification.id))
+      );
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+    }
+  };
+
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === "") return;
+
+    try {
+      const accessToken = localStorage.getItem("access_token");
+      const response = await fetch(`http://localhost:8000/api/send_message/${selectedContactId}/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: newMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const data = await response.json();
+
+      // Add the new message to the messages state
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: String(prevMessages.length + 1),
+          content: newMessage,
+          sender: "You",
+          isCurrentUser: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+
+      // Clear the input field
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  // Handle selecting a contact
   const handleSelectContact = (contactId) => {
     setSelectedContactId(contactId);
     const selectedContact = dummyContacts.find((contact) => contact.id === contactId);
     setSelectedContactName(selectedContact ? selectedContact.name : "Unknown");
-    setMessages(dummyMessages[contactId] || []);
-  };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() === "") return;
-
-    const newMessageObj = {
-      id: String(messages.length + 1),
-      content: newMessage,
-      sender: "You",
-      isCurrentUser: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-
-    // Update the messages for the selected contact
-    const updatedMessages = [...messages, newMessageObj];
-    setMessages(updatedMessages);
-
-    // Update the dummyMessages object (optional, if you want to persist changes)
-    dummyMessages[selectedContactId] = updatedMessages;
-
-    // Clear the input field
-    setNewMessage("");
+    // Mark notifications as read when selecting a contact
+    const notificationIds = notifications
+      .filter((notification) => notification.sender_id === contactId)
+      .map((notification) => notification.id);
+    if (notificationIds.length > 0) {
+      markNotificationsAsRead(notificationIds);
+    }
   };
 
   return (

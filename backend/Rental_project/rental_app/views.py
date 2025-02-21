@@ -1407,7 +1407,6 @@ def get_hostel_approval(request):
 
 
 @api_view(['GET'])
-@authentication_classes([AdminAuthentication])
 @permission_classes([IsAuthenticated])
 def get_approved_apartments(request):
     # Get approved apartment IDs
