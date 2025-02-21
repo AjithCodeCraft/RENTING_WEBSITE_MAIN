@@ -11,7 +11,7 @@ export const AdminProvider = ({ children }) => {
     unapprovedAppartments,
     setUnapprovedApartments,
     pendingCount,
-    setPendingCount,
+    setPendingCount
   };
 
   return (
