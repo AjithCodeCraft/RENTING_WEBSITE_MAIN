@@ -19,7 +19,7 @@ const FooterSection = () => {
 
           </a>
           <span className="block text-sm text-center text-gray-500 dark:text-gray-400">
-            © 2024-2025 AToM IAS™. All Rights Reserved. 
+            © 2024-2025 twoPointers™. All Rights Reserved. 
           </span>
         </div>
       </div>
