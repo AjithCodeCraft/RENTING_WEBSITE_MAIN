@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -44,12 +44,14 @@ const UserHostels = () => {
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [markers, setMarkers] = useState([]);
+  const mapContainerRef = useRef(null); // Ref for the map container
 
   // Fetch hostels for users
   useEffect(() => {
     const fetchHostels = async () => {
       try {
-        const accessToken = sessionStorage.getItem("access_token");
+        const accessToken = localStorage.getItem("access_token");
         if (!accessToken) {
           throw new Error("No access token found");
         }
@@ -112,10 +114,10 @@ const UserHostels = () => {
 
   // Initialize the map
   useEffect(() => {
-    if (hostels.length === 0) return;
+    if (!mapContainerRef.current || hostels.length === 0) return;
 
     const mapInstance = new maplibregl.Map({
-      container: "map",
+      container: mapContainerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
       center: [76.8801, 8.5585], // Default center
       zoom: DEFAULT_ZOOM,
@@ -130,7 +132,7 @@ const UserHostels = () => {
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
     // Add markers for each hostel
-    hostels.forEach((hostel) => {
+    const markers = hostels.map((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.longitude, hostel.latitude])
         .setPopup(new maplibregl.Popup().setText(hostel.name))
@@ -140,7 +142,11 @@ const UserHostels = () => {
         e.stopPropagation();
         setSelectedHostel(hostel);
       });
+
+      return marker;
     });
+
+    setMarkers(markers);
 
     // Get user location
     if (navigator.geolocation) {
@@ -168,6 +174,31 @@ const UserHostels = () => {
       mapInstance.remove(); // Clean up the map instance
     };
   }, [hostels]);
+
+  // Center the map on the selected hostel
+  useEffect(() => {
+    if (selectedHostel && map) {
+      map.flyTo({
+        center: [selectedHostel.longitude, selectedHostel.latitude],
+        zoom: CLOSE_ZOOM,
+      });
+
+      // Highlight the selected hostel marker
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        if (
+          marker.getLngLat().lng === selectedHostel.longitude &&
+          marker.getLngLat().lat === selectedHostel.latitude
+        ) {
+          markerElement.style.width = "40px";
+          markerElement.style.height = "40px";
+        } else {
+          markerElement.style.width = "30px";
+          markerElement.style.height = "30px";
+        }
+      });
+    }
+  }, [selectedHostel, map, markers]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -212,10 +243,13 @@ const UserHostels = () => {
             return (
               <div
                 key={hostel.apartment_id}
-                className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
+                className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
+                  selectedHostel?.apartment_id === hostel.apartment_id ? "border-2 border-blue-500" : ""
+                }`}
                 style={{
                   backgroundImage: `url(${imageUrl})`,
                 }}
+                onClick={() => setSelectedHostel(hostel)}
               >
                 <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
                 <div className="flex flex-row items-center space-x-4 z-10">
@@ -283,7 +317,8 @@ const UserHostels = () => {
       <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
-            <div id="map" className="w-full h-full rounded-xl" />
+            {/* Use the ref for the map container */}
+            <div id="map" ref={mapContainerRef} className="w-full h-full rounded-xl" />
             {/* Locate User Button */}
             <button
               className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
