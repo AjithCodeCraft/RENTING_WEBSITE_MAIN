@@ -13,8 +13,10 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '../../../components/ui/sheet';
+import { useRouter } from 'next/router';
 
 const AdminLayout = ({ children }) => {
+  const router = useRouter();
   const sidebarItems = [
     { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
     { icon: Building2, label: 'Hostels', href: '/admin/dashboard/hostels' },
@@ -23,6 +25,11 @@ const AdminLayout = ({ children }) => {
     { icon: Clock, label: 'Activity Log', href: '/admin/activity' },
     { icon: Settings, label: 'Settings', href: '/admin/settings' },
   ];
+  
+  const logout = () => {
+    localStorage.removeItem("access_token");
+    router.push("/admin/login");
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -52,7 +59,7 @@ const AdminLayout = ({ children }) => {
               <span className="text-xs text-muted-foreground">admin@example.com</span>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start gap-2 mt-2">
+          <Button type="button" variant="ghost" className="w-full justify-start gap-2 mt-2" onClick={logout}>
             <LogOut className="h-4 w-4" />
             <span>Logout</span>
           </Button>
@@ -88,11 +95,11 @@ const AdminLayout = ({ children }) => {
                   <AvatarFallback>AD</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">Admin User</span>
+                  <span className="text-sm font-medium">The User</span>
                   <span className="text-xs text-muted-foreground">admin@example.com</span>
                 </div>
               </div>
-              <Button variant="ghost" className="w-full justify-start gap-2 mt-2">
+              <Button type="button" variant="ghost" className="w-full justify-start gap-2 mt-2" onClick={logout}>
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
               </Button>

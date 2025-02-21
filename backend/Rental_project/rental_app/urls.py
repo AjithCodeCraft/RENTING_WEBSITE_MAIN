@@ -62,13 +62,15 @@ from .views import (
     get_csrf_token,
     get_hostel_approval,
     delete_pending,
-    approve_hostel
+    approve_hostel,
+    get_all_users
 )
 
 
 urlpatterns = [
     path("signup/", register_user, name="register_user"),  # 🔹 User Registration
     path("login/", login_user, name="login_user"),
+    path("get-users/", get_all_users, name="get_all_users"),
     path("houseowner/", get_house_owner, name="get-house-owner"),
     path("add-house-owner/", add_house_owner, name="add-house-owner"),
     path(
