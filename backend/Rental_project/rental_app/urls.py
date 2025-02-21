@@ -5,6 +5,7 @@ from .views import (
     get_apartments_by_owner,
     get_house_owner_by_id,
     get_house_owner_by_ssn,
+    get_pending_apartments_for_owner,
     register_user,
     login_user,
     apartment_detail,
@@ -312,6 +313,9 @@ urlpatterns = [
          delete_pending,
          name="delete_pending"
     ),
+    path('pending_apartments_for_owner/',
+         get_pending_apartments_for_owner,
+         name = 'pending_apartments_for_owner')
 ]
 
 

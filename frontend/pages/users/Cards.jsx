@@ -1,5 +1,4 @@
-import React from "react";
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ const CLOSE_ZOOM = 13.5;
 const HOSTEL_ICON_URL = "hostel.png";
 const USER_ICON_URL = "user.png";
 const ITEMS_PER_PAGE = 9;
+const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
   const el = document.createElement("div");
@@ -28,6 +28,12 @@ const createCustomMarker = (iconUrl, size = [30, 30]) => {
   el.style.height = `${size[1]}px`;
   el.style.backgroundSize = "cover";
   return el;
+};
+
+// Function to convert hex to Base64
+const hexToBase64 = (hex) => {
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+  return Buffer.from(bytes).toString("base64");
 };
 
 const CardDemo = () => {
@@ -42,6 +48,8 @@ const CardDemo = () => {
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hostelImages, setHostelImages] = useState({}); // Store images for each hostel
+  const mapContainerRef = useRef(null); // Ref for the map container
   const detailsRef = useRef(null);
 
   // Fetch hostels with authentication
@@ -55,9 +63,9 @@ const CardDemo = () => {
 
         const response = await fetch("http://localhost:8000/api/apartments/approved/", {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
         });
 
         if (response.status === 401) {
@@ -70,12 +78,39 @@ const CardDemo = () => {
         }
 
         const data = await response.json();
-        console.log(data)
+        console.log(data);
         setHostels(data);
+
+        // Fetch images for each hostel
+        const images = {};
+        for (const hostel of data) {
+          try {
+            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
+
+            if (!imagesResponse.ok) {
+              // If no images are found, use the default thumbnail
+              images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
+              continue;
+            }
+
+            const imagesData = await imagesResponse.json();
+            images[hostel.id] = imagesData.images;
+          } catch (error) {
+            console.error(`Error fetching images for hostel ${hostel.id}:`, error);
+            // If there's an error, use the default thumbnail
+            images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
+          }
+        }
+
+        setHostelImages(images);
       } catch (error) {
         console.error("Fetch error:", error);
         setError(error.message);
-        
+
         // Redirect to login if unauthorized
         if (error.message.includes("Unauthorized")) {
           sessionStorage.removeItem("access_token");
@@ -98,11 +133,12 @@ const CardDemo = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  // Initialize the map after the component is mounted
   useEffect(() => {
-    if (hostels.length === 0) return;
+    if (!mapContainerRef.current || hostels.length === 0) return;
 
     const mapInstance = new maplibregl.Map({
-      container: "map",
+      container: mapContainerRef.current, // Use the ref to the map container
       style: "https://tiles.openfreemap.org/styles/liberty",
       center: [76.8801, 8.5585],
       zoom: DEFAULT_ZOOM,
@@ -163,7 +199,7 @@ const CardDemo = () => {
     document.addEventListener("click", handleClickOutside);
 
     return () => {
-      mapInstance.remove();
+      mapInstance.remove(); // Clean up the map instance
       document.removeEventListener("click", handleClickOutside);
     };
   }, [hostels]);
@@ -284,45 +320,52 @@ const CardDemo = () => {
       {/* Left Section - Hostel Listings */}
       <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {currentHostels.map((hostel) => (
-            <div
-              key={hostel.id}
-              className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
-                selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
-              }`}
-              style={{
-                backgroundImage: `url(${hostel.image_path || "/default-hostel.jpg"})`,
-              }}
-              onClick={() => handleHostelCardTap(hostel)}
-              onMouseEnter={() => setHoveredHostel(hostel)}
-              onMouseLeave={() => setHoveredHostel(null)}
-            >
-              <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-              <div className="flex flex-row items-center space-x-4 z-10">
-                <Image
-                  height="100"
-                  width="100"
-                  alt="Avatar"
-                  src="/manu.png"
-                  className="h-10 w-10 rounded-full border-2 object-cover"
-                />
-                <div className="flex flex-col">
-                  <p className="font-normal text-base text-gray-50 relative z-10">
+          {currentHostels.map((hostel) => {
+            const imageData = hostelImages[hostel.id]?.[0]?.image_data;
+            const imageUrl = imageData?.startsWith("ffd8") // Check if it's a hex string
+              ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
+              : imageData || DEFAULT_THUMBNAIL;
+
+            return (
+              <div
+                key={hostel.id}
+                className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
+                  selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
+                }`}
+                style={{
+                  backgroundImage: `url(${imageUrl})`,
+                }}
+                onClick={() => handleHostelCardTap(hostel)}
+                onMouseEnter={() => setHoveredHostel(hostel)}
+                onMouseLeave={() => setHoveredHostel(null)}
+              >
+                <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
+                <div className="flex flex-row items-center space-x-4 z-10">
+                  <Image
+                    height="100"
+                    width="100"
+                    alt="Avatar"
+                    src="/manu.png"
+                    className="h-10 w-10 rounded-full border-2 object-cover"
+                  />
+                  <div className="flex flex-col">
+                    <p className="font-normal text-base text-gray-50 relative z-10">
+                      {hostel.title}
+                    </p>
+                    <p className="text-sm text-gray-400">{hostel.location}</p>
+                  </div>
+                </div>
+                <div className="text content">
+                  <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
                     {hostel.title}
+                  </h1>
+                  <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
+                    ₹{hostel.rent}
                   </p>
-                  <p className="text-sm text-gray-400">{hostel.location}</p>
                 </div>
               </div>
-              <div className="text content">
-                <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                  {hostel.title}
-                </h1>
-                <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                  ₹{hostel.rent}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Pagination */}
@@ -362,7 +405,8 @@ const CardDemo = () => {
       <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
-            <div id="map" className="w-full h-full rounded-xl" />
+            {/* Use the ref for the map container */}
+            <div id="map" ref={mapContainerRef} className="w-full h-full rounded-xl" />
             <button
               className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
               onClick={locateUser}

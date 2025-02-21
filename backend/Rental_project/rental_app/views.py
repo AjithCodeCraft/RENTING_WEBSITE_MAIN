@@ -1460,6 +1460,20 @@ def get_pending_apartments(request):
     
     return JsonResponse(serializer.data, safe=False)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_pending_apartments_for_owner(request):
+   
+    pending_apartment_ids = HostelApproval.objects.filter(status='pending').values_list('apartment_id', flat=True)
+    
+    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')  
+    
+    serializer = ApartmentSerializer(pending_apartments, many=True)
+    
+    return JsonResponse(serializer.data, safe=False)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_pending(request, owner_id):
