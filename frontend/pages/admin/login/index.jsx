@@ -66,7 +66,7 @@ export default function AdminLogin({ className, ...props }) {
           </a>
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-[65%]">
+          <div className="w-full max-w-[65%] flex justify-center">
             <form onSubmit={handleSubmit} className={cn("flex flex-col gap-6", className)} {...props}>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Login to your account</h1>

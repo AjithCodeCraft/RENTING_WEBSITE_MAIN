@@ -1572,3 +1572,10 @@ def get_csrf_token(request):
     response.set_cookie("csrftoken", csrf_token, httponly=False, samesite="None", secure=False)
     return response
 
+@api_view(['GET'])
+@authentication_classes([AdminAuthentication])
+def get_all_users(request):
+    users = User.objects.all()
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    

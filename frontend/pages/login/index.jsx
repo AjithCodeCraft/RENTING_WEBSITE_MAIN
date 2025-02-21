@@ -38,6 +38,10 @@ export default function LoginPage({ className, ...props }) {
   
       // Save the token to session storage
       sessionStorage.setItem("access_token", data.access);
+      
+      localStorage.setItem("user_type", data.user_type);
+      localStorage.setItem("access_token", data.access);
+      localStorage.setItem("email", email);
   
       // Check user_type and navigate accordingly
       const userType = data.user_type; // Assuming user_type is in the response
