@@ -8,7 +8,7 @@ import axios from 'axios';
 import { ownerDocument } from '@mui/material';
 import { useAdminContext } from '../context/AdminContext';
 
-const PendingApprovalsList = ({ limit, setPendingCount }) => {
+const PendingApprovalsList = ({props: { limit, setPendingCount, updateTotalApartmentCount }}) => {
 
   const {
     unapprovedAppartments,
@@ -79,6 +79,7 @@ const PendingApprovalsList = ({ limit, setPendingCount }) => {
 
   useEffect(() => {
     get_pending_data();
+    updateTotalApartmentCount();
   }, []);
 
   const handleReject = async (apartment_id) => {
@@ -108,6 +109,7 @@ const PendingApprovalsList = ({ limit, setPendingCount }) => {
         withCredentials: true,
       });
       get_pending_data();
+      updateTotalApartmentCount();
     } catch (error) {
       console.log(error);
     }

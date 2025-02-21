@@ -29,11 +29,35 @@ import PendingApprovalsList from "./PendingApprovalsList";
 import RecentActivityList from "./RecentActivityList";
 import StatCard from "./StatCard";
 import AdminLayout from "./adminsidebar";
-import { useAdminContext } from "../context/AdminContext";
 import { AdminProvider } from "../context/AdminContext";
+import axios from "axios";
 
 const AdminDashboard = () => {
   const [pendingCount, setPendingCount] = useState("-");
+  const [totalApartments, setTotalApartments] = useState("-");
+  const limit = useRef(5);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  const updateTotalApartmentCount = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/apartments/approved`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+      setTotalApartments(response.data.length);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const pendingApprovalListProps = {
+    limit,
+    setPendingCount,
+    updateTotalApartmentCount,
+  };
 
   return (
     <AdminProvider>
@@ -60,7 +84,7 @@ const AdminDashboard = () => {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                   title="Total Hostels"
-                  value="243"
+                  value={totalApartments}
                   description="+12% from last month"
                   icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
                 />
@@ -91,7 +115,7 @@ const AdminDashboard = () => {
                     <CardTitle>Pending Approvals</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <PendingApprovalsList limit={5} setPendingCount={setPendingCount} />
+                    <PendingApprovalsList props={pendingApprovalListProps} />
                   </CardContent>
                 </Card>
                 <Card className="col-span-3">

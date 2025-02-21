@@ -3,7 +3,7 @@ import AdminLogin from './login'
 
 const index = () => {
   return (
-    <AdminLogin/>
+      <AdminLogin/>
   )
 }
 

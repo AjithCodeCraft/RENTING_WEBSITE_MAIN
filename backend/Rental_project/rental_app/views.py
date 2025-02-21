@@ -1395,7 +1395,7 @@ def approve_hostel(request, apartment_id):
         )
 
 @api_view(['GET'])
-#@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
+@authentication_classes([AdminAuthentication])  # Use the custom admin authentication
 @permission_classes([IsAuthenticated])  # Ensure the user is authenticated
 def get_hostel_approval(request):
     approval = HostelApproval.objects.all()
@@ -1407,6 +1407,7 @@ def get_hostel_approval(request):
 
 
 @api_view(['GET'])
+@authentication_classes([AdminAuthentication])
 @permission_classes([IsAuthenticated])
 def get_approved_apartments(request):
     # Get approved apartment IDs
