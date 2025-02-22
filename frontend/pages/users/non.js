@@ -16,10 +16,10 @@ import Link from "next/link";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
-const HOSTEL_ICON_URL = "/hostel.png"; // Ensure the path is correct
-const USER_ICON_URL = "/user.png"; // Ensure the path is correct
-const ITEMS_PER_PAGE = 6; // Number of hostels per page
-const DEFAULT_THUMBNAIL = "/default-image.jpg"; // Default thumbnail image
+const HOSTEL_ICON_URL = "hostel.png";
+const USER_ICON_URL = "user.png";
+const ITEMS_PER_PAGE = 9;
+const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
   const el = document.createElement("div");
@@ -27,7 +27,6 @@ const createCustomMarker = (iconUrl, size = [30, 30]) => {
   el.style.width = `${size[0]}px`;
   el.style.height = `${size[1]}px`;
   el.style.backgroundSize = "cover";
-  el.style.transition = "width 0.3s, height 0.3s"; // Add transition for smooth resizing
   return el;
 };
 
@@ -37,70 +36,87 @@ const hexToBase64 = (hex) => {
   return Buffer.from(bytes).toString("base64");
 };
 
-const UserHostels = () => {
+const CardDemo = () => {
   const [map, setMap] = useState(null);
-  const [selectedHostel, setSelectedHostel] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [selectedHostel, setSelectedHostel] = useState(null);
+  const [hoveredHostel, setHoveredHostel] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [markers, setMarkers] = useState([]);
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTimeout, setTapTimeout] = useState(null);
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [markers, setMarkers] = useState([]);
-  const [hoveredHostel, setHoveredHostel] = useState(null);
-  const [tapCount, setTapCount] = useState(0); // Add tapCount state
-  const [tapTimeout, setTapTimeout] = useState(null); // Add tapTimeout state
+  const [hostelImages, setHostelImages] = useState({}); // Store images for each hostel
   const mapContainerRef = useRef(null); // Ref for the map container
-  const detailsRef = useRef(null); // Ref for the details popup
+  const detailsRef = useRef(null);
 
-  // Fetch hostels for users
+  // Fetch hostels with authentication
   useEffect(() => {
     const fetchHostels = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
+        const accessToken = sessionStorage.getItem("access_token");
         if (!accessToken) {
           throw new Error("No access token found");
         }
 
-        // Fetch hostels for users
-        const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
+        const response = await fetch("http://localhost:8000/api/apartments/approved/", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
         });
-        if (!hostelsResponse.ok) {
-          throw new Error("Failed to fetch hostels");
+
+        if (response.status === 401) {
+          // Handle unauthorized access
+          throw new Error("Unauthorized access. Please login again.");
         }
-        const hostelsData = await hostelsResponse.json();
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+        setHostels(data);
 
         // Fetch images for each hostel
-        const hostelsWithImages = await Promise.all(
-          hostelsData.map(async (hostel) => {
-            try {
-              const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              });
+        const images = {};
+        for (const hostel of data) {
+          try {
+            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            });
 
-              if (!imagesResponse.ok) {
-                // If no images are found, use the default thumbnail
-                return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
-              }
-
-              const imagesData = await imagesResponse.json();
-              return { ...hostel, images: imagesData.images };
-            } catch (error) {
-              console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
-              // If there's an error, use the default thumbnail
-              return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+            if (!imagesResponse.ok) {
+              // If no images are found, use the default thumbnail
+              images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
+              continue;
             }
-          })
-        );
 
-        setHostels(hostelsWithImages);
-        setLoading(false);
+            const imagesData = await imagesResponse.json();
+            images[hostel.id] = imagesData.images;
+          } catch (error) {
+            console.error(`Error fetching images for hostel ${hostel.id}:`, error);
+            // If there's an error, use the default thumbnail
+            images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
+          }
+        }
+
+        setHostelImages(images);
       } catch (error) {
+        console.error("Fetch error:", error);
         setError(error.message);
+
+        // Redirect to login if unauthorized
+        if (error.message.includes("Unauthorized")) {
+          sessionStorage.removeItem("access_token");
+          window.location.href = "/login";
+        }
+      } finally {
         setLoading(false);
       }
     };
@@ -117,21 +133,21 @@ const UserHostels = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Initialize the map
+  // Initialize the map after the component is mounted
   useEffect(() => {
     if (!mapContainerRef.current || hostels.length === 0) return;
 
     const mapInstance = new maplibregl.Map({
-      container: mapContainerRef.current,
+      container: mapContainerRef.current, // Use the ref to the map container
       style: "https://tiles.openfreemap.org/styles/liberty",
-      center: [76.8801, 8.5585], // Default center
+      center: [76.8801, 8.5585],
       zoom: DEFAULT_ZOOM,
     });
 
     setMap(mapInstance);
 
     mapInstance.on("load", () => {
-      mapInstance._controlContainer.children[2]?.remove(); // Remove unnecessary controls
+      mapInstance._controlContainer.children[2]?.remove();
     });
 
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
@@ -140,7 +156,7 @@ const UserHostels = () => {
     const markers = hostels.map((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.longitude, hostel.latitude])
-        .setPopup(new maplibregl.Popup().setText(hostel.name))
+        .setPopup(new maplibregl.Popup().setText(hostel.title))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
@@ -160,13 +176,11 @@ const UserHostels = () => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
-          // Add a marker for the user's location
           const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
             .setLngLat([longitude, latitude])
             .setPopup(new maplibregl.Popup().setText("Your Location"))
             .addTo(mapInstance);
 
-          // Center the map on the user's location
           mapInstance.setCenter([longitude, latitude]);
           mapInstance.setZoom(CLOSE_ZOOM);
         },
@@ -190,7 +204,6 @@ const UserHostels = () => {
     };
   }, [hostels]);
 
-  // Center the map on the selected hostel and increase icon size
   useEffect(() => {
     if (selectedHostel && map) {
       map.flyTo({
@@ -198,13 +211,9 @@ const UserHostels = () => {
         zoom: CLOSE_ZOOM,
       });
 
-      // Highlight the selected hostel marker
       markers.forEach((marker) => {
         const markerElement = marker.getElement();
-        if (
-          marker.getLngLat().lng === selectedHostel.longitude &&
-          marker.getLngLat().lat === selectedHostel.latitude
-        ) {
+        if (marker.getLngLat().lng === selectedHostel.longitude && marker.getLngLat().lat === selectedHostel.latitude) {
           markerElement.style.width = "40px";
           markerElement.style.height = "40px";
         } else {
@@ -215,25 +224,59 @@ const UserHostels = () => {
     }
   }, [selectedHostel, map, markers]);
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
+  useEffect(() => {
+    if (hoveredHostel && map) {
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        if (marker.getLngLat().lng === hoveredHostel.longitude && marker.getLngLat().lat === hoveredHostel.latitude) {
+          markerElement.style.width = "40px";
+          markerElement.style.height = "40px";
+        } else {
+          markerElement.style.width = "30px";
+          markerElement.style.height = "30px";
+        }
+      });
+    } else if (!hoveredHostel && map) {
+      markers.forEach((marker) => {
+        const markerElement = marker.getElement();
+        markerElement.style.width = "30px";
+        markerElement.style.height = "30px";
+      });
+    }
+  }, [hoveredHostel, map, markers]);
+
+  const handleGetDirections = () => {
+    if (selectedHostel && userLocation) {
+      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.latitude},${selectedHostel.longitude}`;
+      window.open(url, "_blank");
+    }
   };
 
   const locateUser = () => {
-    if (navigator.geolocation && map) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
-          // Center the map on the user's location
-          map.setCenter([longitude, latitude]);
-          map.setZoom(CLOSE_ZOOM);
+          if (map) {
+            const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
+              .setLngLat([longitude, latitude])
+              .setPopup(new maplibregl.Popup().setText("Your Location"))
+              .addTo(map);
+
+            map.setCenter([longitude, latitude]);
+            map.setZoom(CLOSE_ZOOM);
+          }
         },
         (error) => console.error("Geolocation error:", error),
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   const handleHostelCardTap = (hostel) => {
@@ -253,19 +296,23 @@ const UserHostels = () => {
     }
   };
 
-  const handleGetDirections = () => {
-    if (selectedHostel && userLocation) {
-      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.latitude},${selectedHostel.longitude}`;
-      window.open(url, "_blank");
-    }
-  };
-
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-red-500 text-center">
+          <p className="text-xl font-semibold">Error</p>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -274,16 +321,16 @@ const UserHostels = () => {
       <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {currentHostels.map((hostel) => {
-            const imageData = hostel.images[0]?.image_data;
-            const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
+            const imageData = hostelImages[hostel.id]?.[0]?.image_data;
+            const imageUrl = imageData?.startsWith("ffd8") // Check if it's a hex string
               ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
-              : imageData;
+              : imageData || DEFAULT_THUMBNAIL;
 
             return (
               <div
                 key={hostel.id}
-                className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
-                  selectedHostel?.id === hostel.id ? "scale-105" : ""
+                className={`w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover ${
+                  selectedHostel?.id === hostel.id ? "border-2 border-blue-500" : ""
                 }`}
                 style={{
                   backgroundImage: `url(${imageUrl})`,
@@ -293,7 +340,7 @@ const UserHostels = () => {
                 onMouseLeave={() => setHoveredHostel(null)}
               >
                 <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-                <div className="flex flex-row items-center space-x-4 z-10 p-4">
+                <div className="flex flex-row items-center space-x-4 z-10">
                   <Image
                     height="100"
                     width="100"
@@ -308,7 +355,7 @@ const UserHostels = () => {
                     <p className="text-sm text-gray-400">{hostel.location}</p>
                   </div>
                 </div>
-                <div className="text content p-4">
+                <div className="text content">
                   <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
                     {hostel.title}
                   </h1>
@@ -383,4 +430,4 @@ const UserHostels = () => {
   );
 };
 
-export default UserHostels;
+export default CardDemo;
