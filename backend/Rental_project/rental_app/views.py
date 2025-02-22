@@ -193,7 +193,7 @@ def login_user(request):
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])  # Ensure authentication
+# @permission_classes([IsAuthenticated])  # Ensure authentication
 def get_house_owner(request):
     user = request.user  # Get authenticated user
 
@@ -413,7 +413,6 @@ def add_apartment_image(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_apartment_images(request, apartment_id):
     """Retrieve all images for a specific apartment from ApartmentImage model & GridFS."""
     try:
@@ -1407,7 +1406,6 @@ def get_hostel_approval(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def get_approved_apartments(request):
     # Get approved apartment IDs
     approved_apartment_ids = HostelApproval.objects.filter(status='approved').values_list('apartment_id', flat=True)
@@ -1574,7 +1572,7 @@ def get_csrf_token(request):
 @api_view(['GET'])
 @authentication_classes([AdminAuthentication])
 def get_all_users(request):
-    users = User.objects.all()
+    users = User.objects.all().order_by("name")
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 

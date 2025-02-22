@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            "id",
             "user_id",
             "name",
             "email",
@@ -28,8 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
             "user_type",
             "latitude",
             "longitude",
+            "is_active"
         ]
         extra_kwargs = {
+            "is_active": {"required": False},
+            "id": {"read_only": True},
             "password_hash": {"write_only": True}
         }  # Hide password in responses
 

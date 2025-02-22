@@ -30,6 +30,7 @@ import RecentActivityList from "./RecentActivityList";
 import StatCard from "./StatCard";
 import AdminLayout from "./adminsidebar";
 import axios from "axios";
+import useApartmentStore from "@/store/apartmentStore";
 
 const AdminDashboard = () => {
   const [pendingCount, setPendingCount] = useState("-");
@@ -37,6 +38,7 @@ const AdminDashboard = () => {
   const [limit, setLimit] = useState(4);
   const [activeUsers, setActiveUsers] = useState("-");
   const pendingSection = useRef(null);
+  const { setApprovedApartments, setAllUsers } = useApartmentStore();
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -44,27 +46,11 @@ const AdminDashboard = () => {
     try {
       const response = await axios.get(`${API_URL}/apartments/approved`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
           "Content-Type": "application/json",
         },
-        withCredentials: true,
       });
+      setApprovedApartments(response.data);
       setTotalApartments(response.data.length);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const getTotalUser = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/get-users`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
-      setActiveUsers(response.data.length);
     } catch (error) {
       console.log(error);
     }
@@ -78,6 +64,26 @@ const AdminDashboard = () => {
 
   const scrollToPendingSection = () => {
     pendingSection.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const getTotalUser = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/get-users`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      });
+      setActiveUsers(response.data.length);
+      const ownerData = response.data.reduce((acc, item) => {
+        acc[item.id] = item
+        return acc;
+      }, {});
+      setAllUsers(ownerData);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   useEffect(() => {

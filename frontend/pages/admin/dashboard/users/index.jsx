@@ -1,5 +1,5 @@
     "use client";
-    import React, { useState } from "react";
+    import React, {useEffect, useState} from "react";
     import { cn } from "@/lib/utils";
     import Image from "next/image";
     import AdminLayout from "../adminsidebar";
@@ -7,42 +7,16 @@
     import { Button } from "@/components/ui/button";
     import { Separator } from "@/components/ui/separator";
     import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon } from "lucide-react";
-
-    // Dummy user data
-    const users = [
-    {
-        id: 1,
-        name: "John Doe",
-        email: "john.doe@example.com",
-        phone: "+1234567890",
-        address: "123 Main St, City, Country",
-        image: "/user1.jpg",
-        propertiesOwned: 5,
-        status: "Active",
-    },
-    {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane.smith@example.com",
-        phone: "+0987654321",
-        address: "456 Elm St, City, Country",
-        image: "/user2.jpg",
-        propertiesOwned: 3,
-        status: "Inactive",
-    },
-    // Add more users as needed
-    ];
+    import useApartmentStore from "@/store/apartmentStore";
+    import {object} from "zod";
 
     export function UserDetails() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedUser, setSelectedUser] = useState(null);
+    const [owners, setOwners] = useState([]);
+    const [filteredOwners, setFilteredOwners] = useState([]);
 
-    // Filter users based on the search query
-    const filteredUsers = users.filter(
-        (user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const { approvedApartments, allUsers } = useApartmentStore();
 
     const handleRowClick = (user) => {
         setSelectedUser(user);
@@ -51,6 +25,35 @@
     const closePopup = () => {
         setSelectedUser(null);
     };
+
+    const getPropertiesOwned = (owner_id) => {
+        let count = 0;
+        console.log(approvedApartments);
+        approvedApartments.forEach((item) => {
+            count += item.owner === owner_id ? 1 : 0;
+        });
+        return count;
+    }
+
+    const getFilteredOwners = () => {
+        return owners.filter((owner) =>
+            owner.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            owner.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    };
+
+    useEffect(() => {
+        if (!allUsers || Object.keys(allUsers).length === 0) return;
+        let data = Object.values(allUsers);
+        data = data.filter((user) => user.user_type?.toLowerCase() === "owner");
+        data = data.sort((a, b) => a.name?.localeCompare(b.name));
+        setOwners(data);
+        setFilteredOwners(data);
+    }, [allUsers]);
+
+    useEffect(() => {
+        setFilteredOwners(getFilteredOwners());
+    }, [searchQuery, owners]);
 
     return (
         <AdminLayout>
@@ -77,20 +80,20 @@
                 </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
+                {filteredOwners.map((user) => (
                     <tr key={user.id} onClick={() => handleRowClick(user)} className="cursor-pointer hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name ? user.name : "No Name"}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phone}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.propertiesOwned}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getPropertiesOwned(user.id)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span
                         className={cn(
                             "px-2 py-1 rounded-full text-xs font-semibold",
-                            user.status === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                            user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         )}
                         >
-                        {user.status}
+                        {user.is_active ? "Active" : "Inactive"}
                         </span>
                     </td>
                     </tr>
@@ -121,7 +124,7 @@
                     <div className="grid grid-cols-2 gap-4">
                     <div className="relative w-full h-64 rounded-lg overflow-hidden">
                         <Image
-                        src={selectedUser.image}
+                        src="/download.png"
                         alt={`${selectedUser.name} - Profile Image`}
                         fill
                         className="object-cover"
@@ -131,8 +134,8 @@
                         <p className="text-sm text-gray-500">{selectedUser.phone}</p>
                         <p className="text-sm text-gray-500">{selectedUser.address}</p>
                         <div className="mt-4">
-                        <p className="text-lg font-semibold">Properties Owned: {selectedUser.propertiesOwned}</p>
-                        <p className="text-lg font-semibold">Status: {selectedUser.status}</p>
+                        <p className="text-lg font-semibold">Properties Owned: {getPropertiesOwned(selectedUser.id)}</p>
+                        <p className="text-lg font-semibold">Status: {selectedUser.is_active}</p>
                         </div>
                         <div className="mt-4">
                         <Button variant="outline" className="mr-2">
