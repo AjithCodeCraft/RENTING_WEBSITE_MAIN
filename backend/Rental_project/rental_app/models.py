@@ -39,6 +39,8 @@ class User(AbstractBaseUser,PermissionsMixin):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, unique=True)
     password_hash = models.TextField()
+    date_of_birth = models.DateField(blank=True, null=True) 
+    bio = models.TextField(blank=True, null=True)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES)
     latitude = models.DecimalField(max_digits=10, decimal_places=8, null=True, blank=True)
     longitude = models.DecimalField(max_digits=11, decimal_places=8, null=True, blank=True)

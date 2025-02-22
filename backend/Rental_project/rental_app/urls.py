@@ -64,7 +64,8 @@ from .views import (
     delete_pending,
     approve_hostel,
     get_all_users,
-    user_profile
+    user_profile,
+    update_profile
 )
 
 
@@ -322,7 +323,12 @@ urlpatterns = [
 
     path('user/profile/',
          user_profile,
-         name ='user_profile' )
+         name ='user_profile' ),
+    path('update-profile/', 
+         update_profile,
+        name='update_profile'),  # Add this line
+
+    
 ]
 
 
