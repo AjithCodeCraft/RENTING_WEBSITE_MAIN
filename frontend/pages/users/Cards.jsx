@@ -249,7 +249,10 @@ const UserHostels = () => {
     } else if (tapCount === 1) {
       clearTimeout(tapTimeout);
       setTapCount(0);
-      window.location.href = `/users/HostelDetails/${hostel.id}`;
+      localStorage.setItem("apartment_id",hostel.apartment_id)
+      // Use the correct property `apartment_id` from the hostel object
+      window.location.href = `/users/HostelDetails/${hostel.apartment_id}`;
+
     }
   };
 
@@ -281,9 +284,9 @@ const UserHostels = () => {
 
             return (
               <div
-                key={hostel.id}
+                key={hostel.apartment_id} // Use `apartment_id` as the key
                 className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
-                  selectedHostel?.id === hostel.id ? "scale-105" : ""
+                  selectedHostel?.apartment_id === hostel.apartment_id ? "scale-105" : ""
                 }`}
                 style={{
                   backgroundImage: `url(${imageUrl})`,
@@ -303,14 +306,14 @@ const UserHostels = () => {
                   />
                   <div className="flex flex-col">
                     <p className="font-normal text-base text-gray-50 relative z-10">
-                      {hostel.title}
+                      {hostel.name}
                     </p>
                     <p className="text-sm text-gray-400">{hostel.location}</p>
                   </div>
                 </div>
                 <div className="text content p-4">
                   <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                    {hostel.title}
+                    {hostel.name}
                   </h1>
                   <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
                     ₹{hostel.rent}
@@ -368,7 +371,7 @@ const UserHostels = () => {
             </button>
             {selectedHostel && (
               <div ref={detailsRef} className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
-                <h3 className="text-md font-semibold">{selectedHostel.title}</h3>
+                <h3 className="text-md font-semibold">{selectedHostel.name}</h3>
                 <p className="text-xs text-gray-600">{selectedHostel.location}</p>
                 <p className="text-xs text-green-600 font-medium">Price: ₹{selectedHostel.rent}</p>
                 <Button className="mt-2 w-full bg-blue-500 text-white text-xs py-1" onClick={handleGetDirections}>

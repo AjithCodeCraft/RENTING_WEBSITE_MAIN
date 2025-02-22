@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     add_house_owner,
     check_owner_verification,
+    get_apartment_by_id,
     get_apartments_by_owner,
     get_house_owner_by_id,
     get_house_owner_by_ssn,
@@ -326,10 +327,11 @@ urlpatterns = [
          name ='user_profile' ),
     path('update-profile/', 
          update_profile,
-        name='update_profile'),  # Add this line
+        name='update_profile'),
+    path('apartments_by_id/<str:apartment_id>/', get_apartment_by_id, name='get_apartment_by_id'),
+]    
 
     
-]
 
 
 

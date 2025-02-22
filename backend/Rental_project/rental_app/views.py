@@ -265,6 +265,17 @@ def add_apartment(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+def get_apartment_by_id(request, apartment_id):
+    try:
+        apartment = Apartment.objects.get(apartment_id=apartment_id)
+        serializer = ApartmentSerializer(apartment)
+        return Response(serializer.data)
+    except Apartment.DoesNotExist:
+        return Response({"error": "Apartment not found"}, status=404)
+
+
+
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @authentication_classes([AdminAuthentication])  
