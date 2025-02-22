@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Mail, Phone, MapPin, User, Calendar, Edit, Globe, Briefcase, Heart } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Edit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import UserHeader from "../UserHeader";
 
@@ -13,15 +13,18 @@ export default function ProfilePage() {
     bio: "",
     profile_picture: "",
     date_of_birth: "",
-    address: "",
-    website: "",
-    occupation: "",
-    interests: "",
+    latitude: null,
+    longitude: null,
     created_at: "",
   });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    bio: "",
+    date_of_birth: "",
+  });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -31,9 +34,15 @@ export default function ProfilePage() {
             Authorization: `Bearer ${localStorage.getItem("access_token")}`,
           },
         });
+        console.log("API Response:", response.data); // Debugging: Log the response
         setUser(response.data);
+        setFormData({
+          bio: response.data.bio || "",
+          date_of_birth: response.data.date_of_birth || "",
+        });
         setLoading(false);
       } catch (err) {
+        console.error("Error fetching profile:", err); // Debugging: Log the error
         setError(err.message);
         setLoading(false);
       }
@@ -41,6 +50,50 @@ export default function ProfilePage() {
 
     fetchUserProfile();
   }, []);
+
+  useEffect(() => {
+    console.log("User State Updated:", user); // Debugging: Log the user state
+  }, [user]);
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelClick = () => {
+    setIsEditing(false);
+    setFormData({
+      bio: user.bio || "",
+      date_of_birth: user.date_of_birth || "",
+    });
+  };
+
+  const handleSaveClick = async () => {
+    try {
+      const response = await axios.put(
+        "http://127.0.0.1:8000/api/update-profile/",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+      console.log("Profile Updated:", response.data); // Debugging: Log the update response
+      setUser(response.data);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error updating profile:", err); // Debugging: Log the error
+      setError(err.message);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
@@ -84,9 +137,12 @@ export default function ProfilePage() {
             </div>
 
             {/* Edit Profile Button */}
-            <button className="absolute top-4 right-4 flex items-center gap-2 bg-[#2dac5c] text-white px-4 py-2 rounded-lg hover:bg-[#248f4d] transition-all">
+            <button
+              onClick={isEditing ? handleCancelClick : handleEditClick}
+              className="absolute top-4 right-4 flex items-center gap-2 bg-[#2dac5c] text-white px-4 py-2 rounded-lg hover:bg-[#248f4d] transition-all"
+            >
               <Edit className="h-4 w-4" />
-              Edit Profile
+              {isEditing ? "Cancel" : "Edit Profile"}
             </button>
           </div>
 
@@ -95,100 +151,51 @@ export default function ProfilePage() {
             {/* Bio Section */}
             <div className="mb-8">
               <h3 className="text-xl font-semibold text-[#3e435d] mb-4">About Me</h3>
-              <p className="text-[#86909c]">
-                {user.bio || "No bio available."}
-              </p>
+              {isEditing ? (
+                <textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-lg"
+                  rows="4"
+                  placeholder="Write something about yourself..."
+                />
+              ) : (
+                <p className="text-[#86909c]">
+                  {user.bio || "No bio available."}
+                </p>
+              )}
             </div>
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Email */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Mail className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Email</p>
-                  <p className="text-[#86909c]">{user.email}</p>
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Phone className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Phone</p>
-                  <p className="text-[#86909c]">{user.phone}</p>
-                </div>
-              </div>
-
-              {/* Date of Birth */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Date of Birth</p>
-                  <p className="text-[#86909c]">
-                    {user.date_of_birth || "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <MapPin className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Address</p>
-                  <p className="text-[#86909c]">
-                    {user.address || "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Website */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Globe className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Website</p>
-                  <p className="text-[#86909c]">
-                    {user.website || "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Occupation */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Briefcase className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Occupation</p>
-                  <p className="text-[#86909c]">
-                    {user.occupation || "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Interests */}
-              <div className="flex items-center gap-4 p-4 bg-[#f8f9fa] rounded-lg hover:bg-[#f0f4ff] transition-all">
-                <div className="h-12 w-12 rounded-full bg-[#4182f9]/10 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-[#2dac5c]" />
-                </div>
-                <div>
-                  <p className="text-[#2dac5c] font-medium">Interests</p>
-                  <p className="text-[#86909c]">
-                    {user.interests || "Not provided"}
-                  </p>
-                </div>
-              </div>
+            {/* Date of Birth Section */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-[#3e435d] mb-4">Date of Birth</h3>
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={formData.date_of_birth}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-lg"
+                />
+              ) : (
+                <p className="text-[#86909c]">
+                  {user.date_of_birth || "Not provided"}
+                </p>
+              )}
             </div>
+
+            {/* Save Button (Visible only in Edit Mode) */}
+            {isEditing && (
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveClick}
+                  className="bg-[#2dac5c] text-white px-4 py-2 rounded-lg hover:bg-[#248f4d] transition-all"
+                >
+                  Save Changes
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </main>

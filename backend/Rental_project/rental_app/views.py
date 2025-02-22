@@ -1584,4 +1584,19 @@ def user_profile(request):
     user = request.user
     serializer = UserSerializer(user)
     return Response(serializer.data)
-    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    data = request.data
+
+    # Update allowed fields
+    if 'bio' in data:
+        user.bio = data['bio']
+    if 'date_of_birth' in data:
+        user.date_of_birth = data['date_of_birth']
+
+    user.save()
+    serializer = UserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)

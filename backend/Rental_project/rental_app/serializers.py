@@ -25,6 +25,8 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "password_hash",
+            "date_of_birth",
+            "bio",
             "user_type",
             "latitude",
             "longitude",
