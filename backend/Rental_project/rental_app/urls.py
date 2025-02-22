@@ -63,7 +63,8 @@ from .views import (
     get_hostel_approval,
     delete_pending,
     approve_hostel,
-    get_all_users
+    get_all_users,
+    user_profile
 )
 
 
@@ -317,7 +318,11 @@ urlpatterns = [
     ),
     path('pending_apartments_for_owner/',
          get_pending_apartments_for_owner,
-         name = 'pending_apartments_for_owner')
+         name = 'pending_apartments_for_owner'),
+
+    path('user/profile/',
+         user_profile,
+         name ='user_profile' )
 ]
 
 

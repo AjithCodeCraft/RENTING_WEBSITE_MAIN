@@ -5,6 +5,7 @@ import  CardDemo  from "./Cards";
 // import Map from "./MapView";
 // import MapCard from "./MapView";
 import FooterSection from "./footerSection";
+import UserHostels from "./Cards";
 
 export default function Index() {
   return (
@@ -21,7 +22,7 @@ export default function Index() {
 
       {/* Homecard Section */}
       <div className="">
-        <CardDemo/>
+        <UserHostels/>
       </div>
       <div>
       {/* <MapCard/> */}
