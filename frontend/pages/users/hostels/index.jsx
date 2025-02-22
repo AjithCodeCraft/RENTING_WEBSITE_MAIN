@@ -48,14 +48,7 @@ export function HostelCards() {
         const images = {};
         for (const hostel of data) {
           try {
-            const imagesResponse = await fetch(
-              `http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`,
-              {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              }
-            );
+            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`);
 
             if (!imagesResponse.ok) {
               // If no images are found, use the default thumbnail

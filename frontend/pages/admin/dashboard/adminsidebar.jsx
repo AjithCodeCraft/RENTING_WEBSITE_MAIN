@@ -21,9 +21,7 @@ const AdminLayout = ({ children }) => {
     { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
     { icon: Building2, label: 'Hostels', href: '/admin/dashboard/hostels' },
     // { icon: FileCheck, label: 'Approvals', href: '/admin/approvals' },
-    { icon: Users, label: 'Users', href: '/admin/dashboard/users' },
-    { icon: Clock, label: 'Activity Log', href: '/admin/activity' },
-    { icon: Settings, label: 'Settings', href: '/admin/settings' },
+    { icon: Users, label: 'Users', href: '/admin/dashboard/users' }
   ];
   
   const logout = () => {
