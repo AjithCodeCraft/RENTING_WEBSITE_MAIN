@@ -4,13 +4,17 @@ import Header from "@/components/Header";
 
 import "leaflet/dist/leaflet.css";
 import axios from "axios";
+import { Toaster } from "sonner";
 
 axios.defaults.withCredentials = true;
 
 export default function Home() {
   return (
-    <div>
+    <><div>
       <Header />
-    </div>
+    </div><div>
+        {/* Your other components */}
+        <Toaster position="top-right" />
+      </div></>
   );
 }
