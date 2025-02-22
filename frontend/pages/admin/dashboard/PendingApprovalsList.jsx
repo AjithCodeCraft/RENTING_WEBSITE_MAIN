@@ -19,10 +19,6 @@ const PendingApprovalsList = ({
   const API_URL_GET_OWNER = `${process.env.NEXT_PUBLIC_API_URL}/house-owner/by-id`;
   const unique_ids = {};
 
-  const update_values = (data, pendingCount) => {
-    console.log("IN");
-  };
-
   const get_owner_name = async (owner_id) => {
     if (unique_ids.hasOwnProperty(owner_id)) {
       return unique_ids[owner_id];

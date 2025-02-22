@@ -36,6 +36,7 @@ const AdminDashboard = () => {
   const [totalApartments, setTotalApartments] = useState("-");
   const [limit, setLimit] = useState(4);
   const [activeUsers, setActiveUsers] = useState("-");
+  const pendingSection = useRef(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -75,6 +76,10 @@ const AdminDashboard = () => {
     updateTotalApartmentCount,
   };
 
+  const scrollToPendingSection = () => {
+    pendingSection.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
     getTotalUser();
   }, []);
@@ -94,9 +99,7 @@ const AdminDashboard = () => {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="approvals">Pending Approvals</TabsTrigger>
-            <TabsTrigger value="recent">Recent Activity</TabsTrigger>
+            <TabsTrigger value="overview" onClick={scrollToPendingSection}>Pending Approvals</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -128,7 +131,7 @@ const AdminDashboard = () => {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7" ref={pendingSection}>
               <Card className="col-span-4">
                 <CardHeader>
                   <CardTitle>Pending Approvals</CardTitle>
@@ -146,39 +149,6 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Analytics Content</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>Analytics dashboard will be displayed here...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="approvals" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Hostel Approvals</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PendingApprovalsList />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="recent" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity Log</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RecentActivityList />
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
