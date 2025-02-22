@@ -5,65 +5,107 @@ import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, CameraIcon, MessageCircleI
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import UserHeader from "../UserHeader"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { addDays } from "date-fns" // Import addDays from date-fns
+import { addDays } from "date-fns"
 
-// Dummy hostel data
-const hostel = {
-  id: 1,
-  title: "Private Room K-Mansion Deluxe Room",
-  description:
-    "Escape to our charming room in Munnar and experience the true essence of this beautiful hill station. Whether you're a couple seeking a romantic getaway or a solo traveler on a nature retreat, our accommodation provides a serene and comfortable base for your Munnar adventure.",
-  location: "Munnar, India",
-  rent: 4000,
-  rating: 4.94,
-  reviews: 16,
-  images: ["/download.png", "/tree-house.jpg", "/loginhome.jpg"],
-  host: {
-    name: "Mathew",
-    isSuperhost: true,
-    yearsHosting: 3,
-  },
-  guests: 2,
-  bedrooms: 1,
-  beds: 1,
-  bathrooms: 1,
-  amenities: [
-    "Valley view",
-    "Wifi",
-    "Dedicated workspace",
-    "Free parking on premises",
-    "TV",
-    "Washing machine",
-    "Dryer",
-    "Luggage drop-off allowed",
-  ],
-  reviewsData: [
-    {
-      id: 1,
-      username: "John Doe",
-      userImage: "/user1.jpg",
-      review: "Great place to stay! The view was amazing and the host was very friendly.",
-      rating: 5,
-    },
-    {
-      id: 2,
-      username: "Jane Smith",
-      userImage: "/user2.jpg",
-      review: "The room was clean and cozy. Highly recommended!",
-      rating: 4.5,
-    },
-  ],
+const DEFAULT_THUMBNAIL = "/default-image.jpg" // Default thumbnail image
+
+// Function to convert hex to Base64
+const hexToBase64 = (hex) => {
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)))
+  return Buffer.from(bytes).toString("base64")
 }
 
 const HostelDetails = () => {
+  const [hostel, setHostel] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false)
   const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [selectedReview, setSelectedReview] = useState(null)
-  const [duration, setDuration] = useState("short-term") // State for duration selection
-  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) }) // State for calendar dates
+  const [duration, setDuration] = useState("short-term")
+  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) })
+  const [apartment_id, setApartmentId] = useState(null) // State to store apartment_id
+
+  // Fetch apartment_id from localStorage on the client side
+  useEffect(() => {
+    const apartmentId = localStorage.getItem("apartment_id")
+    if (apartmentId) {
+      setApartmentId(apartmentId)
+    } else {
+      setError("Apartment ID not found in localStorage")
+      setLoading(false)
+    }
+  }, [])
+
+  // Fetch apartment details and images
+  useEffect(() => {
+    if (!apartment_id) return // Ensure apartment_id is available
+
+    const fetchApartmentDetails = async () => {
+      try {
+        const accessToken = localStorage.getItem("access_token")
+        if (!accessToken) {
+          throw new Error("No access token found")
+        }
+
+        // Fetch apartment details
+        const apartmentResponse = await fetch(
+          `http://127.0.0.1:8000/api/apartments_by_id/${apartment_id}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        )
+        if (!apartmentResponse.ok) {
+          throw new Error("Failed to fetch apartment details")
+        }
+        const apartmentData = await apartmentResponse.json()
+
+        // Fetch apartment images
+        const imagesResponse = await fetch(
+          `http://127.0.0.1:8000/api/apartment-images/${apartment_id}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        )
+        if (!imagesResponse.ok) {
+          throw new Error("Failed to fetch apartment images")
+        }
+        const imagesData = await imagesResponse.json()
+
+        // Convert hex images to Base64
+        const imagesWithBase64 = imagesData.images.map((image) => {
+          if (image.image_data.startsWith("ffd8")) { // Check if it's a hex string
+            return {
+              ...image,
+              image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
+            }
+          }
+          return image
+        })
+
+        // Combine apartment details and images
+        const apartmentWithImages = {
+          ...apartmentData,
+          images: imagesWithBase64.length > 0 ? imagesWithBase64 : [{ image_url: DEFAULT_THUMBNAIL }],
+        }
+
+        setHostel(apartmentWithImages)
+        setLoading(false)
+      } catch (error) {
+        setError(error.message)
+        setLoading(false)
+      }
+    }
+
+    fetchApartmentDetails()
+  }, [apartment_id]) // Fetch data when apartment_id changes
 
   const toggleMessagePopup = () => {
     setIsMessagePopupOpen(!isMessagePopupOpen)
@@ -89,9 +131,8 @@ const HostelDetails = () => {
     setSelectedReview(null)
   }
 
-  // Calculate total amount based on duration
   const calculateTotalAmount = () => {
-    const baseAmount = hostel.rent
+    const baseAmount = hostel?.rent || 0
     if (duration === "short-term") {
       return baseAmount * 7 // 1 week
     } else {
@@ -99,13 +140,24 @@ const HostelDetails = () => {
     }
   }
 
-  // Handle date selection
   const handleDateSelect = (date) => {
     if (duration === "short-term") {
       setSelectedDates({ from: date, to: addDays(date, 7) })
     } else {
       setSelectedDates({ from: date, to: addDays(date, 30) })
     }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>
+  }
+
+  if (!hostel) {
+    return <div className="flex justify-center items-center h-screen">No data found</div>
   }
 
   return (
@@ -147,10 +199,10 @@ const HostelDetails = () => {
             </div>
 
             {/* Image Layout */}
-            <div className="grid grid-cols-2 gap-2 ">
+            <div className="grid grid-cols-2 gap-2">
               <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
                 <Image
-                  src={hostel.images[0] || "/placeholder.svg"}
+                  src={hostel.images[0]?.image_url || DEFAULT_THUMBNAIL}
                   alt={`${hostel.title} - Main Image`}
                   fill
                   className="object-cover"
@@ -159,7 +211,7 @@ const HostelDetails = () => {
               <div className="grid grid-rows-2 gap-2">
                 <div className="relative w-full h-[195px] rounded-lg overflow-hidden">
                   <Image
-                    src={hostel.images[1] || "/placeholder.svg"}
+                    src={hostel.images[1]?.image_url || DEFAULT_THUMBNAIL}
                     alt={`${hostel.title} - Image 2`}
                     fill
                     className="object-cover"
@@ -167,7 +219,7 @@ const HostelDetails = () => {
                 </div>
                 <div className="relative w-full h-[195px] rounded-lg overflow-hidden">
                   <Image
-                    src={hostel.images[2] || "/placeholder.svg"}
+                    src={hostel.images[2]?.image_url || DEFAULT_THUMBNAIL}
                     alt={`${hostel.title} - Image 3`}
                     fill
                     className="object-cover"
@@ -178,14 +230,14 @@ const HostelDetails = () => {
 
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Private room in hostel hosted by {hostel.host.name}</h2>
+                <h2 className="text-xl font-semibold">Private room in hostel hosted by {hostel.host?.name}</h2>
                 <p className="text-muted-foreground">
                   {hostel.guests} guests · {hostel.bedrooms} bedroom · {hostel.beds} bed · {hostel.bathrooms} private
                   bathroom
                 </p>
               </div>
               <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                <Image src="/placeholder-user.jpg" alt={`Host ${hostel.host.name}`} fill className="object-cover" />
+                <Image src="/placeholder-user.jpg" alt={`Host ${hostel.host?.name}`} fill className="object-cover" />
               </div>
             </div>
 
@@ -201,7 +253,7 @@ const HostelDetails = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">What this place offers</h3>
               <div className="grid grid-cols-2 gap-4">
-                {hostel.amenities.map((amenity, index) => (
+                {hostel.amenities?.map((amenity, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <StarIcon className="h-5 w-5" />
                     <span>{amenity}</span>
@@ -214,7 +266,7 @@ const HostelDetails = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">Reviews</h3>
               <div className="space-y-4">
-                {hostel.reviewsData.map((review, index) => (
+                {hostel.reviewsData?.map((review, index) => (
                   <div
                     key={index}
                     className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
@@ -238,8 +290,8 @@ const HostelDetails = () => {
             </div>
           </div>
 
-        {/* Right Side: Sticky Booking Card */}
-        <div className="lg:sticky lg:top-4 lg:self-start py-20">
+          {/* Right Side: Sticky Booking Card */}
+          <div className="lg:sticky lg:top-4 lg:self-start py-20">
             <Card className="p-6">
               <CardHeader className="p-0">
                 <CardTitle className="text-2xl font-bold">
@@ -276,7 +328,7 @@ const HostelDetails = () => {
                     mode="range"
                     selected={selectedDates}
                     onSelect={handleDateSelect}
-                    numberOfMonths={duration === "short-term" ? 1 : 2} // Show 1 month for short-term, 2 for long-term
+                    numberOfMonths={duration === "short-term" ? 1 : 2}
                   />
                 </div>
 
@@ -362,7 +414,6 @@ const HostelDetails = () => {
           </Card>
         </div>
       )}
-
     </>
   )
 }
