@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ const createCustomMarker = (iconUrl, size = [30, 30]) => {
   el.style.width = `${size[0]}px`;
   el.style.height = `${size[1]}px`;
   el.style.backgroundSize = "cover";
+  el.style.transition = "width 0.3s, height 0.3s"; // Add transition for smooth resizing
   return el;
 };
 
@@ -44,6 +45,10 @@ const OwnerHostels = () => {
   const [pendingApartments, setPendingApartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [markers, setMarkers] = useState([]);
+  const [hoveredHostel, setHoveredHostel] = useState(null);
+  const mapContainerRef = useRef(null); // Ref for the map container
+  const detailsRef = useRef(null); // Ref for the details popup
 
   // Fetch pending apartments and their images
   useEffect(() => {
@@ -110,11 +115,12 @@ const OwnerHostels = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  // Initialize the map
   useEffect(() => {
-    if (pendingApartments.length === 0) return;
+    if (!mapContainerRef.current || pendingApartments.length === 0) return;
 
     const mapInstance = new maplibregl.Map({
-      container: "map",
+      container: mapContainerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
       center: [76.8801, 8.5585], // Default center
       zoom: DEFAULT_ZOOM,
@@ -129,17 +135,20 @@ const OwnerHostels = () => {
     mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
 
     // Add markers for each hostel
-    pendingApartments.forEach((apartment) => {
+    const markers = pendingApartments.map((apartment) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([apartment.longitude, apartment.latitude])
-        .setPopup(new maplibregl.Popup().setText(apartment.name))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
         e.stopPropagation();
-        setSelectedHostel(apartment);
+        setSelectedHostel(apartment); // Show legend when marker is clicked
       });
+
+      return marker;
     });
+
+    setMarkers(markers);
 
     // Get user location
     if (navigator.geolocation) {
@@ -163,10 +172,30 @@ const OwnerHostels = () => {
       );
     }
 
+    // Handle clicks outside the details popup
+    const handleClickOutside = (event) => {
+      if (detailsRef.current && !detailsRef.current.contains(event.target)) {
+        setSelectedHostel(null);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
     return () => {
       mapInstance.remove(); // Clean up the map instance
+      document.removeEventListener("click", handleClickOutside);
     };
   }, [pendingApartments]);
+
+  // Center the map on the selected hostel when a hostel card is clicked
+  useEffect(() => {
+    if (selectedHostel && map) {
+      map.flyTo({
+        center: [selectedHostel.longitude, selectedHostel.latitude],
+        zoom: CLOSE_ZOOM,
+      });
+    }
+  }, [selectedHostel, map]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -186,6 +215,13 @@ const OwnerHostels = () => {
         (error) => console.error("Geolocation error:", error),
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    }
+  };
+
+  const handleGetDirections = () => {
+    if (selectedHostel && userLocation) {
+      const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${selectedHostel.latitude},${selectedHostel.longitude}`;
+      window.open(url, "_blank");
     }
   };
 
@@ -219,13 +255,18 @@ const OwnerHostels = () => {
             return (
               <div
                 key={apartment.apartment_id}
-                className="w-full group/card cursor-pointer overflow-hidden relative h-65 rounded-md shadow-xl max-w-sm mx-auto backgroundImage flex flex-col justify-between p-4 bg-cover"
+                className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
+                  selectedHostel?.apartment_id === apartment.apartment_id ? "scale-105" : ""
+                }`}
                 style={{
                   backgroundImage: `url(${imageUrl})`,
                 }}
+                onClick={() => setSelectedHostel(apartment)}
+                onMouseEnter={() => setHoveredHostel(apartment)}
+                onMouseLeave={() => setHoveredHostel(null)}
               >
                 <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-                <div className="flex flex-row items-center space-x-4 z-10">
+                <div className="flex flex-row items-center space-x-4 z-10 p-4">
                   <Image
                     height="100"
                     width="100"
@@ -235,17 +276,17 @@ const OwnerHostels = () => {
                   />
                   <div className="flex flex-col">
                     <p className="font-normal text-base text-gray-50 relative z-10">
-                      {apartment.name}
+                      {apartment.title}
                     </p>
                     <p className="text-sm text-gray-400">{apartment.location}</p>
                   </div>
                 </div>
-                <div className="text content">
+                <div className="text content p-4">
                   <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                    {apartment.name}
+                    {apartment.title}
                   </h1>
                   <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                    {apartment.rent}
+                    ₹{apartment.rent}
                   </p>
                 </div>
               </div>
@@ -290,7 +331,8 @@ const OwnerHostels = () => {
       <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
         <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
           <div className="relative w-full h-full">
-            <div id="map" className="w-full h-full rounded-xl" />
+            {/* Use the ref for the map container */}
+            <div id="map" ref={mapContainerRef} className="w-full h-full rounded-xl" />
             {/* Locate User Button */}
             <button
               className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
@@ -300,10 +342,13 @@ const OwnerHostels = () => {
             </button>
             {/* Selected Hostel Details */}
             {selectedHostel && (
-              <div className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
-                <h3 className="text-md font-semibold">{selectedHostel.name}</h3>
-                <p className="text-xs text-gray-600">{selectedHostel.address}</p>
-                <p className="text-xs text-green-600 font-medium">Price: {selectedHostel.rent}</p>
+              <div ref={detailsRef} className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
+                <h3 className="text-md font-semibold">{selectedHostel.title}</h3>
+                <p className="text-xs text-gray-600">{selectedHostel.location}</p>
+                <p className="text-xs text-green-600 font-medium">Price: ₹{selectedHostel.rent}</p>
+                <Button className="mt-2 w-full bg-blue-500 text-white text-xs py-1" onClick={handleGetDirections}>
+                  Get Directions
+                </Button>
               </div>
             )}
           </div>
