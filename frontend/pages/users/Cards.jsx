@@ -56,7 +56,7 @@ const UserHostels = () => {
   useEffect(() => {
     const fetchHostels = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
+        const accessToken = localStorage.getItem("access_token_user");
         if (!accessToken) {
           throw new Error("No access token found");
         }
@@ -140,7 +140,7 @@ const UserHostels = () => {
     const markers = hostels.map((hostel) => {
       const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
         .setLngLat([hostel.longitude, hostel.latitude])
-        .setPopup(new maplibregl.Popup().setText(hostel.name))
+        .setPopup(new maplibregl.Popup().setText(hostel.title))
         .addTo(mapInstance);
 
       marker.getElement().addEventListener("click", (e) => {
@@ -306,14 +306,14 @@ const UserHostels = () => {
                   />
                   <div className="flex flex-col">
                     <p className="font-normal text-base text-gray-50 relative z-10">
-                      {hostel.name}
+                      {hostel.title}
                     </p>
                     <p className="text-sm text-gray-400">{hostel.location}</p>
                   </div>
                 </div>
                 <div className="text content p-4">
                   <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                    {hostel.name}
+                    {hostel.title}
                   </h1>
                   <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
                     ₹{hostel.rent}

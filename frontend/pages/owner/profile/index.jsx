@@ -109,7 +109,7 @@ export default function ProfilePage() {
         formData,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
           },
         }
       );

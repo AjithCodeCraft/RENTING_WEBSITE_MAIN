@@ -55,7 +55,7 @@ export default function AddApartmentForm() {
   // Check verification status on component mount
   useEffect(() => {
     const checkVerificationStatus = async () => {
-      const accessToken = localStorage.getItem("access_token");
+      const accessToken = localStorage.getItem("access_token_owner");
       if (!accessToken) {
         setErrorMessage("Authentication token not found");
         return;
@@ -97,7 +97,7 @@ export default function AddApartmentForm() {
     }
 
     try {
-      const accessToken = localStorage.getItem("access_token");
+      const accessToken = localStorage.getItem("access_token_owner");
       if (!accessToken) {
         setErrorMessage("Authentication token not found");
         return;
@@ -128,7 +128,7 @@ export default function AddApartmentForm() {
 
   // Handle form submission
   const onSubmit = async (data) => {
-    const accessToken = localStorage.getItem("access_token");
+    const accessToken = localStorage.getItem("access_token_owner");
     if (!accessToken) {
       setErrorMessage("Authentication token not found");
       return;
@@ -191,7 +191,7 @@ export default function AddApartmentForm() {
 
   // Upload image to the server
   const uploadImage = async (file, apartmentId) => {
-    const accessToken = localStorage.getItem("access_token");
+    const accessToken = localStorage.getItem("access_token_owner");
     if (!accessToken) {
       setErrorMessage("Authentication token not found");
       return;
