@@ -1,17 +1,16 @@
-// pages/admin/index.js
 import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../.../../../../components/ui/card";
+} from "../../../components/ui/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "../.../../../../components/ui/tabs";
+} from "../../../components/ui/tabs";
 import {
   CircleUser,
   Home,
@@ -24,7 +23,6 @@ import {
   Clock3,
   AlertTriangle,
 } from "lucide-react";
-// import StatCard from '../../components/dashboard/StatCard';
 import PendingApprovalsList from "./PendingApprovalsList";
 import RecentActivityList from "./RecentActivityList";
 import StatCard from "./StatCard";
@@ -77,7 +75,7 @@ const AdminDashboard = () => {
       });
       setActiveUsers(response.data.length);
       const ownerData = response.data.reduce((acc, item) => {
-        acc[item.id] = item
+        acc[item.id] = item;
         return acc;
       }, {});
       setAllUsers(ownerData);
@@ -92,9 +90,11 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 lg:ml-[20%]">
+        <div className="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Dashboard
+          </h2>
           <div className="flex items-center space-x-2">
             <span className="text-sm text-muted-foreground">
               Welcome back, Admin
@@ -103,13 +103,21 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="overview" onClick={scrollToPendingSection}>Pending Approvals</TabsTrigger>
+          <TabsList className="w-full md:w-auto">
+            <TabsTrigger value="overview" className="w-full md:w-auto">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="overview"
+              onClick={scrollToPendingSection}
+              className="w-full md:w-auto"
+            >
+              Pending Approvals
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 title="Total Hostels"
                 value={totalApartments}
@@ -137,8 +145,11 @@ const AdminDashboard = () => {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7" ref={pendingSection}>
-              <Card className="col-span-4">
+            <div
+              className="grid gap-4 grid-cols-1 lg:grid-cols-7"
+              ref={pendingSection}
+            >
+              <Card className="col-span-1 lg:col-span-4">
                 <CardHeader>
                   <CardTitle>Pending Approvals</CardTitle>
                 </CardHeader>
@@ -146,7 +157,7 @@ const AdminDashboard = () => {
                   <PendingApprovalsList props={pendingApprovalListProps} />
                 </CardContent>
               </Card>
-              <Card className="col-span-3">
+              <Card className="col-span-1 lg:col-span-3">
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>

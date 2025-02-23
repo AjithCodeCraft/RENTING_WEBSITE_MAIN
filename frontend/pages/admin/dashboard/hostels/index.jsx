@@ -64,7 +64,7 @@ export function AdminHostels() {
 
     return (
         <AdminLayout>
-            <div className="pt-6 px-10">
+            <div className="pt-6 px-10 lg:ml-[20%]">
                 {/* Search Bar */}
                 <input
                     type="text"
