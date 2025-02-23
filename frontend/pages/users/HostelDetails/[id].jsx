@@ -1,13 +1,14 @@
 "use client"
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, CameraIcon, MessageCircleIcon, XIcon } from "lucide-react"
+import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import UserHeader from "../UserHeader"
 import { useState, useEffect } from "react"
-import { Calendar } from "@/components/ui/calendar"
 import { addDays } from "date-fns"
+import 'react-modern-calendar-datepicker/lib/DatePicker.css';
+import { Calendar } from 'react-modern-calendar-datepicker';
 
 const DEFAULT_THUMBNAIL = "/default-image.jpg" // Default thumbnail image
 
@@ -26,7 +27,7 @@ const HostelDetails = () => {
   const [message, setMessage] = useState("")
   const [selectedReview, setSelectedReview] = useState(null)
   const [duration, setDuration] = useState("short-term")
-  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) })
+  const [selectedDayRange, setSelectedDayRange] = useState({ from: null, to: null })
   const [apartment_id, setApartmentId] = useState(null) // State to store apartment_id
 
   // Fetch apartment_id from localStorage on the client side
@@ -133,19 +134,8 @@ const HostelDetails = () => {
 
   const calculateTotalAmount = () => {
     const baseAmount = hostel?.rent || 0
-    if (duration === "short-term") {
-      return baseAmount * 7 // 1 week
-    } else {
-      return baseAmount * 30 // 1 month
-    }
-  }
-
-  const handleDateSelect = (date) => {
-    if (duration === "short-term") {
-      setSelectedDates({ from: date, to: addDays(date, 7) })
-    } else {
-      setSelectedDates({ from: date, to: addDays(date, 30) })
-    }
+    const days = selectedDayRange.to ? Math.ceil((selectedDayRange.to - selectedDayRange.from) / (1000 * 60 * 60 * 24)) : 0
+    return baseAmount * days
   }
 
   if (loading) {
@@ -325,10 +315,10 @@ const HostelDetails = () => {
                 {/* Calendar */}
                 <div className="border rounded p-2">
                   <Calendar
-                    mode="range"
-                    selected={selectedDates}
-                    onSelect={handleDateSelect}
-                    numberOfMonths={duration === "short-term" ? 1 : 2}
+                    value={selectedDayRange}
+                    onChange={setSelectedDayRange}
+                    shouldHighlightWeekends
+                    minimumDate={new Date()} // Ensure the minimum date is today
                   />
                 </div>
 
@@ -345,7 +335,7 @@ const HostelDetails = () => {
                 {/* Total Amount */}
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span>₹{hostel.rent} x {duration === "short-term" ? "7 nights" : "30 nights"}</span>
+                    <span>₹{hostel.rent} x {selectedDayRange.to ? `${Math.ceil((selectedDayRange.to - selectedDayRange.from) / (1000 * 60 * 60 * 24))} nights` : "Select dates"}</span>
                     <span>₹{calculateTotalAmount()}</span>
                   </div>
                   <div className="flex justify-between font-semibold">
