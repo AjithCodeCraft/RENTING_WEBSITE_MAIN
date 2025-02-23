@@ -1,24 +1,17 @@
 import base64
-import datetime
 import random
 from django.shortcuts import get_object_or_404
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.views.decorators.csrf import csrf_exempt
 import firebase_admin
 from rest_framework.views import APIView
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-import json
 import os
 from gridfs import GridFS
 import jwt
 from django.core.mail import send_mail
-import urllib.parse
-from rest_framework.parsers import JSONParser
 import json
 from bson import ObjectId  # If using MongoDB
-from django.http import JsonResponse
-from rental_app.models import Booking  # Import Booking model
 import uuid  # Import UUID
 import razorpay
 from pymongo import MongoClient
@@ -29,24 +22,29 @@ from .authentication import AdminAuthentication
 from django.conf import settings
 from firebase_admin import auth
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
 from rest_framework import status
-from .models import ( HostelApproval, HouseOwner, OTPVerification, User, Apartment, ApartmentImage, SearchFilter, Chat, Booking, Payment, 
+from .models import (HostelApproval, HouseOwner, OTPVerification, User, Apartment, ApartmentImage, SearchFilter, Chat,
+                     Booking, Payment,
                      Notification, Admin, Wishlist, Complaint)
-from rest_framework.decorators import api_view, permission_classes,authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.hashers import make_password,check_password
+from django.contrib.auth.hashers import make_password, check_password
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 
-
 from django.middleware.csrf import get_token
-from .serializers import (ApartmentOwnerSerializer, ApartmentSerializer, CheckOwnerVerificationSerializer,HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
 
-                          SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
-                          WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
-SECRET_KEY = settings.SECRET_KEY  
+
+from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer,
+                          ApartmentImageSerializer,
+
+                          SearchFilterSerializer, ChatSerializer, BookingSerializer, PaymentSerializer,
+                          NotificationSerializer,
+                          WishlistSerializer, HostelApprovalSerializer, ComplaintSerializer)
+
+
+SECRET_KEY = settings.SECRET_KEY
 
 
 @api_view(['POST'])
@@ -84,6 +82,7 @@ def send_otp(request):
     except Exception as e:
         return Response({'error': f'Error sending OTP email: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 @api_view(['POST'])
 def verify_otp(request):
     email = request.data.get('email')
@@ -110,6 +109,7 @@ def verify_otp(request):
 
     except OTPVerification.DoesNotExist:
         return Response({'error': 'OTP not found or already used'}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 def register_user(request):
@@ -166,7 +166,6 @@ def register_user(request):
         return Response({'error': f'Unexpected error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
 @api_view(['POST'])
 def login_user(request):
     email = request.data.get('email')
@@ -187,10 +186,11 @@ def login_user(request):
             'user_id': user.user_id,
             'email': user.email,
             'name': user.name,
-            'user_type':user.user_type
+            'user_type': user.user_type
         }, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])  # Ensure authentication
@@ -202,11 +202,10 @@ def get_house_owner(request):
     house_owner = get_object_or_404(HouseOwner, owner=user)
     serializer = HouseOwnerSerializer(house_owner)
     return Response(serializer.data, status=status.HTTP_200_OK)
-    
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  #  Ensure authentication
+@permission_classes([IsAuthenticated])  # Ensure authentication
 def add_house_owner(request):
     ssn = request.data.get('SSN')  # Get SSN
 
@@ -227,7 +226,7 @@ def add_house_owner(request):
     if serializer.is_valid():
         serializer.save()
         return Response({'message': 'House owner record created successfully'}, status=status.HTTP_201_CREATED)
-    
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -239,9 +238,9 @@ def get_apartment_list(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])  #  Ensure only authenticated users can post
+@permission_classes([IsAuthenticated])  # Ensure only authenticated users can post
 def add_apartment(request):
-    user = request.user  
+    user = request.user
 
     if not hasattr(user, 'houseowner'):
         return Response({'error': 'Only house owners can add apartments'}, status=status.HTTP_403_FORBIDDEN)
@@ -260,8 +259,9 @@ def add_apartment(request):
             comments='Approval pending.',  # You can add default comments or leave it blank
         )
 
-        return Response({'message': 'Apartment added successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
-    
+        return Response({'message': 'Apartment added successfully', 'data': serializer.data},
+                        status=status.HTTP_201_CREATED)
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -275,14 +275,11 @@ def get_apartment_by_id(request, apartment_id):
         return Response({"error": "Apartment not found"}, status=404)
 
 
-
-
 @api_view(['GET', 'PUT', 'DELETE'])
-@authentication_classes([AdminAuthentication])  
-@permission_classes([IsAuthenticated])  # Ensure only authenticated users can access
+@authentication_classes([SessionAuthentication, TokenAuthentication, AdminAuthentication])
 def apartment_detail(request, pk):
     """Handles GET (Retrieve), PUT (Update), and DELETE for a specific Apartment."""
-    
+
     try:
         apartment = Apartment.objects.get(apartment_id=pk)
     except Apartment.DoesNotExist:
@@ -292,22 +289,35 @@ def apartment_detail(request, pk):
         serializer = ApartmentSerializer(apartment)
         return Response(serializer.data)
 
-    elif request.method == 'PUT':
+    if not request.user.is_authenticated:
+        return Response({"message": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if request.method == "PUT":
         serializer = ApartmentSerializer(apartment, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
+            if (
+                    (hasattr(request.user,
+                             "user_type") and request.user.user_type == "owner" and request.user.id == apartment.owner)
+                    or hasattr(request.user, "admin_id")
+            ):
+                serializer.save()
+                return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'DELETE':
-        apartment.delete()
-        return Response({'message': 'Apartment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-
+    elif request.method == "DELETE":
+        if (
+                (hasattr(request.user,
+                         "user_type") and request.user.user_type == "owner" and request.user.id == apartment.owner)
+                or hasattr(request.user, "admin_id")
+        ):
+            apartment.delete()
+            return Response({'message': 'Apartment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"message": "You don't have enough rights!"}, status=status.HTTP_403_FORBIDDEN)
 
 
 # Get House Owner by Owner ID
 @api_view(['GET'])
-@authentication_classes([AdminAuthentication])  
+@authentication_classes([AdminAuthentication])
 @permission_classes([IsAuthenticated])
 def get_house_owner_by_id(request, owner_id):
     try:
@@ -332,13 +342,13 @@ def get_house_owner_by_id(request, owner_id):
 
 
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])  
 def get_user_by_apartment_uuid(request, apartment_uuid):
     apartment = get_object_or_404(Apartment, apartment_id=apartment_uuid)
     data = ApartmentOwnerSerializer(apartment).data  
     return Response({"apartment": data})
-
 
 # Get House Owner by SSN
 @api_view(['GET'])
@@ -361,7 +371,6 @@ def get_house_owner_by_ssn(request, ssn):
 
     except HouseOwner.DoesNotExist:
         return Response({'error': 'House owner details not found'}, status=status.HTTP_404_NOT_FOUND)
-
 
 
 # Get All Apartments by Owner ID
@@ -387,16 +396,15 @@ def get_apartments_by_owner(request, owner_id):
         return Response({'error': 'Owner not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-    
-MONGO_URI = os.getenv("MONGO_HOST")  
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  
+MONGO_URI = os.getenv("MONGO_HOST")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
 
 # Connect to MongoDB
-client = MongoClient(MONGO_URI)  
-db = client[MONGO_DB_NAME]  
+client = MongoClient(MONGO_URI)
+db = client[MONGO_DB_NAME]
 
 # Initialize GridFS correctly
-fs = GridFS(db) 
+fs = GridFS(db)
 
 
 @api_view(['POST'])
@@ -430,7 +438,6 @@ def add_apartment_image(request):
     }, status=201)
 
 
-
 @api_view(['GET'])
 def get_apartment_images(request, apartment_id):
     """Retrieve all images for a specific apartment from ApartmentImage model & GridFS."""
@@ -438,12 +445,12 @@ def get_apartment_images(request, apartment_id):
         # Ensure apartment_id is a string before using it
         if isinstance(apartment_id, uuid.UUID):
             apartment_id = str(apartment_id)  # Convert UUID object to string
-        
+
         print(f"Received apartment_id: {apartment_id}")  # Debugging
 
         # Fetch images from ApartmentImage model
         apartment_images = ApartmentImage.objects.filter(apartment__apartment_id=apartment_id)
-        
+
         if not apartment_images.exists():
             return JsonResponse({'error': 'No images found for this apartment'}, status=404)
 
@@ -454,7 +461,7 @@ def get_apartment_images(request, apartment_id):
                 # Get the image from GridFS using image_path (GridFS file ID)
                 gridfs_file = fs.get(ObjectId(img.image_path))
                 image_data = gridfs_file.read()  # Read binary data
-                
+
                 image_list.append({
                     "gridfs_id": str(gridfs_file._id),
                     "image_id": str(img.image_id),
@@ -469,9 +476,6 @@ def get_apartment_images(request, apartment_id):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
-
 
 
 @api_view(['GET'])
@@ -506,7 +510,6 @@ def get_apartment_image(request, image_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_apartment_image(request, image_id):
@@ -529,7 +532,8 @@ def update_apartment_image(request, image_id):
                 pass  # Ignore if file doesn't exist
 
         # Save the new image to GridFS
-        new_file_id = fs.put(new_image_file.read(), filename=new_image_file.name, content_type=new_image_file.content_type)
+        new_file_id = fs.put(new_image_file.read(), filename=new_image_file.name,
+                             content_type=new_image_file.content_type)
 
         # Update the database record with the new image path
         image.image_path = str(new_file_id)
@@ -548,8 +552,6 @@ def update_apartment_image(request, image_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_apartment_image(request, image_id):
@@ -566,7 +568,7 @@ def delete_apartment_image(request, image_id):
 
         # Delete from Database
         image.delete()
-        
+
         return JsonResponse({'message': 'Image deleted successfully'}, status=200)
 
     except ApartmentImage.DoesNotExist:
@@ -574,7 +576,7 @@ def delete_apartment_image(request, image_id):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
+
 
 # Make sure that decimal values like rent_min, rent_max are not in quotes when making a request
 @api_view(['POST'])
@@ -592,13 +594,13 @@ def create_search_filter(request):
 @permission_classes([IsAuthenticated])
 def get_user_search_filter(request):
     filter = SearchFilter.objects.filter(user=request.user)
-    
+
     if not filter.exists():
         return Response(
             {"message": "No search filter found for this user."},
             status=status.HTTP_204_NO_CONTENT
         )
-    
+
     serializer = SearchFilterSerializer(filter, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -611,14 +613,15 @@ def update_user_search_filter(request):
     except SearchFilter.DoesNotExist:
         return Response(
             {"message": "No search filter found for this user!"},
-            status=status.HTTP_404_NOT_FOUND    
+            status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = SearchFilterSerializer(filter_instance, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -627,15 +630,14 @@ def delete_user_search_filter(request):
         filter = SearchFilter.objects.get(user=request.user)
     except SearchFilter.DoesNotExist:
         return Response(
-                {"message": "No search filter found for this user!"},
-            status=status.HTTP_404_NOT_FOUND    
+            {"message": "No search filter found for this user!"},
+            status=status.HTTP_404_NOT_FOUND
         )
     filter.delete()
     return Response(
         {"message": "Search filter deleted successfully"},
         status=status.HTTP_204_NO_CONTENT
     )
-    
 
 
 def safe_decimal(value):
@@ -649,7 +651,7 @@ def safe_decimal(value):
             return None
     return value
 
-    
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_filtered_apartments(request):
@@ -658,14 +660,14 @@ def get_filtered_apartments(request):
     except:
         return Response(
             {"message": "No search filter found for this user!"},
-            status=status.HTTP_404_NOT_FOUND    
+            status=status.HTTP_404_NOT_FOUND
         )
-        
+
     apartments = Apartment.objects.all()
-    
+
     for apartment in apartments:
         apartment.rent = float(apartment.rent.to_decimal())
-    
+
     if search_filter.location:
         apartments = apartments.filter(location__icontains=search_filter.location)
     if search_filter.duration:
@@ -688,11 +690,12 @@ def get_filtered_apartments(request):
             {"message": "No apartment found matching the search criteria"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = ApartmentSerializer(apartments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-        
-@api_view(['POST'])        
+
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_message(request, receiver_id):
     try:
@@ -702,17 +705,20 @@ def send_message(request, receiver_id):
             {"message": "No user found with the given id!"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     notification_message = f"You have received a new message from {request.user.name}"
-    
+
     serializer = ChatSerializer(data=request.data)
     notification_serializer = NotificationSerializer(data={"user": receiver.id, "message": notification_message})
+
 
     
     serializer_valid = serializer.is_valid()
     notification_serializer_valid = notification_serializer.is_valid()
 
-    if serializer_valid and notification_serializer_valid:
+
+    if serializer.is_valid() and notification_serializer.is_valid():
+
         serializer.save(sender=request.user, receiver=receiver)
         notification_serializer.save()
         return Response(
@@ -729,51 +735,51 @@ def send_message(request, receiver_id):
         status=status.HTTP_400_BAD_REQUEST
     )
 
+    return Response({serializer.errors, notification_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])        
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_notifications(request):
-    
     notification = Notification.objects.filter(user=request.user, read_status=0)
-    
+
     if not notification:
         return Response(
             {"message": "No new notifications"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     serializer = NotificationSerializer(notification, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])        
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_notification_as_read(request):
     ids = request.data.get("ids", [])
-    
+
     if not ids or not isinstance(ids, list):
         return Response(
             {"message": "Invalid or missing 'ids' list"},
             status=status.HTTP_400_BAD_REQUEST
         )
-        
+
     notifications = Notification.objects.filter(user=request.user, notification_id__in=ids)
-    
+
     if not notifications:
         return Response(
             {"message": "Wrong matching notifications found"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     notifications.update(read_status=1)
     return Response(
         {"message": "Notifications marked as read."},
         status=status.HTTP_200_OK
     )
-    
-    
-    
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_send_messages(request):
@@ -807,7 +813,6 @@ def get_send_messages_by_user_uuid(request, user_uuid):
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_send_received_messages(request):
@@ -817,15 +822,14 @@ def get_all_send_received_messages(request):
             {"message": "No message send or received!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_received_messages(request):
-    
     recevied_messages = Chat.objects.filter(receiver=request.user)
     if not recevied_messages:
         return Response(
@@ -846,17 +850,18 @@ def get_all_received_messages_from(request, sender_id):
             {"message": "No user found with the given id!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     received_messages_from = Chat.objects.filter(sender=sender, receiver=request.user)
-    
+
     if not received_messages_from:
         return Response(
             {"message": "No messages received from this user!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     serializer = ChatSerializer(received_messages_from, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -868,17 +873,18 @@ def get_all_send_messages_to(request, receiver_id):
             {"message": "No user found with the given id!"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     send_messages_to = Chat.objects.filter(sender=request.user, receiver=receiver_id)
-    
+
     if not send_messages_to:
         return Response(
             {"message": "No messages send to this user!"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = ChatSerializer(send_messages_to, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # Get the entire chat with a particular user both send and received messages
 @api_view(['GET'])
@@ -891,19 +897,18 @@ def get_all_send_received_messages_with(request, other_user_id):
             {"message": "No user found with the given id!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     messages = Chat.objects.filter(
         Q(sender=request.user, receiver=other_user) | Q(sender=other_user, receiver=request.user))
-    
+
     if not messages:
         return Response(
             {"message": "No messages sent or received with this user."},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 
 @api_view(['GET'])
@@ -912,13 +917,11 @@ def total_bookings(request):
     bookings = Booking.objects.all()
     total = bookings.count()
     serializer = BookingSerializer(bookings, many=True)
-    
+
     return Response({
         "total_bookings": total,
         "bookings": serializer.data
     })
-
-
 
 
 @api_view(['GET'])
@@ -929,7 +932,6 @@ def bookings_by_apartment(request, apartment_id):
     return Response(serializer.data)
 
 
-
 @api_view(['GET'])
 def bookings_by_user(request, user_id):
     """ Get all bookings for a specific user ID """
@@ -938,15 +940,14 @@ def bookings_by_user(request, user_id):
     return Response(serializer.data)
 
 
-
 class BookingCreateView(APIView):
     def post(self, request):
         serializer = BookingSerializer(data=request.data)
         if serializer.is_valid():
             booking = serializer.save()
-            return Response({"message": "Booking created successfully", "booking_id": booking.booking_id}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Booking created successfully", "booking_id": booking.booking_id},
+                            status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @api_view(['GET'])
@@ -955,7 +956,7 @@ def total_payments(request):
     payments = Payment.objects.all()
     total = payments.count()
     serializer = PaymentSerializer(payments, many=True)
-    
+
     return Response({
         "total_payments": total,
         "payments": serializer.data
@@ -968,7 +969,6 @@ def payments_by_booking(request, booking_id):
     payments = Payment.objects.filter(booking_id=booking_id)
     serializer = PaymentSerializer(payments, many=True)
     return Response(serializer.data)
-
 
 
 @api_view(['GET'])
@@ -996,31 +996,33 @@ def payments_by_user(request, user_id):
 @permission_classes([IsAuthenticated])
 def get_payment_by_transaction_id(request, transaction_id):
     payment = Payment.objects.filter(transaction_id=transaction_id).first()
-    
+
     if not payment:
-        return Response (
+        return Response(
             {"message": "No payment with the given ID"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = PaymentSerializer(payment)
-    
+
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_payment_by_payment_id(request, payment_id):
     payment = Payment.objects.filter(payment_id=payment_id).first()
-    
+
     if not payment:
-        return Response (
+        return Response(
             {"message": "No payment with the given ID."},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = PaymentSerializer(payment)
-    
+
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class PaymentInitiateView(APIView):
     def post(self, request, booking_id):
@@ -1069,7 +1071,7 @@ def payment_callback(request):
     if request.method == "GET":
         try:
             razorpay_payment_id = request.GET.get("razorpay_payment_id")
-            razorpay_order_id = request.GET.get("razorpay_payment_link_reference_id")  
+            razorpay_order_id = request.GET.get("razorpay_payment_link_reference_id")
             payment_status = request.GET.get("razorpay_payment_link_status")
 
             if not razorpay_payment_id or not razorpay_order_id or not payment_status:
@@ -1084,12 +1086,12 @@ def payment_callback(request):
 
                 # ✅ Extract and convert booking_id from Binary format
                 booking_id_binary = payment_record.get("booking_id")
-                
+
                 if not booking_id_binary:
                     return JsonResponse({"error": "No booking ID found in payment record"}, status=404)
 
                 # Convert Binary UUID to string
-                if isinstance(booking_id_binary, bytes):  
+                if isinstance(booking_id_binary, bytes):
                     booking_id = str(uuid.UUID(bytes=booking_id_binary))
                 elif isinstance(booking_id_binary, uuid.UUID):
                     booking_id = str(booking_id_binary)
@@ -1109,8 +1111,8 @@ def payment_callback(request):
                     try:
                         # ✅ Fetch and update booking record in SQL DB
                         booking = Booking.objects.get(booking_id=booking_id)
-                        booking.status = "confirmed"  
-                        booking.save()  
+                        booking.status = "confirmed"
+                        booking.save()
 
                         return JsonResponse({
                             "message": "Payment successful and booking confirmed",
@@ -1131,19 +1133,13 @@ def payment_callback(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-
-
-
-
-
 razorpay_client = razorpay.Client(auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_SECRET_KEY")))
 client = MongoClient(os.getenv("MONGO_HOST"))
 # Select the database
-db = client["rental_db"] 
+db = client["rental_db"]
 
 # Select the collection (example)
 payment_collection = db["rental_app_payment"]
-
 
 
 @csrf_exempt
@@ -1190,7 +1186,7 @@ def generate_payment_url(request):
             payment_link = razorpay_client.payment_link.create(payment_data)
 
             # ✅ Save the order details in MongoDB (Explicitly store UUIDs as strings)
-            
+
             BookingInstance = Booking.objects.filter(booking_id=booking_id).first()
             UserInstance = User.objects.filter(id=user_id).first()
             ApartmentInstance = Apartment.objects.filter(apartment_id=apartment_id).first()
@@ -1199,19 +1195,19 @@ def generate_payment_url(request):
                     {"message": "No booking found with provided ID!"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-                
+
             if not UserInstance:
                 return Response(
                     {"message": "No user found with the provided ID!"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-                
+
             if not ApartmentInstance:
                 return Response(
                     {"message": "No apartment found with the provided ID!"},
                     status=status.HTTP_404_NOT_FOUND
                 )
-                
+
             serializer = PaymentSerializer(data={
                 "payment_id": payment_id,
                 "transaction_id": transaction_id,
@@ -1220,38 +1216,36 @@ def generate_payment_url(request):
                 "apartment": str(ApartmentInstance.pk),
                 "amount": float(amount),
                 "razorpay_order_id": razorpay_order["id"],
-                "razorpay_payment_id": None,  
-                "razorpay_signature": None,  
+                "razorpay_payment_id": None,
+                "razorpay_signature": None,
                 "payment_status": "pending",
                 "payment_method": "razorpay"
             })
-            
+
             if serializer.is_valid():
                 serializer.save()
-            
+
                 return JsonResponse({
                     "payment_url": payment_link["short_url"],
-                    "razorpay_order_id": razorpay_order["id"],  
-                    "transaction_id": transaction_id,  
-                    "payment_id": payment_id,  
-                    "booking_id": booking_id  
+                    "razorpay_order_id": razorpay_order["id"],
+                    "transaction_id": transaction_id,
+                    "payment_id": payment_id,
+                    "booking_id": booking_id
                 }, status=200)
-            
+
             return JsonResponse(serializer.errors, status=405)
-        
+
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-
-
 def check_payment_status(request, order_id):
     try:
         # Get payment details from Razorpay
         payment = razorpay_client.order.fetch(order_id)
-        
+
         if payment["status"] == "paid":
             # Update payment status in your database
             Payment.objects.filter(razorpay_order_id=order_id).update(
@@ -1265,9 +1259,6 @@ def check_payment_status(request, order_id):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
-
 
 
 @api_view(['POST'])
@@ -1291,23 +1282,22 @@ def register_admin(request):
             name=name,
             password_hash=make_password(password)  # ✅ Hash the password before storing
         )
-        return Response({'message': 'Admin created successfully', 'admin_id': str(admin.admin_id)}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'Admin created successfully', 'admin_id': str(admin.admin_id)},
+                        status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 def get_tokens_for_admin(admin):
     """Manually generate JWT token for Admin model"""
-    
+
     payload = {
         'admin_id': str(admin.admin_id),
         'email': admin.email,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1),  # Expires in 1 hour
         'iat': datetime.datetime.utcnow()
     }
-    
+
     access_token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
     return {
@@ -1342,21 +1332,21 @@ def login_admin(request):
 
     except Admin.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-    
-    
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_item_wishlist(request, apartment_id):
     apartment = Apartment.objects.get(apartment_id=apartment_id)
-    
+
     if not apartment:
         return Response(
             {"message": "No apartment found with the give ID!"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     wishlist_serializer = WishlistSerializer(data={"apartment": apartment_id})
-    
+
     if wishlist_serializer.is_valid():
         wishlist_serializer.save(user=request.user)
         return Response(wishlist_serializer.data, status=status.HTTP_200_OK)
@@ -1364,6 +1354,7 @@ def add_item_wishlist(request, apartment_id):
         {"message": wishlist_serializer.errors, "error": "Apartment already in Wishlist!"},
         status=status.HTTP_400_BAD_REQUEST
     )
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -1375,9 +1366,10 @@ def get_wishlist(request):
             {"message": "Wish list is empty!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     serializer = WishlistSerializer(wishlist, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -1389,12 +1381,13 @@ def remove_item_wishlist_with_wishlist_id(request, wishlist_id):
             {"message": "No such item in wishlist"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     wishlist_item.delete()
     return Response(
         {"message": "Successfully removed item from wishlist"},
         status=status.HTTP_200_OK
     )
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -1406,36 +1399,35 @@ def remove_item_wishlist_with_apartment_id(request, apartment_id):
             {"message": "No such item in wishlist"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     wishlist_item.delete()
     return Response(
         {"message": "Successfully removed item from wishlist"},
         status=status.HTTP_200_OK
     )
-    
 
 
 @api_view(['POST'])
-@authentication_classes([AdminAuthentication]) 
-@permission_classes([IsAuthenticated])  
+@authentication_classes([AdminAuthentication])
+@permission_classes([IsAuthenticated])
 def create_hostel_approval(request):
-    
     data = request.data
-    data['admin'] = request.user.admin_id 
+    data['admin'] = request.user.admin_id
 
     serializer = HostelApprovalSerializer(data=data)
-    
+
     if serializer.is_valid():
         serializer.save()
         return JsonResponse(serializer.data, status=201)
-    
+
     return JsonResponse(serializer.errors, status=400)
+
 
 @api_view(['PATCH'])
 @authentication_classes([AdminAuthentication])
 def approve_hostel(request, apartment_id):
     updated_count = HostelApproval.objects.filter(apartment_id=apartment_id).update(status="approved")
-    
+
     if updated_count == 0:
         return Response(
             {"message": "No aparment found with the given ID!"},
@@ -1447,38 +1439,35 @@ def approve_hostel(request, apartment_id):
             status=status.HTTP_200_OK
         )
 
+
 @api_view(['GET'])
 @authentication_classes([AdminAuthentication])  # Use the custom admin authentication
 @permission_classes([IsAuthenticated])  # Ensure the user is authenticated
 def get_hostel_approval(request):
     approval = HostelApproval.objects.all()
-    
+
     serializer = HostelApprovalSerializer(approval, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 
 
 @api_view(['GET'])
 def get_approved_apartments(request):
     # Get approved apartment IDs
     approved_apartment_ids = HostelApproval.objects.filter(status='approved').values_list('apartment_id', flat=True)
-    
+
     # Fetch approved apartments
     approved_apartments = Apartment.objects.filter(apartment_id__in=approved_apartment_ids)
     serialized_apartments = ApartmentSerializer(approved_apartments, many=True).data
-    
-  
+
     for apartment in serialized_apartments:
         apartment_id = apartment['apartment_id']  # Ensure this matches your Apartment model's field
 
-       
         apartment_images = ApartmentImage.objects.filter(apartment_id=apartment_id)
         image_list = []
 
         for img in apartment_images:
             try:
-                
+
                 gridfs_file = fs.get(ObjectId(img.image_path))
                 image_data = base64.b64encode(gridfs_file.read()).decode('utf-8')  # Convert to base64
 
@@ -1486,7 +1475,7 @@ def get_approved_apartments(request):
                     "gridfs_id": str(gridfs_file._id),
                     "image_id": str(img.image_id),
                     "filename": gridfs_file.filename,
-                    "image_data": image_data, 
+                    "image_data": image_data,
                     "is_primary": img.is_primary
                 })
             except Exception as e:
@@ -1498,31 +1487,28 @@ def get_approved_apartments(request):
     return JsonResponse(serialized_apartments, safe=False)
 
 
-
 @api_view(['GET'])
 @authentication_classes([AdminAuthentication])
 @permission_classes([IsAuthenticated])
 def get_pending_apartments(request):
-   
     pending_apartment_ids = HostelApproval.objects.filter(status='pending').values_list('apartment_id', flat=True)
-    
-    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')  
-    
+
+    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')
+
     serializer = ApartmentSerializer(pending_apartments, many=True)
-    
+
     return JsonResponse(serializer.data, safe=False)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_pending_apartments_for_owner(request):
-   
     pending_apartment_ids = HostelApproval.objects.filter(status='pending').values_list('apartment_id', flat=True)
-    
-    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')  
-    
+
+    pending_apartments = Apartment.objects.filter(apartment_id__in=pending_apartment_ids).order_by('-created_at')
+
     serializer = ApartmentSerializer(pending_apartments, many=True)
-    
+
     return JsonResponse(serializer.data, safe=False)
 
 
@@ -1533,43 +1519,44 @@ def delete_pending(request, owner_id):
     pending.delete()
     return Response({"message": "Deleted"}, status=status.HTTP_200_OK)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_complaint(request, apartment_id):
     try:
         apartment = Apartment.objects.get(apartment_id=apartment_id)
     except Apartment.DoesNotExist:
-        return Response (
+        return Response(
             {"message": "No Apartment found with given ID!"},
             status=status.HTTP_404_NOT_FOUND
         )
-        
+
     owner = apartment.owner.owner
-    
 
     notification_message = f"You have received a complaint from {request.user.name}"
-    
+
     complaint_serializer = ComplaintSerializer(data=request.data)
     notification_serializer = NotificationSerializer(data={"user": owner.pk, "message": notification_message})
-    
+
     if notification_serializer.is_valid():
         if complaint_serializer.is_valid():
-                complaint_serializer.save(complainant=request.user, apartment=apartment, owner=owner)
-                notification_serializer.save()
-                return Response(complaint_serializer.data, status=status.HTTP_200_OK)
-    
+            complaint_serializer.save(complainant=request.user, apartment=apartment, owner=owner)
+            notification_serializer.save()
+            return Response(complaint_serializer.data, status=status.HTTP_200_OK)
+
     return Response(
         {complaint_serializer.errors, notification_serializer.errors},
         status=status.HTTP_400_BAD_REQUEST
     )
-    
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_complaints_with_apartment_id(request, apartment_id):
     complaints = Complaint.objects.filter(apartment=apartment_id)
-    
+
     if not complaints:
-        return Response (
+        return Response(
             {"message": "No complaints found with given ID!"},
             status=status.HTTP_404_NOT_FOUND
         )
@@ -1579,19 +1566,20 @@ def get_complaints_with_apartment_id(request, apartment_id):
         serializer.data,
         status=status.HTTP_200_OK
     )
-    
+
+
 @csrf_exempt
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_complaints(request):
     complaints = Complaint.objects.filter(owner=request.user)
-    
+
     if not complaints:
-        return Response (
+        return Response(
             {"message": "No complaints found with given ID!"},
             status=status.HTTP_404_NOT_FOUND
         )
-    
+
     serializer = ComplaintSerializer(complaints, many=True)
     return Response(
         serializer.data,
@@ -1623,6 +1611,7 @@ def get_csrf_token(request):
     response.set_cookie("csrftoken", csrf_token, httponly=False, samesite="None", secure=False)
     return response
 
+
 @api_view(['GET'])
 @authentication_classes([AdminAuthentication])
 def get_all_users(request):
@@ -1630,12 +1619,14 @@ def get_all_users(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
     user = request.user
     serializer = UserSerializer(user)
     return Response(serializer.data)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -1654,7 +1645,6 @@ def update_profile(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_owner_details_by_receiver_id(request, receiver_id):
@@ -1664,3 +1654,4 @@ def get_owner_details_by_receiver_id(request, receiver_id):
     # Serialize the owner details
     serializer = UserSerializer(owner)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
