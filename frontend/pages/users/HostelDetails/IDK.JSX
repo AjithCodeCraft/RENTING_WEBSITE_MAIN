@@ -123,47 +123,13 @@ const HostelDetails = () => {
     setIsMessagePopupOpen(!isMessagePopupOpen)
   }
 
-  const handleSendMessage = async () => {
-    if (!message || message.trim() === "") return;
-  
-    try {
-      const accessToken = localStorage.getItem("access_token_user");
-      const receiverId = Number(localStorage.getItem("owner_id"));
-  
-      if (isNaN(receiverId)) {
-        console.error("Invalid receiver ID");
-        return;
-      }
-  
-      const requestBody = JSON.stringify({ message: message });
-      console.log("Sending:", requestBody);
-  
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/chat/send-message/${receiverId}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: requestBody,
-        }
-      );
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Failed to send message:", errorData);
-        throw new Error(errorData.message || "Failed to send message");
-      }
-  
-      // Close the message popup and show success popup
-      setIsMessagePopupOpen(false);
-      setIsSuccessPopupOpen(true);
-      setMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-    }
-  };
+  const handleSendMessage = () => {
+    setTimeout(() => {
+      setIsMessagePopupOpen(false)
+      setIsSuccessPopupOpen(true)
+      setMessage("")
+    }, 1000)
+  }
 
   const closeSuccessPopup = () => {
     setIsSuccessPopupOpen(false)

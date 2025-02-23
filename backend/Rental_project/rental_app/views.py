@@ -41,7 +41,7 @@ from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer,
 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer, PaymentSerializer,
                           NotificationSerializer,
-                          WishlistSerializer, HostelApprovalSerializer, ComplaintSerializer)
+                          WishlistSerializer, HostelApprovalSerializer, ComplaintSerializer,ApartmentOwnerSerializer)
 
 
 SECRET_KEY = settings.SECRET_KEY

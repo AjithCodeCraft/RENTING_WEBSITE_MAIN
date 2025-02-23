@@ -15,12 +15,20 @@ function ChatInterface() {
   const [notifications, setNotifications] = useState([]);
   const [ownerDetails, setOwnerDetails] = useState(null);
   const [receiverIds, setReceiverIds] = useState([]);
+  const [userId, setUserId] = useState(null);
 
-  // Get user ID from localStorage
-  const userId = localStorage.getItem("user_id");
+  // Check if localStorage is available (client-side only)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userIdFromStorage = localStorage.getItem("user_id");
+      setUserId(userIdFromStorage);
+    }
+  }, []);
 
   // Fetch messages for the current user
   useEffect(() => {
+    if (!userId) return; // Don't fetch messages if userId is not available
+
     const fetchMessages = async () => {
       try {
         const accessToken = localStorage.getItem("access_token_user");
