@@ -46,7 +46,7 @@ const HostelDetails = () => {
 
     const fetchApartmentDetails = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token")
+        const accessToken = localStorage.getItem("access_token_user")
         if (!accessToken) {
           throw new Error("No access token found")
         }

@@ -54,7 +54,7 @@ const OwnerHostels = () => {
   useEffect(() => {
     const fetchPendingApartments = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
+        const accessToken = localStorage.getItem("access_token_owner");
         if (!accessToken) {
           throw new Error("No access token found");
         }

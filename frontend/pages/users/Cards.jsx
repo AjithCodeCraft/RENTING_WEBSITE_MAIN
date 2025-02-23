@@ -65,7 +65,7 @@ const UserHostels = () => {
                 const locationMatch = apartment.location.toLowerCase().includes(searchText);
                 if (!titleMatch && !locationMatch) return false;
             }
-
+          
             if (filters.rentMin && parseFloat(apartment.rent) < parseFloat(filters.rentMin)) return false;
             if (filters.rentMax && parseFloat(apartment.rent) > parseFloat(filters.rentMax)) return false;
             if (filters.duration && apartment.duration !== filters.duration) return false;
@@ -165,7 +165,6 @@ const UserHostels = () => {
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation({ lat: latitude, lng: longitude });
-
                     const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
                         .setLngLat([longitude, latitude])
                         .setPopup(new maplibregl.Popup().setText("Your Location"))
@@ -308,7 +307,6 @@ const UserHostels = () => {
                         );
                     })}
                 </div>
-
                 {/* Pagination */}
                 <div className="mt-8 mb-8">
                     <Pagination>
