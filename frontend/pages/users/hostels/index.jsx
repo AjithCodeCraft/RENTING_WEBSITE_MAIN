@@ -41,7 +41,7 @@ export function HostelCards() {
         }
 
         const data = await response.json();
-        console.log(data);
+        console.log("Hostels data:", data); // Log hostels data
         setHostels(data);
 
         // Fetch images for each hostel
@@ -49,19 +49,19 @@ export function HostelCards() {
         for (const hostel of data) {
           try {
             const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`);
-
-            if (!imagesResponse.ok) {
-              // If no images are found, use the default thumbnail
-              images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
-              continue;
-            }
-
             const imagesData = await imagesResponse.json();
-            images[hostel.id] = imagesData.images;
+            console.log(`Images data for hostel ${hostel.apartment_id}:`, imagesData); // Log images data
+
+            if (!imagesResponse.ok || !imagesData.images || imagesData.images.length === 0) {
+              // If no images are found, use the default thumbnail
+              images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
+            } else {
+              images[hostel.apartment_id] = imagesData.images;
+            }
           } catch (error) {
-            console.error(`Error fetching images for hostel ${hostel.id}:`, error);
+            console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
             // If there's an error, use the default thumbnail
-            images[hostel.id] = [{ image_data: DEFAULT_THUMBNAIL }];
+            images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
           }
         }
 
@@ -134,14 +134,24 @@ export function HostelCards() {
       {/* Hostel Cards Grid */}
       <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-6 px-10">
         {filteredHostels.map((hostel) => {
-          const imageData = hostelImages[hostel.id]?.[0]?.image_data || DEFAULT_THUMBNAIL;
-          const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
-            ? `data:image/jpeg;base64,${Buffer.from(imageData, "hex").toString("base64")}`
-            : imageData;
+          const imageData = hostelImages[hostel.apartment_id]?.[0]?.image_data || DEFAULT_THUMBNAIL;
+          let imageUrl;
+
+          if (imageData.startsWith("http")) {
+            // If it's a URL, use it directly
+            imageUrl = imageData;
+          } else if (imageData.startsWith("ffd8")) {
+            // If it's a hex string, convert it to base64
+            const bytes = new Uint8Array(imageData.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+            imageUrl = `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}`;
+          } else {
+            // Assume it's a base64 string
+            imageUrl = `data:image/jpeg;base64,${imageData}`;
+          }
 
           return (
             <div
-              key={hostel.id}
+              key={hostel.apartment_id}
               className="max-w-xs w-full group/card"
               onClick={() => handleHostelCardTap(hostel)}
             >

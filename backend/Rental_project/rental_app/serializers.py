@@ -57,7 +57,7 @@ class ApartmentSerializer(serializers.ModelSerializer):
     food = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Food.objects.all(),
-        required=False,  # ✅ Make food selection optional
+        required=False,  
     )
 
     class Meta:
@@ -150,3 +150,18 @@ class ComplaintSerializer(serializers.ModelSerializer):
 
 class CheckOwnerVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+
+class HouseOwnerDetailSerializer(serializers.ModelSerializer):
+    owner = UserSerializer()
+
+    class Meta:
+        model = HouseOwner
+        fields = ["owner", "verified", "SSN"]
+
+class ApartmentOwnerSerializer(serializers.ModelSerializer):
+    owner = HouseOwnerDetailSerializer()
+
+    class Meta:
+        model = Apartment
+        fields = ["apartment_id", "title", "location", "rent", "bhk", "owner"]
