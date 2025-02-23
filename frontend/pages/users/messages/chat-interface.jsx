@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import { Alert } from "@mui/material";
 
 function ChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -43,7 +44,13 @@ function ChatInterface() {
         }
 
         const data = await response.json();
-        setMessages(data);
+        // Ensure fetched messages have a valid timestamp
+        const updatedMessages = data.map((message) => ({
+          ...message,
+          sender: userId, // Set the sender as the current user
+          timestamp: message.timestamp || new Date().toISOString(), // Ensure valid timestamp
+        }));
+        setMessages(updatedMessages);
 
         // Extract receiver IDs
         const receivers = [...new Set(data.map(message => message.receiver))];
@@ -96,7 +103,7 @@ function ChatInterface() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to fetch notifications");
+          throw alert("Failed to fetch notifications");
         }
 
         const data = await response.json();
@@ -138,43 +145,59 @@ function ChatInterface() {
   // Handle sending a message
   const handleSendMessage = async () => {
     if (newMessage.trim() === "") return;
-
+  
     try {
       const accessToken = localStorage.getItem("access_token_user");
-      const response = await fetch(`http://127.0.0.1:8000/api/chat/send-message/${selectedContactId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ content: newMessage }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
+      const receiverId = Number(localStorage.getItem("owner_id"));
+  
+      if (isNaN(receiverId)) {
+        console.error("Invalid receiver ID");
+        return;
       }
-
+  
+      const requestBody = JSON.stringify({ message: newMessage });
+      console.log("Sending message with body:", requestBody);
+  
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/chat/send-message/${receiverId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: requestBody,
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to send message:", errorData);
+        throw new Error(errorData.message || "Failed to send message");
+      }
+  
       const data = await response.json();
-
+      console.log("Message sent successfully:", data);
+  
       // Add the new message to the messages state
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: String(prevMessages.length + 1),
-          content: newMessage,
-          sender: "You",
-          isCurrentUser: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          ownerName: selectedContactName, // Include the owner's name
+          message: newMessage, // Use the correct key "message"
+          sender: userId, // Set the sender as the current user
+          timestamp: new Date().toISOString(), // Ensure valid timestamp
         },
       ]);
-
+  
       // Clear the input field
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
+  
+  
 
   // Handle selecting a contact
   const handleSelectContact = (contactId) => {
@@ -229,29 +252,24 @@ function ChatInterface() {
             {messages.length > 0 ? (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div key={message.chat_id} className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex ${message.isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={message.sender} />
-                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`mx-2 p-3 rounded-lg ${
-                          message.isCurrentUser
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground"
-                        }`}
-                      >
-                        <p className="font-semibold">{message.ownerName}</p> {/* Display owner's name */}
-                        <p>{message.message}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.isCurrentUser ? "text-primary-foreground/70" : "text-secondary-foreground/70"
-                          }`}
-                        >
-                          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
+                  <div
+                    key={message.id}
+                    className={`flex ${message.sender === userId ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] p-3 rounded-lg ${
+                        message.sender === userId
+                          ? "bg-green-500 text-white" // Green background for sent messages
+                          : "bg-secondary text-secondary-foreground" // Default background for received messages
+                      }`}
+                    >
+                      <p>{message.message}</p> {/* Use the correct key "message" */}
+                      <p className="text-xs mt-1 text-right">
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}
