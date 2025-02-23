@@ -1,14 +1,14 @@
 "use client";
-import React, {useEffect, useState} from "react";
-import {cn} from "@/lib/utils";
+import React, { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import AdminLayout from "../adminsidebar";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
-import {Button} from "@/components/ui/button";
-import {Separator} from "@/components/ui/separator";
-import {StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon } from "lucide-react";
 import useApartmentStore from "@/store/apartmentStore";
-import {object} from "zod";
+import { object } from "zod";
 
 export function UserDetails() {
     const [searchQuery, setSearchQuery] = useState("");
@@ -16,7 +16,7 @@ export function UserDetails() {
     const [owners, setOwners] = useState([]);
     const [filteredOwners, setFilteredOwners] = useState([]);
 
-    const {approvedApartments, allUsers} = useApartmentStore();
+    const { approvedApartments, allUsers } = useApartmentStore();
 
     const handleRowClick = (user) => {
         setSelectedUser(user);
@@ -57,7 +57,7 @@ export function UserDetails() {
 
     return (
         <AdminLayout>
-            <div className="pt-6 px-10">
+            <div className="pt-6 px-4 sm:px-6 lg:px-10 lg:ml-[20%]">
                 {/* Search Bar */}
                 <input
                     type="text"
@@ -70,37 +70,34 @@ export function UserDetails() {
                 {/* User Table */}
                 <div className="mt-6 overflow-x-auto">
                     <table className="min-w-full bg-white border border-gray-200">
-                        <thead>
-                        <tr>
-                            <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                            <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Properties
-                                Owned
-                            </th>
-                            <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        </tr>
+                        <thead className="hidden sm:table-header-group">
+                            <tr>
+                                <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                                <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Properties Owned</th>
+                                <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredOwners.map((user) => (
-                            <tr key={user.id} onClick={() => handleRowClick(user)}
-                                className="cursor-pointer hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name ? user.name : "No Name"}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phone}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getPropertiesOwned(user.id)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span
-                            className={cn(
-                                "px-2 py-1 rounded-full text-xs font-semibold",
-                                user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            )}
-                        >
-                        {user.is_active ? "Active" : "Inactive"}
-                        </span>
-                                </td>
-                            </tr>
-                        ))}
+                            {filteredOwners.map((user) => (
+                                <tr key={user.id} onClick={() => handleRowClick(user)} className="cursor-pointer hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name ? user.name : "No Name"}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phone}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getPropertiesOwned(user.id)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <span
+                                            className={cn(
+                                                "px-2 py-1 rounded-full text-xs font-semibold",
+                                                user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                            )}
+                                        >
+                                            {user.is_active ? "Active" : "Inactive"}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -108,14 +105,14 @@ export function UserDetails() {
                 {/* User Details Popup */}
                 {selectedUser && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <Card className="w-full max-w-2xl relative">
+                        <Card className="w-full max-w-2xl mx-4 sm:mx-0 relative">
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="absolute top-2 right-2 p-2"
                                 onClick={closePopup}
                             >
-                                <XIcon className="h-4 w-4"/>
+                                <XIcon className="h-4 w-4" />
                             </Button>
                             <CardHeader>
                                 <CardTitle>{selectedUser.name}</CardTitle>
@@ -124,7 +121,7 @@ export function UserDetails() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="relative w-full h-64 rounded-lg overflow-hidden">
                                         <Image
                                             src="/download.png"
@@ -144,17 +141,16 @@ export function UserDetails() {
                                             </a>
                                         </p>
                                         <div className="mt-4">
-                                            <p className="text-lg font-semibold">Properties
-                                                Owned: {getPropertiesOwned(selectedUser.id)}</p>
+                                            <p className="text-lg font-semibold">Properties Owned: {getPropertiesOwned(selectedUser.id)}</p>
                                             <p className="text-lg font-semibold">Status: {selectedUser.is_active ? "Active" : "Inactive"}</p>
                                         </div>
                                         <div className="mt-4">
                                             <Button variant="outline" className="mr-2">
-                                                <MessageCircleIcon className="h-4 w-4 mr-2"/>
+                                                <MessageCircleIcon className="h-4 w-4 mr-2" />
                                                 Message
                                             </Button>
                                             <Button variant="outline">
-                                                <Share2Icon className="h-4 w-4 mr-2"/>
+                                                <Share2Icon className="h-4 w-4 mr-2" />
                                                 Share
                                             </Button>
                                         </div>
