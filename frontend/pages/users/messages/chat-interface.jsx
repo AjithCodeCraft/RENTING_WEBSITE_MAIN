@@ -7,43 +7,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 
-const dummyContacts = [
-  {
-    id: "1",
-    name: "Alice Johnson",
-    lastMessage: "That sounds great! Let's do it.",
-    lastMessageTime: "10:30 AM",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: "2",
-    name: "Bob Smith",
-    lastMessage: "Can you send me the report?",
-    lastMessageTime: "Yesterday",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-];
-
 function ChatInterface() {
-  const [selectedContactId, setSelectedContactId] = useState("1");
-  const [selectedContactName, setSelectedContactName] = useState("Alice Johnson");
+  const [selectedContactId, setSelectedContactId] = useState(null);
+  const [selectedContactName, setSelectedContactName] = useState("Select a contact");
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [ownerDetails, setOwnerDetails] = useState(null);
+  const [receiverIds, setReceiverIds] = useState([]);
 
-  // Fetch messages for the selected contact
+  // Get user ID from localStorage
+  const userId = localStorage.getItem("user_id");
+
+  // Fetch messages for the current user
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
-        const response = await fetch(
-          `http://localhost:8000/api/get_all_send_received_messages_with/${selectedContactId}/`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const accessToken = localStorage.getItem("access_token_user");
+        const response = await fetch(`http://127.0.0.1:8000/api/messages/sent/${userId}/`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
@@ -51,20 +36,52 @@ function ChatInterface() {
 
         const data = await response.json();
         setMessages(data);
+
+        // Extract receiver IDs
+        const receivers = [...new Set(data.map(message => message.receiver))];
+        setReceiverIds(receivers);
+
+        // Fetch owner details for the first receiver ID
+        if (receivers.length > 0) {
+          fetchOwnerDetails(receivers[0]);
+        }
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
 
     fetchMessages();
-  }, [selectedContactId]);
+  }, [userId]);
+
+  // Fetch owner details using receiver ID
+  const fetchOwnerDetails = async (receiverId) => {
+    try {
+      const accessToken = localStorage.getItem("access_token_user");
+      const response = await fetch(`http://127.0.0.1:8000/api/get_owner_details_by_receiver/${receiverId}/`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch owner details");
+      }
+
+      const data = await response.json();
+      setOwnerDetails(data);
+      setSelectedContactId(data.id);
+      setSelectedContactName(data.name);
+    } catch (error) {
+      console.error("Error fetching owner details:", error);
+    }
+  };
 
   // Fetch notifications for the current user
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token");
-        const response = await fetch("http://localhost:8000/api/get_user_notifications/", {
+        const accessToken = localStorage.getItem("access_token_user");
+        const response = await fetch("http://127.0.0.1:8000/api/get_user_notifications/", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -87,8 +104,8 @@ function ChatInterface() {
   // Mark notifications as read
   const markNotificationsAsRead = async (notificationIds) => {
     try {
-      const accessToken = localStorage.getItem("access_token");
-      const response = await fetch("http://localhost:8000/api/mark_notification_as_read/", {
+      const accessToken = localStorage.getItem("access_token_user");
+      const response = await fetch("http://127.0.0.1:8000/api/mark_notification_as_read/", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -115,8 +132,8 @@ function ChatInterface() {
     if (newMessage.trim() === "") return;
 
     try {
-      const accessToken = localStorage.getItem("access_token");
-      const response = await fetch(`http://localhost:8000/api/send_message/${selectedContactId}/`, {
+      const accessToken = localStorage.getItem("access_token_user");
+      const response = await fetch(`http://127.0.0.1:8000/api/chat/send-message/${selectedContactId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -140,6 +157,7 @@ function ChatInterface() {
           sender: "You",
           isCurrentUser: true,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          ownerName: selectedContactName, // Include the owner's name
         },
       ]);
 
@@ -153,7 +171,7 @@ function ChatInterface() {
   // Handle selecting a contact
   const handleSelectContact = (contactId) => {
     setSelectedContactId(contactId);
-    const selectedContact = dummyContacts.find((contact) => contact.id === contactId);
+    const selectedContact = ownerDetails ? ownerDetails : "Unknown";
     setSelectedContactName(selectedContact ? selectedContact.name : "Unknown");
 
     // Mark notifications as read when selecting a contact
@@ -170,25 +188,27 @@ function ChatInterface() {
       <div className="w-1/3 border-r">
         <ScrollArea className="h-[calc(100vh-4rem)] w-full">
           <div className="space-y-2 p-4">
-            {dummyContacts.map((contact) => (
+            {ownerDetails ? (
               <div
-                key={contact.id}
+                key={ownerDetails.id}
                 className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${
-                  contact.id === selectedContactId ? "bg-primary/10" : "hover:bg-muted"
+                  ownerDetails.id === selectedContactId ? "bg-primary/10" : "hover:bg-muted"
                 }`}
-                onClick={() => handleSelectContact(contact.id)}
+                onClick={() => handleSelectContact(ownerDetails.id)}
               >
                 <Avatar className="w-10 h-10 mr-3">
-                  <AvatarImage src={contact.avatar} alt={contact.name} />
-                  <AvatarFallback>{contact.name[0]}</AvatarFallback>
+                  <AvatarImage src={ownerDetails.avatar} alt={ownerDetails.name} />
+                  <AvatarFallback>{ownerDetails.name[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-grow">
-                  <h3 className="font-semibold">{contact.name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">{contact.lastMessage}</p>
+                  <h3 className="font-semibold">{ownerDetails.name}</h3>
+                  <p className="text-sm text-muted-foreground truncate">{ownerDetails.lastMessage}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{contact.lastMessageTime}</span>
+                <span className="text-xs text-muted-foreground">{ownerDetails.lastMessageTime}</span>
               </div>
-            ))}
+            ) : (
+              <p className="text-muted-foreground">You don't have any contacts.</p>
+            )}
           </div>
         </ScrollArea>
       </div>
@@ -198,34 +218,39 @@ function ChatInterface() {
             <h2 className="text-xl font-semibold">Chat with {selectedContactName}</h2>
           </div>
           <ScrollArea className="flex-grow p-4">
-            <div className="space-y-4">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex ${message.isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={`/placeholder.svg?height=32&width=32`} alt={message.sender} />
-                      <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                    </Avatar>
-                    <div
-                      className={`mx-2 p-3 rounded-lg ${
-                        message.isCurrentUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-secondary-foreground"
-                      }`}
-                    >
-                      <p>{message.content}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          message.isCurrentUser ? "text-primary-foreground/70" : "text-secondary-foreground/70"
+            {messages.length > 0 ? (
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <div key={message.chat_id} className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}>
+                    <div className={`flex ${message.isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={message.sender} />
+                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={`mx-2 p-3 rounded-lg ${
+                          message.isCurrentUser
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground"
                         }`}
                       >
-                        {message.timestamp}
-                      </p>
+                        <p className="font-semibold">{message.ownerName}</p> {/* Display owner's name */}
+                        <p>{message.message}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            message.isCurrentUser ? "text-primary-foreground/70" : "text-secondary-foreground/70"
+                          }`}
+                        >
+                          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">You don't have any messages.</p>
+            )}
           </ScrollArea>
           <div className="p-4 bg-background">
             <div className="flex items-center space-x-2">

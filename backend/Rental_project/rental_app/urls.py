@@ -6,7 +6,10 @@ from .views import (
     get_apartments_by_owner,
     get_house_owner_by_id,
     get_house_owner_by_ssn,
+    get_owner_details_by_receiver_id,
     get_pending_apartments_for_owner,
+    get_send_messages_by_user_uuid,
+    get_user_by_apartment_uuid,
     register_user,
     login_user,
     apartment_detail,
@@ -328,7 +331,24 @@ urlpatterns = [
     path('update-profile/', 
          update_profile,
         name='update_profile'),
-    path('apartments_by_id/<str:apartment_id>/', get_apartment_by_id, name='get_apartment_by_id'),
+    path(
+        'apartments_by_id/<str:apartment_id>/', 
+        get_apartment_by_id, 
+        name='get_apartment_by_id'),
+    path(
+        "user-by-apartment/<uuid:apartment_uuid>/", 
+        get_user_by_apartment_uuid, 
+        name="user-by-apartment"),
+    path(
+        'messages/sent/<str:user_uuid>/', 
+        get_send_messages_by_user_uuid, 
+        name='get_send_messages_by_user_uuid'),
+
+    path(
+        'get_owner_details_by_receiver/<int:receiver_id>/', 
+        get_owner_details_by_receiver_id, 
+        name='get_owner_details_by_receiver_id'),
+
 ]    
 
     

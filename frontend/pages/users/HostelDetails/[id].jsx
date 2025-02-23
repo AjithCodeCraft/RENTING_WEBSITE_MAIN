@@ -1,71 +1,78 @@
-"use client"
-import Image from "next/image"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, CameraIcon, MessageCircleIcon, XIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import UserHeader from "../UserHeader"
-import { useState, useEffect } from "react"
-import { Calendar } from "@/components/ui/calendar"
-import { addDays } from "date-fns"
+"use client";
 
-const DEFAULT_THUMBNAIL = "/default-image.jpg" // Default thumbnail image
+import Image from "next/image";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, CameraIcon, MessageCircleIcon, XIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import UserHeader from "../UserHeader";
+import { useState, useEffect } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { addDays } from "date-fns";
+
+const DEFAULT_THUMBNAIL = "/default-image.jpg"; // Default thumbnail image
 
 // Function to convert hex to Base64
 const hexToBase64 = (hex) => {
-  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)))
-  return Buffer.from(bytes).toString("base64")
-}
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+  return Buffer.from(bytes).toString("base64");
+};
 
 const HostelDetails = () => {
-  const [hostel, setHostel] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false)
-  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false)
-  const [message, setMessage] = useState("")
-  const [selectedReview, setSelectedReview] = useState(null)
-  const [duration, setDuration] = useState("short-term")
-  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) })
-  const [apartment_id, setApartmentId] = useState(null) // State to store apartment_id
+  const [hostel, setHostel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false);
+  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [duration, setDuration] = useState("short-term");
+  const [selectedDates, setSelectedDates] = useState({ from: new Date(), to: addDays(new Date(), 7) });
+  const [apartment_id, setApartmentId] = useState(null); // State to store apartment_id
+  const [ownerId, setOwnerId] = useState(null); // State to store owner's ID
 
   // Fetch apartment_id from localStorage on the client side
   useEffect(() => {
-    const apartmentId = localStorage.getItem("apartment_id")
+    const apartmentId = localStorage.getItem("apartment_id");
     if (apartmentId) {
-      setApartmentId(apartmentId)
+      setApartmentId(apartmentId);
     } else {
-      setError("Apartment ID not found in localStorage")
-      setLoading(false)
+      setError("Apartment ID not found in localStorage");
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
-  // Fetch apartment details and images
+  // Fetch apartment details and owner's ID
   useEffect(() => {
-    if (!apartment_id) return // Ensure apartment_id is available
+    if (!apartment_id) return; // Ensure apartment_id is available
 
     const fetchApartmentDetails = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token_user")
+        const accessToken = localStorage.getItem("access_token_user");
         if (!accessToken) {
-          throw new Error("No access token found")
+          throw new Error("No access token found");
         }
 
         // Fetch apartment details
         const apartmentResponse = await fetch(
-          `http://127.0.0.1:8000/api/apartments_by_id/${apartment_id}/`,
+          `http://127.0.0.1:8000/api/user-by-apartment/${apartment_id}/`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           }
-        )
+        );
         if (!apartmentResponse.ok) {
-          throw new Error("Failed to fetch apartment details")
+          throw new Error("Failed to fetch apartment details");
         }
-        const apartmentData = await apartmentResponse.json()
+        const apartmentData = await apartmentResponse.json();
 
-        // Fetch apartment images
+        // Extract owner's ID and store it in localStorage
+        const ownerId = apartmentData.apartment.owner.owner.id;
+        localStorage.setItem("owner_id", ownerId);
+        setOwnerId(ownerId);
+
+        // Fetch apartment images (if needed)
         const imagesResponse = await fetch(
           `http://127.0.0.1:8000/api/apartment-images/${apartment_id}/`,
           {
@@ -73,91 +80,128 @@ const HostelDetails = () => {
               Authorization: `Bearer ${accessToken}`,
             },
           }
-        )
+        );
         if (!imagesResponse.ok) {
-          throw new Error("Failed to fetch apartment images")
+          throw new Error("Failed to fetch apartment images");
         }
-        const imagesData = await imagesResponse.json()
+        const imagesData = await imagesResponse.json();
 
         // Convert hex images to Base64
         const imagesWithBase64 = imagesData.images.map((image) => {
-          if (image.image_data.startsWith("ffd8")) { // Check if it's a hex string
+          if (image.image_data.startsWith("ffd8")) {
+            // Check if it's a hex string
             return {
               ...image,
               image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
-            }
+            };
           }
-          return image
-        })
+          return image;
+        });
 
         // Combine apartment details and images
         const apartmentWithImages = {
-          ...apartmentData,
+          ...apartmentData.apartment,
           images: imagesWithBase64.length > 0 ? imagesWithBase64 : [{ image_url: DEFAULT_THUMBNAIL }],
-        }
+        };
 
-        setHostel(apartmentWithImages)
-        setLoading(false)
+        setHostel(apartmentWithImages);
+        setLoading(false);
       } catch (error) {
-        setError(error.message)
-        setLoading(false)
+        setError(error.message);
+        setLoading(false);
       }
-    }
+    };
 
-    fetchApartmentDetails()
-  }, [apartment_id]) // Fetch data when apartment_id changes
+    fetchApartmentDetails();
+  }, [apartment_id]); // Fetch data when apartment_id changes
+
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!message || message.trim() === "") return;
+  
+    try {
+      const accessToken = localStorage.getItem("access_token_user");
+      const receiverId = Number(localStorage.getItem("owner_id"));
+  
+      if (isNaN(receiverId)) {
+        console.error("Invalid receiver ID");
+        return;
+      }
+  
+      const requestBody = JSON.stringify({ message: message });
+      console.log("Sending:", requestBody);
+  
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/chat/send-message/${receiverId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: requestBody,
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to send message:", errorData);
+        throw new Error(errorData.message || "Failed to send message");
+      }
+  
+      // Close the message popup and show success popup
+      setIsMessagePopupOpen(false);
+      setIsSuccessPopupOpen(true);
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+  
 
   const toggleMessagePopup = () => {
-    setIsMessagePopupOpen(!isMessagePopupOpen)
-  }
-
-  const handleSendMessage = () => {
-    setTimeout(() => {
-      setIsMessagePopupOpen(false)
-      setIsSuccessPopupOpen(true)
-      setMessage("")
-    }, 1000)
-  }
+    setIsMessagePopupOpen(!isMessagePopupOpen);
+  };
 
   const closeSuccessPopup = () => {
-    setIsSuccessPopupOpen(false)
-  }
+    setIsSuccessPopupOpen(false);
+  };
 
   const handleReviewClick = (review) => {
-    setSelectedReview(review)
-  }
+    setSelectedReview(review);
+  };
 
   const closeReviewPopup = () => {
-    setSelectedReview(null)
-  }
+    setSelectedReview(null);
+  };
 
   const calculateTotalAmount = () => {
-    const baseAmount = hostel?.rent || 0
+    const baseAmount = hostel?.rent || 0;
     if (duration === "short-term") {
-      return baseAmount * 7 // 1 week
+      return baseAmount * 7; // 1 week
     } else {
-      return baseAmount * 30 // 1 month
+      return baseAmount * 30; // 1 month
     }
-  }
+  };
 
   const handleDateSelect = (date) => {
     if (duration === "short-term") {
-      setSelectedDates({ from: date, to: addDays(date, 7) })
+      setSelectedDates({ from: date, to: addDays(date, 7) });
     } else {
-      setSelectedDates({ from: date, to: addDays(date, 30) })
+      setSelectedDates({ from: date, to: addDays(date, 30) });
     }
-  }
+  };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>
+    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
   }
 
   if (!hostel) {
-    return <div className="flex justify-center items-center h-screen">No data found</div>
+    return <div className="flex justify-center items-center h-screen">No data found</div>;
   }
 
   return (
@@ -230,14 +274,14 @@ const HostelDetails = () => {
 
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Private room in hostel hosted by {hostel.host?.name}</h2>
+                <h2 className="text-xl font-semibold">Private room in hostel hosted by {hostel.owner?.owner?.name}</h2>
                 <p className="text-muted-foreground">
                   {hostel.guests} guests · {hostel.bedrooms} bedroom · {hostel.beds} bed · {hostel.bathrooms} private
                   bathroom
                 </p>
               </div>
               <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                <Image src="/placeholder-user.jpg" alt={`Host ${hostel.host?.name}`} fill className="object-cover" />
+                <Image src="/placeholder-user.jpg" alt={`Host ${hostel.owner?.owner?.name}`} fill className="object-cover" />
               </div>
             </div>
 
@@ -415,7 +459,7 @@ const HostelDetails = () => {
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default HostelDetails
+export default HostelDetails;       

@@ -42,7 +42,7 @@ from django.db.models import Q
 
 
 from django.middleware.csrf import get_token
-from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer,HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
+from .serializers import (ApartmentOwnerSerializer, ApartmentSerializer, CheckOwnerVerificationSerializer,HouseOwnerSerializer, UserSerializer, ApartmentImageSerializer, 
 
                           SearchFilterSerializer, ChatSerializer, BookingSerializer,PaymentSerializer, NotificationSerializer,
                           WishlistSerializer,HostelApprovalSerializer, ComplaintSerializer)
@@ -330,6 +330,14 @@ def get_house_owner_by_id(request, owner_id):
     except HouseOwner.DoesNotExist:
         return Response({'error': 'House owner details not found'}, status=status.HTTP_404_NOT_FOUND)
 
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  
+def get_user_by_apartment_uuid(request, apartment_uuid):
+    apartment = get_object_or_404(Apartment, apartment_id=apartment_uuid)
+    data = ApartmentOwnerSerializer(apartment).data  
+    return Response({"apartment": data})
 
 
 # Get House Owner by SSN
@@ -699,16 +707,28 @@ def send_message(request, receiver_id):
     
     serializer = ChatSerializer(data=request.data)
     notification_serializer = NotificationSerializer(data={"user": receiver.id, "message": notification_message})
+
     
-    if serializer.is_valid() and notification_serializer.is_valid():
+    serializer_valid = serializer.is_valid()
+    notification_serializer_valid = notification_serializer.is_valid()
+
+    if serializer_valid and notification_serializer_valid:
         serializer.save(sender=request.user, receiver=receiver)
         notification_serializer.save()
-        return Response (
+        return Response(
             {"message": "Message sent successfully!", "data": serializer.data},
             status=status.HTTP_201_CREATED
         )
-    
-    return Response({serializer.errors, notification_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    return Response(
+        {
+            "message_errors": serializer.errors if not serializer_valid else None,
+            "notification_errors": notification_serializer.errors if not notification_serializer_valid else None
+        },
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
 
 
 @api_view(['GET'])        
@@ -766,6 +786,28 @@ def get_all_send_messages(request):
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_send_messages_by_user_uuid(request, user_uuid):
+    
+   
+    user = get_object_or_404(User, user_id=user_uuid)
+
+    # Filter messages where the sender is the specified user
+    messages = Chat.objects.filter(sender=user)
+
+    if not messages.exists():
+        return Response(
+            {"message": "No messages found for the specified user!"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Serialize the messages
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_send_received_messages(request):
@@ -779,6 +821,7 @@ def get_all_send_received_messages(request):
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
     
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_received_messages(request):
@@ -1608,4 +1651,16 @@ def update_profile(request):
 
     user.save()
     serializer = UserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_owner_details_by_receiver_id(request, receiver_id):
+    # Get the user object by receiver_id
+    owner = get_object_or_404(User, id=receiver_id)
+
+    # Serialize the owner details
+    serializer = UserSerializer(owner)
     return Response(serializer.data, status=status.HTTP_200_OK)
