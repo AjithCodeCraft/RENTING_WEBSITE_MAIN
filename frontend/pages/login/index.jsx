@@ -40,15 +40,19 @@ export default function LoginPage({ className, ...props }) {
       sessionStorage.setItem("access_token", data.access);
       
       localStorage.setItem("user_type", data.user_type);
-      localStorage.setItem("access_token", data.access);
+      // localStorage.setItem("", data.access);
       localStorage.setItem("email", email);
   
       // Check user_type and navigate accordingly
       const userType = data.user_type; // Assuming user_type is in the response
   
       if (userType === "owner") {
-        Router.push("/owner"); // Replace with actual owner route
+        localStorage.setItem("access_token_owner", data.access);
+
+        Router.push("/owner"); // Replaccess_tokenace with actual owner route
       } else if (userType === "seeker") {
+        localStorage.setItem("access_token_user", data.access);
+
         Router.push("/users"); // Replace with actual user route
       } else {
         console.log("Error: Unexpected user type");

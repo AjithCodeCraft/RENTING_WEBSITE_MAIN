@@ -19,7 +19,7 @@ export function HostelCards() {
   useEffect(() => {
     const fetchHostels = async () => {
       try {
-        const accessToken = sessionStorage.getItem("access_token");
+        const accessToken = localStorage.getItem("access_token_user");
         if (!accessToken) {
           throw new Error("No access token found");
         }
