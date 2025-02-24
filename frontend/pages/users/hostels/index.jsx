@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router"; // Import useRouter
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import UserHeader from "../UserHeader";
@@ -8,11 +9,11 @@ import FooterSection from "../footerSection";
 const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
 
 export function HostelCards() {
+  const router = useRouter(); // Initialize useRouter
   const [searchQuery, setSearchQuery] = useState("");
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedHostel, setSelectedHostel] = useState(null);
   const [hostelImages, setHostelImages] = useState({}); // Store images for each hostel
 
   // Fetch hostels with authentication
@@ -92,7 +93,8 @@ export function HostelCards() {
 
   // Handle card tap
   const handleHostelCardTap = (hostel) => {
-    setSelectedHostel(hostel);
+    // Navigate to the detailed page using the hostel's ID
+    router.push(`/users/HostelDetails/${hostel.apartment_id}`);
   };
 
   if (loading) {
@@ -170,6 +172,7 @@ export function HostelCards() {
                     alt="Avatar"
                     src="/manu.png"
                     className="h-10 w-10 rounded-full border-2 object-cover"
+                    loading="lazy"
                   />
                   <div className="flex flex-col">
                     <p className="font-normal text-base text-gray-50 relative z-10">
@@ -191,25 +194,6 @@ export function HostelCards() {
           );
         })}
       </div>
-
-      {/* Selected Hostel Details */}
-      {selectedHostel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-11/12 max-w-md">
-            <h2 className="text-xl font-bold mb-4">{selectedHostel.title}</h2>
-            <p className="text-gray-600 mb-2">{selectedHostel.location}</p>
-            <p className="text-green-600 font-medium mb-4">
-              Price: ₹{selectedHostel.rent}
-            </p>
-            <button
-              className="w-full bg-blue-500 text-white py-2 rounded-md"
-              onClick={() => setSelectedHostel(null)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="mt-4">
         <FooterSection />
