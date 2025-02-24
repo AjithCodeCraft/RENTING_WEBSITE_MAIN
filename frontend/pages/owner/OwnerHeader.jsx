@@ -90,7 +90,7 @@ export default function OwnerHeader() {
         <Link href="">
           <BellRing className="h-8 w-8" />
         </Link>
-        <Link href="/users/messages">
+        <Link href="/owner/messages">
           <MessageSquareText className="h-8 w-8" />
         </Link>
   

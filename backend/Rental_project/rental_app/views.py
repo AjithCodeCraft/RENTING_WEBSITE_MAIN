@@ -34,6 +34,7 @@ from bson.decimal128 import Decimal128
 from django.db.models import Q
 
 from django.middleware.csrf import get_token
+from django.core.cache import cache
 
 
 from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer,
@@ -440,28 +441,37 @@ def add_apartment_image(request):
 
 @api_view(['GET'])
 def get_apartment_images(request, apartment_id):
-    """Retrieve all images for a specific apartment from ApartmentImage model & GridFS."""
+    # Generate a unique cache key for this apartment
+    cache_key = f"apartment_images_{apartment_id}"
+    
+    # Check if the data is already cached
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return JsonResponse(cached_data, status=200)
+
     try:
-        # Ensure apartment_id is a string before using it
+        # Ensure apartment_id is a string
         if isinstance(apartment_id, uuid.UUID):
-            apartment_id = str(apartment_id)  # Convert UUID object to string
+            apartment_id = str(apartment_id)
 
-        print(f"Received apartment_id: {apartment_id}")  # Debugging
-
-        # Fetch images from ApartmentImage model
-        apartment_images = ApartmentImage.objects.filter(apartment__apartment_id=apartment_id)
+        # Fetch all ApartmentImage records for this apartment
+        apartment_images = ApartmentImage.objects.filter(apartment__apartment_id=apartment_id).select_related('apartment')
 
         if not apartment_images.exists():
             return JsonResponse({'error': 'No images found for this apartment'}, status=404)
 
+        # Extract all GridFS file IDs in one go
+        gridfs_ids = [ObjectId(img.image_path) for img in apartment_images]
+
+        # Fetch all GridFS files in a single batch operation
+        gridfs_files = {file._id: file for file in fs.find({"_id": {"$in": gridfs_ids}})}
+
+        # Prepare the response data
         image_list = []
-
         for img in apartment_images:
-            try:
-                # Get the image from GridFS using image_path (GridFS file ID)
-                gridfs_file = fs.get(ObjectId(img.image_path))
-                image_data = gridfs_file.read()  # Read binary data
-
+            gridfs_file = gridfs_files.get(ObjectId(img.image_path))
+            if gridfs_file:
+                image_data = gridfs_file.read()
                 image_list.append({
                     "gridfs_id": str(gridfs_file._id),
                     "image_id": str(img.image_id),
@@ -469,14 +479,15 @@ def get_apartment_images(request, apartment_id):
                     "image_data": image_data.hex(),  # Convert binary to hex string
                     "is_primary": img.is_primary
                 })
-            except Exception as e:
-                print(f"Error retrieving image from GridFS: {e}")
 
-        return JsonResponse({"images": image_list}, status=200)
+        # Cache the response data for 5 minutes (300 seconds)
+        response_data = {"images": image_list}
+        cache.set(cache_key, response_data, timeout=300)
+
+        return JsonResponse(response_data, status=200)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
