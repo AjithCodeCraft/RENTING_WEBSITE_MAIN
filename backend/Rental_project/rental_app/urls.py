@@ -8,6 +8,7 @@ from .views import (
     get_house_owner_by_ssn,
     get_owner_details_by_receiver_id,
     get_pending_apartments_for_owner,
+    get_received_messages_by_user,
     get_send_messages_by_user_uuid,
     get_user_by_apartment_uuid,
     register_user,
@@ -348,6 +349,12 @@ urlpatterns = [
         'get_owner_details_by_receiver/<int:receiver_id>/', 
         get_owner_details_by_receiver_id, 
         name='get_owner_details_by_receiver_id'),
+
+    path(
+        'messages/received/<str:firebase_uuid>/', 
+        get_received_messages_by_user, 
+        name='get-received-messages'),
+
 
 ]    
 

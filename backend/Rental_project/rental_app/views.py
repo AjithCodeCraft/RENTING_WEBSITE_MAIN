@@ -1666,3 +1666,26 @@ def get_owner_details_by_receiver_id(request, receiver_id):
     serializer = UserSerializer(owner)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_received_messages_by_user(request, firebase_uuid):
+    try:
+        receiver = get_object_or_404(User, user_id=firebase_uuid)
+        received_messages = Chat.objects.filter(receiver=receiver)
+
+        if not received_messages.exists():
+            return Response(
+                {"message": "This user hasn't received any messages!"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ChatSerializer(received_messages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"message": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

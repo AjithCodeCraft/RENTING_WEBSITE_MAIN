@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import { Alert } from "@mui/material";
 
 function AdminChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -20,7 +21,7 @@ function AdminChatInterface() {
   // Check if localStorage is available (client-side only)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userIdFromStorage = localStorage.getItem("user_id");
+      const userIdFromStorage = localStorage.getItem("owner_id");
       setUserId(userIdFromStorage);
     }
   }, []);
@@ -32,7 +33,7 @@ function AdminChatInterface() {
     const fetchMessages = async () => {
       try {
         const accessToken = localStorage.getItem("access_token_user");
-        const response = await fetch(`http://127.0.0.1:8000/api/messages/sent/${userId}/`, {
+        const response = await fetch(`http://127.0.0.1:8000/api/messages/received/${userId}/`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -43,10 +44,16 @@ function AdminChatInterface() {
         }
 
         const data = await response.json();
-        setMessages(data);
+        // Ensure fetched messages have a valid timestamp
+        const updatedMessages = data.map((message) => ({
+          ...message,
+          isCurrentUser: message.sender === userId, // Check if the sender is the current user
+          timestamp: message.timestamp || new Date().toISOString(), // Ensure valid timestamp
+        }));
+        setMessages(updatedMessages);
 
         // Extract receiver IDs
-        const receivers = [...new Set(data.map(message => message.receiver))];
+        const receivers = [...new Set(data.map(message => message.sender))];
         setReceiverIds(receivers);
 
         // Fetch owner details for the first receiver ID
@@ -147,7 +154,7 @@ function AdminChatInterface() {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content: newMessage }),
+        body: JSON.stringify({ message: newMessage }),
       });
 
       if (!response.ok) {
@@ -161,11 +168,10 @@ function AdminChatInterface() {
         ...prevMessages,
         {
           id: String(prevMessages.length + 1),
-          content: newMessage,
-          sender: "You",
-          isCurrentUser: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          ownerName: selectedContactName, // Include the owner's name
+          message: newMessage, // Use the correct key "message"
+          sender: userId, // Set the sender as the current user
+          isCurrentUser: true, // Mark as sent by the current user
+          timestamp: new Date().toISOString(), // Ensure valid timestamp
         },
       ]);
 
@@ -229,29 +235,24 @@ function AdminChatInterface() {
             {messages.length > 0 ? (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div key={message.chat_id} className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex ${message.isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={message.sender} />
-                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`mx-2 p-3 rounded-lg ${
-                          message.isCurrentUser
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground"
-                        }`}
-                      >
-                        <p className="font-semibold">{message.ownerName}</p> {/* Display owner's name */}
-                        <p>{message.message}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.isCurrentUser ? "text-primary-foreground/70" : "text-secondary-foreground/70"
-                          }`}
-                        >
-                          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
+                  <div
+                    key={message.id}
+                    className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] p-3 rounded-lg ${
+                        message.isCurrentUser
+                          ? "bg-green-500 text-white" // Green background for sent messages
+                          : "bg-secondary text-secondary-foreground" // Default background for received messages
+                      }`}
+                    >
+                      <p>{message.message}</p> {/* Use the correct key "message" */}
+                      <p className="text-xs mt-1 text-right">
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}
