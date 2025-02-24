@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from "@/components/ui/navigation-menu"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu"
@@ -6,8 +7,49 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import OwnerHeader from "./OwnerHeader"
+import axios from "axios";
 
 export default function OwnerHome() {
+  const [ownedApartmentCount, setOwnedApartmentCount] = useState(0);
+  const [bookingCount, setBookingCount] = useState(0);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const ownerId = useRef(0);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  async function callApi(url) {
+    const response = await axios.get(`${API_URL}${url}`, {
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("access_token_owner")}`,
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    });
+    return response;
+  }
+
+	async function fetchData() {
+		try {
+      const response_total_aparment = await callApi(`/apartment/by-owner/${ownerId.current}`);
+      setOwnedApartmentCount(response_total_aparment.data.total_apartments);
+      const response_total_booking = await callApi(`/get-all-received-booking`);
+      setBookingCount(response_total_booking.data?.length);
+      const response_notification = await callApi('/get-notifications/');
+      setNotificationCount(response_notification?.data?.length);
+      const response_pending = await callApi(`/pending_apartments_for_owner/`);
+      const data = response_pending.data.filter((item) => item.owner === Number(ownerId.current));
+      setPendingApprovalCount(data.length);      
+		} catch(error) {
+			console.error("An error occured: ", error);
+		}
+	}
+	
+	useEffect(() => { 
+    ownerId.current = localStorage.getItem("id");
+    fetchData();
+  }, []);
+
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 bg-white shadow-md">
@@ -21,7 +63,7 @@ export default function OwnerHome() {
               <BuildingIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">15</div>
+              <div className="text-2xl font-bold">{ownedApartmentCount}</div>
               <p className="text-xs text-muted-foreground">+2 from last month</p>
             </CardContent>
           </Card>
@@ -31,7 +73,7 @@ export default function OwnerHome() {
               <CalendarIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45</div>
+              <div className="text-2xl font-bold">{bookingCount}</div>
               <p className="text-xs text-muted-foreground">+10% from last month</p>
             </CardContent>
           </Card>
@@ -41,7 +83,7 @@ export default function OwnerHome() {
               <AlertCircleIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{pendingApprovalCount}</div>
               <p className="text-xs text-muted-foreground">Waiting for admin approval</p>
             </CardContent>
           </Card>
@@ -51,7 +93,7 @@ export default function OwnerHome() {
               <BellIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5</div>
+              <div className="text-2xl font-bold">{notificationCount}</div>
               <p className="text-xs text-muted-foreground">New bookings, complaints, and approvals</p>
             </CardContent>
           </Card>
