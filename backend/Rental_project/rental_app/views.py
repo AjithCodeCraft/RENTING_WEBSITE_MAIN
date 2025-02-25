@@ -1700,3 +1700,63 @@ def get_received_messages_by_user(request, firebase_uuid):
             {"message": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Ensure user is authenticated
+def get_owner_details_by_user_id(request, user_id):
+    """
+    Fetch owner details using user_id (Firebase UID).
+    """
+    # Fetch user with given user_id and check if they are an "owner"
+    owner = get_object_or_404(User, user_id=user_id)
+
+    # Serialize the user details
+    serializer = UserSerializer(owner)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_messages(request, user_id):
+   
+    # Fetch user by Firebase user_id
+    user = get_object_or_404(User, id=user_id)
+
+    # Get all messages where the user is either sender or receiver
+    messages = Chat.objects.filter(Q(sender=user) | Q(receiver=user)).order_by('-timestamp')
+
+    if not messages.exists():
+        return Response(
+            {"message": "No messages found for this user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Serialize messages
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_received_messages(request, user_id):
+   
+    # Fetch user by Firebase user_id
+    user = get_object_or_404(User, user_id=user_id)
+
+    # Get messages where the user is the receiver
+    messages = Chat.objects.filter(receiver=user).order_by('-timestamp')
+
+    if not messages.exists():
+        return Response(
+            {"message": "No received messages found for this user."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # Serialize messages
+    serializer = ChatSerializer(messages, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
