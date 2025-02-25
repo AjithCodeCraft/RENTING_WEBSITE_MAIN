@@ -16,57 +16,68 @@ function AdminChatInterface() {
   const [notifications, setNotifications] = useState([]);
   const [ownerDetails, setOwnerDetails] = useState(null);
   const [receiverIds, setReceiverIds] = useState([]);
-  const [userId, setUserId] = useState(null);
+  const [ownerIdNumber, setOwnerIdNumber] = useState(null); // Store owner_id_number from localStorage
 
-  // Check if localStorage is available (client-side only)
+  // Get owner_id_number from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userIdFromStorage = localStorage.getItem("owner_id");
-      setUserId(userIdFromStorage);
+      const ownerIdFromStorage = localStorage.getItem("owner_id_number");
+      setOwnerIdNumber(ownerIdFromStorage);
     }
   }, []);
 
   // Fetch messages for the current user
   useEffect(() => {
-    if (!userId) return; // Don't fetch messages if userId is not available
-
+    if (!ownerIdNumber) return;
+  
     const fetchMessages = async () => {
       try {
         const accessToken = localStorage.getItem("access_token_user");
-        const response = await fetch(`http://127.0.0.1:8000/api/messages/received/${userId}/`, {
+  
+        const response = await fetch(`http://127.0.0.1:8000/api/get_messages/user/${ownerIdNumber}/`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-
+  
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
-
+  
         const data = await response.json();
-        // Ensure fetched messages have a valid timestamp
-        const updatedMessages = data.map((message) => ({
+  
+        // Format messages
+        const formattedMessages = data.map((message) => ({
           ...message,
-          isCurrentUser: message.sender === userId, // Check if the sender is the current user
-          timestamp: message.timestamp || new Date().toISOString(), // Ensure valid timestamp
+          isCurrentUser: String(message.sender) === String(ownerIdNumber),
+          timestamp: message.timestamp || new Date().toISOString(),
         }));
-        setMessages(updatedMessages);
-
-        // Extract receiver IDs
-        const receivers = [...new Set(data.map(message => message.sender))];
-        setReceiverIds(receivers);
-
-        // Fetch owner details for the first receiver ID
-        if (receivers.length > 0) {
-          fetchOwnerDetails(receivers[0]);
+  
+        // Sort messages by timestamp (newest to oldest)
+        formattedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
+        setMessages(formattedMessages);
+  
+        // Extract unique contacts (senders & receivers) excluding self
+        const uniqueContacts = [...new Set(data.flatMap(msg => 
+          [msg.sender, msg.receiver].filter(id => String(id) !== String(ownerIdNumber))
+        ))];
+  
+        setReceiverIds(uniqueContacts);
+  
+        // If no contact is selected, set the first contact
+        if (uniqueContacts.length > 0 && !selectedContactId) {
+          setSelectedContactId(uniqueContacts[0]);
+          fetchOwnerDetails(uniqueContacts[0]);
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
-
+  
     fetchMessages();
-  }, [userId]);
+  }, [ownerIdNumber]);
+  
 
   // Fetch owner details using receiver ID
   const fetchOwnerDetails = async (receiverId) => {
@@ -147,7 +158,7 @@ function AdminChatInterface() {
     if (newMessage.trim() === "") return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = localStorage.getItem("access_token_owner");
       const response = await fetch(`http://127.0.0.1:8000/api/chat/send-message/${selectedContactId}`, {
         method: "POST",
         headers: {
@@ -162,16 +173,17 @@ function AdminChatInterface() {
       }
 
       const data = await response.json();
+      console.log("Message sent successfully:", data);
 
       // Add the new message to the messages state
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: String(prevMessages.length + 1),
-          message: newMessage, // Use the correct key "message"
-          sender: userId, // Set the sender as the current user
+          message: newMessage,
+          sender: ownerIdNumber, // Set the sender as the current user
           isCurrentUser: true, // Mark as sent by the current user
-          timestamp: new Date().toISOString(), // Ensure valid timestamp
+          timestamp: new Date().toISOString(),
         },
       ]);
 
@@ -185,8 +197,13 @@ function AdminChatInterface() {
   // Handle selecting a contact
   const handleSelectContact = (contactId) => {
     setSelectedContactId(contactId);
-    const selectedContact = ownerDetails ? ownerDetails : "Unknown";
-    setSelectedContactName(selectedContact ? selectedContact.name : "Unknown");
+    fetchOwnerDetails(contactId);
+  
+    // Filter messages only for selected contact
+    const filteredMessages = messages.filter(
+      (msg) => msg.sender === contactId || msg.receiver === contactId
+    );
+    setMessages(filteredMessages)
 
     // Mark notifications as read when selecting a contact
     const notificationIds = notifications
@@ -243,10 +260,10 @@ function AdminChatInterface() {
                       className={`max-w-[75%] p-3 rounded-lg ${
                         message.isCurrentUser
                           ? "bg-green-500 text-white" // Green background for sent messages
-                          : "bg-secondary text-secondary-foreground" // Default background for received messages
+                          : "bg-white text-black" // White background for received messages
                       }`}
                     >
-                      <p>{message.message}</p> {/* Use the correct key "message" */}
+                      <p>{message.message}</p>
                       <p className="text-xs mt-1 text-right">
                         {new Date(message.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
