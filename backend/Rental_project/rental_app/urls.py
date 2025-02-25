@@ -71,6 +71,7 @@ from .views import (
     user_profile,
     update_profile,
     get_all_booking_received,
+    get_all_tenants
 )
 
 
@@ -295,4 +296,9 @@ urlpatterns = [
         get_all_booking_received,
         name="get_all_booking_received",
     ),
+    path(
+        "get-all-tenants/",
+        get_all_tenants,
+        name="get_all_tenants"
+    )
 ]
