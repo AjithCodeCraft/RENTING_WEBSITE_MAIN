@@ -281,7 +281,7 @@ urlpatterns = [
         get_user_by_apartment_uuid,
         name="user-by-apartment",
     ),
-    path(
+    
 
 
     path(
