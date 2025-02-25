@@ -1641,6 +1641,16 @@ def get_all_users(request):
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_tenants(request):
+    if request.user.user_type == "owner":
+        house_owner = HouseOwner.objects.get(owner=request.user)
+        user_with_booking = User.objects.filter(booking__apartment__owner=house_owner.pk).distinct()
+        serializer = UserSerializer(user_with_booking, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"message": "You are not a owner!"}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

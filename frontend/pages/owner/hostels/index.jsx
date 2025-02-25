@@ -13,6 +13,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import Link from "next/link";
+import OwnerHeader from "../OwnerHeader";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -33,7 +34,9 @@ const createCustomMarker = (iconUrl, size = [30, 30]) => {
 
 // Function to convert hex to Base64
 const hexToBase64 = (hex) => {
-  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+  const bytes = new Uint8Array(
+    hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
+  );
   return Buffer.from(bytes).toString("base64");
 };
 
@@ -60,11 +63,14 @@ const OwnerHostels = () => {
         }
 
         // Fetch pending apartments
-        const apartmentsResponse = await fetch("http://localhost:8000/api/pending_apartments_for_owner/", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const apartmentsResponse = await fetch(
+          "http://localhost:8000/api/pending_apartments_for_owner/",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
         if (!apartmentsResponse.ok) {
           throw new Error("Failed to fetch pending apartments");
         }
@@ -74,23 +80,35 @@ const OwnerHostels = () => {
         const apartmentsWithImages = await Promise.all(
           apartmentsData.map(async (apartment) => {
             try {
-              const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${apartment.apartment_id}/`, {
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                },
-              });
+              const imagesResponse = await fetch(
+                `http://127.0.0.1:8000/api/apartment-images/${apartment.apartment_id}/`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
 
               if (!imagesResponse.ok) {
                 // If no images are found, use the default thumbnail
-                return { ...apartment, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+                return {
+                  ...apartment,
+                  images: [{ image_data: DEFAULT_THUMBNAIL }],
+                };
               }
 
               const imagesData = await imagesResponse.json();
               return { ...apartment, images: imagesData.images };
             } catch (error) {
-              console.error(`Error fetching images for apartment ${apartment.apartment_id}:`, error);
+              console.error(
+                `Error fetching images for apartment ${apartment.apartment_id}:`,
+                error
+              );
               // If there's an error, use the default thumbnail
-              return { ...apartment, images: [{ image_data: DEFAULT_THUMBNAIL }] };
+              return {
+                ...apartment,
+                images: [{ image_data: DEFAULT_THUMBNAIL }],
+              };
             }
           })
         );
@@ -132,11 +150,16 @@ const OwnerHostels = () => {
       mapInstance._controlContainer.children[2]?.remove(); // Remove unnecessary controls
     });
 
-    mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false, showZoom: false }), "top-right");
+    mapInstance.addControl(
+      new maplibregl.NavigationControl({ showCompass: false, showZoom: false }),
+      "top-right"
+    );
 
     // Add markers for each hostel
     const markers = pendingApartments.map((apartment) => {
-      const marker = new maplibregl.Marker({ element: createCustomMarker(HOSTEL_ICON_URL) })
+      const marker = new maplibregl.Marker({
+        element: createCustomMarker(HOSTEL_ICON_URL),
+      })
         .setLngLat([apartment.longitude, apartment.latitude])
         .addTo(mapInstance);
 
@@ -158,7 +181,9 @@ const OwnerHostels = () => {
           setUserLocation({ lat: latitude, lng: longitude });
 
           // Add a marker for the user's location
-          const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
+          const userMarker = new maplibregl.Marker({
+            element: createCustomMarker(USER_ICON_URL, [35, 35]),
+          })
             .setLngLat([longitude, latitude])
             .setPopup(new maplibregl.Popup().setText("Your Location"))
             .addTo(mapInstance);
@@ -226,135 +251,168 @@ const OwnerHostels = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>;
+    return (
+      <div className="flex justify-center items-center h-screen text-red-500">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full p-4">
-      {/* Left Section - Hostel Listings */}
-      <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">My Hostels</h1>
-          <Link href="/addapp" passHref>
-            <Button className="bg-blue-500 text-white">
-              <Plus className="mr-2 h-4 w-4" /> Add New Hostel
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {currentHostels.map((apartment) => {
-            const imageData = apartment.images[0]?.image_data;
-            const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
-              ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
-              : imageData;
+    <>
+      <header className="sticky top-0 z-50 bg-white shadow-md">
+        <OwnerHeader />
+      </header>
+      <div className="flex flex-col md:flex-row h-full w-full p-4">
+        {/* Left Section - Hostel Listings */}
+        <div className="w-full md:w-3/5 md:pr-4 overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">My Hostels</h1>
+            <Link href="/addapp" passHref>
+              <Button className="bg-blue-500 text-white">
+                <Plus className="mr-2 h-4 w-4" /> Add New Hostel
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {currentHostels.map((apartment) => {
+              const imageData = apartment.images[0]?.image_data;
+              const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
+                ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
+                : imageData;
 
-            return (
-              <div
-                key={apartment.apartment_id}
-                className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
-                  selectedHostel?.apartment_id === apartment.apartment_id ? "scale-105" : ""
-                }`}
-                style={{
-                  backgroundImage: `url(${imageUrl})`,
-                }}
-                onClick={() => setSelectedHostel(apartment)}
-                onMouseEnter={() => setHoveredHostel(apartment)}
-                onMouseLeave={() => setHoveredHostel(null)}
-              >
-                <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-                <div className="flex flex-row items-center space-x-4 z-10 p-4">
-                  <Image
-                    height="100"
-                    width="100"
-                    alt="Avatar"
-                    src="/manu.png"
-                    className="h-10 w-10 rounded-full border-2 object-cover"
-                  />
-                  <div className="flex flex-col">
-                    <p className="font-normal text-base text-gray-50 relative z-10">
+              return (
+                <div
+                  key={apartment.apartment_id}
+                  className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
+                    selectedHostel?.apartment_id === apartment.apartment_id
+                      ? "scale-105"
+                      : ""
+                  }`}
+                  style={{
+                    backgroundImage: `url(${imageUrl})`,
+                  }}
+                  onClick={() => setSelectedHostel(apartment)}
+                  onMouseEnter={() => setHoveredHostel(apartment)}
+                  onMouseLeave={() => setHoveredHostel(null)}
+                >
+                  <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
+                  <div className="flex flex-row items-center space-x-4 z-10 p-4">
+                    <Image
+                      height="100"
+                      width="100"
+                      alt="Avatar"
+                      src="/manu.png"
+                      className="h-10 w-10 rounded-full border-2 object-cover"
+                    />
+                    <div className="flex flex-col">
+                      <p className="font-normal text-base text-gray-50 relative z-10">
+                        {apartment.title}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {apartment.location}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text content p-4">
+                    <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
                       {apartment.title}
+                    </h1>
+                    <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
+                      ₹{apartment.rent}
                     </p>
-                    <p className="text-sm text-gray-400">{apartment.location}</p>
                   </div>
                 </div>
-                <div className="text content p-4">
-                  <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                    {apartment.title}
-                  </h1>
-                  <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                    ₹{apartment.rent}
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-8 mb-8">
+            <Pagination>
+              <PaginationContent>
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => handlePageChange(currentPage - 1)}
+                    />
+                  </PaginationItem>
+                )}
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <PaginationItem key={i + 1}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(i + 1)}
+                      isActive={currentPage === i + 1}
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => handlePageChange(currentPage + 1)}
+                    />
+                  </PaginationItem>
+                )}
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
+
+        {/* Right Section - Map */}
+        <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
+          <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
+            <div className="relative w-full h-full">
+              {/* Use the ref for the map container */}
+              <div
+                id="map"
+                ref={mapContainerRef}
+                className="w-full h-full rounded-xl"
+              />
+              {/* Locate User Button */}
+              <button
+                className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
+                onClick={locateUser}
+              >
+                <LocateFixed className="w-5 h-5 text-blue-500" />
+              </button>
+              {/* Selected Hostel Details */}
+              {selectedHostel && (
+                <div
+                  ref={detailsRef}
+                  className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60"
+                >
+                  <h3 className="text-md font-semibold">
+                    {selectedHostel.title}
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    {selectedHostel.location}
                   </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Pagination */}
-        <div className="mt-8 mb-8">
-          <Pagination>
-            <PaginationContent>
-              {currentPage > 1 && (
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(currentPage - 1)}
-                  />
-                </PaginationItem>
-              )}
-              {Array.from({ length: totalPages }, (_, i) => (
-                <PaginationItem key={i + 1}>
-                  <PaginationLink
-                    onClick={() => handlePageChange(i + 1)}
-                    isActive={currentPage === i + 1}
+                  <p className="text-xs text-green-600 font-medium">
+                    Price: ₹{selectedHostel.rent}
+                  </p>
+                  <Button
+                    className="mt-2 w-full bg-blue-500 text-white text-xs py-1"
+                    onClick={handleGetDirections}
                   >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              {currentPage < totalPages && (
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => handlePageChange(currentPage + 1)}
-                  />
-                </PaginationItem>
+                    Get Directions
+                  </Button>
+                </div>
               )}
-            </PaginationContent>
-          </Pagination>
-        </div>
-      </div>
-
-      {/* Right Section - Map */}
-      <div className="md:w-2/5 items-center justify-center rounded-xl md:mt-0">
-        <div className="relative w-full h-[600px] bg-gray-200 rounded-xl flex items-center justify-center">
-          <div className="relative w-full h-full">
-            {/* Use the ref for the map container */}
-            <div id="map" ref={mapContainerRef} className="w-full h-full rounded-xl" />
-            {/* Locate User Button */}
-            <button
-              className="absolute top-2 left-2 bg-white p-2 rounded-full shadow-md z-10"
-              onClick={locateUser}
-            >
-              <LocateFixed className="w-5 h-5 text-blue-500" />
-            </button>
-            {/* Selected Hostel Details */}
-            {selectedHostel && (
-              <div ref={detailsRef} className="absolute top-2 right-2 bg-white shadow-lg p-2 rounded-md w-60">
-                <h3 className="text-md font-semibold">{selectedHostel.title}</h3>
-                <p className="text-xs text-gray-600">{selectedHostel.location}</p>
-                <p className="text-xs text-green-600 font-medium">Price: ₹{selectedHostel.rent}</p>
-                <Button className="mt-2 w-full bg-blue-500 text-white text-xs py-1" onClick={handleGetDirections}>
-                  Get Directions
-                </Button>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
