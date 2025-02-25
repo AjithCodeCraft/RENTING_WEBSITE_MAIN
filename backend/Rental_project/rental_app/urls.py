@@ -70,7 +70,8 @@ from .views import (
     approve_hostel,
     get_all_users,
     user_profile,
-    update_profile
+    update_profile,
+    get_all_booking_received,
 )
 
 
@@ -165,200 +166,144 @@ urlpatterns = [
         get_all_send_received_messages_with,
         name="get_all_send_received_messages_with",
     ),
-
+    path("booking/create/", BookingCreateView.as_view(), name="create-booking"),
     path(
-        'booking/create/',
-        BookingCreateView.as_view(), 
-        name='create-booking'),
-
+        "payment/initiate/<uuid:booking_id>/",
+        PaymentInitiateView.as_view(),
+        name="initiate-payment",
+    ),
+    path("payment/callback/", payment_callback, name="payment-callback"),
+    path("payment/url/", generate_payment_url, name="generate-payment-url"),
     path(
-        'payment/initiate/<uuid:booking_id>/', 
-        PaymentInitiateView.as_view(), 
-        name='initiate-payment'),
-
+        "payment/status/<str:order_id>/",
+        check_payment_status,
+        name="check-payment-status",
+    ),
+    path("bookings/total/", total_bookings, name="total_bookings"),
     path(
-        'payment/callback/',
-        payment_callback,
-        name='payment-callback'),
-
+        "bookings/apartment/<uuid:apartment_id>/",
+        bookings_by_apartment,
+        name="bookings_by_apartment",
+    ),
+    path("bookings/user/<int:user_id>/", bookings_by_user, name="bookings_by_user"),
+    path("payments/total/", total_payments, name="total_payments"),
     path(
-        'payment/url/', 
-        generate_payment_url, 
-        name='generate-payment-url'),
-
+        "payments/booking/<uuid:booking_id>/",
+        payments_by_booking,
+        name="payments_by_booking",
+    ),
     path(
-        "payment/status/<str:order_id>/", 
-        check_payment_status, 
-        name="check-payment-status"),
+        "payments/apartment/<uuid:apartment_id>/",
+        payments_by_apartment,
+        name="payments_by_apartment",
+    ),
+    path("payments/user/<str:user_id>/", payments_by_user, name="payments_by_user"),
     path(
-        'bookings/total/', 
-        total_bookings, 
-        name='total_bookings'),
-    path(
-        'bookings/apartment/<uuid:apartment_id>/', 
-        bookings_by_apartment, 
-        name='bookings_by_apartment'),
-    path(
-        'bookings/user/<int:user_id>/', 
-        bookings_by_user, 
-        name='bookings_by_user'),
-    path(
-        'payments/total/', 
-        total_payments, 
-        name='total_payments'),
-    path(
-        'payments/booking/<uuid:booking_id>/', 
-        payments_by_booking, 
-        name='payments_by_booking'),
-    path(
-        'payments/apartment/<uuid:apartment_id>/', 
-        payments_by_apartment, 
-        name='payments_by_apartment'),
-    path(
-        'payments/user/<str:user_id>/', 
-        payments_by_user, 
-        name='payments_by_user'),
-    path(
-        'get-payment/transaction-id/<str:transaction_id>',
+        "get-payment/transaction-id/<str:transaction_id>",
         get_payment_by_transaction_id,
-        name='get_payment_by_transaction_id'
-        ),
+        name="get_payment_by_transaction_id",
+    ),
     path(
-        'get-payment/payment-id/<str:payment_id>',
+        "get-payment/payment-id/<str:payment_id>",
         get_payment_by_payment_id,
-        name='get_payment_by_payment-id'
-        ),
-    path("get-notifications", get_user_notifications, name="get_user_notifications"),
-    path("mark-notification-as-read", mark_notification_as_read, name="mark_notification_as_read"),
+        name="get_payment_by_payment-id",
+    ),
+    path("get-notifications/", get_user_notifications, name="get_user_notifications"),
     path(
-        'register-admin/', 
-        register_admin, 
-        name='register_admin'),
+        "mark-notification-as-read",
+        mark_notification_as_read,
+        name="mark_notification_as_read",
+    ),
+    path("register-admin/", register_admin, name="register_admin"),
+    path("login-admin/", login_admin, name="login_admin"),
     path(
-        'login-admin/', 
-        login_admin, 
-        name='login_admin'),
+        "wishlist/add-item/<uuid:apartment_id>",
+        add_item_wishlist,
+        name="add_item_wishlist",
+    ),
+    path("wishlist/get-item", get_wishlist, name="get_wishlist"),
     path(
-        'wishlist/add-item/<uuid:apartment_id>', 
-        add_item_wishlist, 
-        name='add_item_wishlist'),
-    path(
-        'wishlist/get-item', 
-        get_wishlist, 
-        name='get_wishlist'),
-    path(
-        'wishlist/delete-item/<uuid:wishlist_id>',
+        "wishlist/delete-item/<uuid:wishlist_id>",
         remove_item_wishlist_with_wishlist_id,
-        name="remove_item_wishlist_with_wishlist_id"
+        name="remove_item_wishlist_with_wishlist_id",
     ),
     path(
-        'wishlist/delete-item/apartment-id/<uuid:apartment_id>',
+        "wishlist/delete-item/apartment-id/<uuid:apartment_id>",
         remove_item_wishlist_with_apartment_id,
-        name="remove_item_wishlist_with_apartment_id"
+        name="remove_item_wishlist_with_apartment_id",
     ),
+    path("hostel-approval/", create_hostel_approval, name="hostel-approval"),
+    path("approve-hostel/<uuid:apartment_id>", approve_hostel, name="approve_hostel"),
+    path("apartments/approved/", get_approved_apartments, name="paid-apartments"),
     path(
-        'hostel-approval/', 
-        create_hostel_approval, 
-        name='hostel-approval'),
-    path(
-        'approve-hostel/<uuid:apartment_id>', 
-        approve_hostel, 
-        name='approve_hostel'),
-    path(
-        'apartments/approved/', 
-        get_approved_apartments, 
-        name='paid-apartments'),
-    path(
-        'get-pending-apartments/', 
-        get_pending_apartments, 
-        name='get_pending_apartments'),
-    path(
-        'add_complaint/<uuid:apartment_id>',
-        add_complaint,
-        name="add_complaint"
+        "get-pending-apartments/", get_pending_apartments, name="get_pending_apartments"
     ),
+    path("add_complaint/<uuid:apartment_id>", add_complaint, name="add_complaint"),
     path(
-        'get-complaints/apartment-id/<uuid:apartment_id>',
+        "get-complaints/apartment-id/<uuid:apartment_id>",
         get_complaints_with_apartment_id,
-        name="get_complaints_with_apartment_id"
+        name="get_complaints_with_apartment_id",
     ),
     path(
-        'get-complaints',
-        get_all_complaints,
-
-        name="get_all_complaints",
-    ),
-    path(
-        'send_otp/', 
-        send_otp, 
-        name='send_otp'),
-    path(
-        'verify_otp/', 
-        verify_otp, 
-        name='verify_otp'),
-    path(
-        'check-owner-verification/', 
-        check_owner_verification, 
-        name='check-owner-verification'),
-
-    path(
-        'get-complaints/',
+        "get-complaints",
         get_all_complaints,
         name="get_all_complaints",
-        
-    ),      
-   
+    ),
+    path("send_otp/", send_otp, name="send_otp"),
+    path("verify_otp/", verify_otp, name="verify_otp"),
     path(
-        'get-csrf-token/',
-        get_csrf_token,
-        name="get_csrf_token"
+        "check-owner-verification/",
+        check_owner_verification,
+        name="check-owner-verification",
     ),
     path(
-        'get-hostel-approval/',
-        get_hostel_approval,
-        name="get_hostel_approval"
+        "get-complaints/",
+        get_all_complaints,
+        name="get_all_complaints",
     ),
-    path('delete-pending/<str:owner_id>',
-         delete_pending,
-         name="delete_pending"
+    path("get-csrf-token/", get_csrf_token, name="get_csrf_token"),
+    path("get-hostel-approval/", get_hostel_approval, name="get_hostel_approval"),
+    path("delete-pending/<str:owner_id>", delete_pending, name="delete_pending"),
+    path(
+        "pending_apartments_for_owner/",
+        get_pending_apartments_for_owner,
+        name="pending_apartments_for_owner",
     ),
-    path('pending_apartments_for_owner/',
-         get_pending_apartments_for_owner,
-         name = 'pending_apartments_for_owner'),
+    path("user/profile/", user_profile, name="user_profile"),
+    path("update-profile/", update_profile, name="update_profile"),
+    path(
+        "apartments_by_id/<str:apartment_id>/",
+        get_apartment_by_id,
+        name="get_apartment_by_id",
+    ),
+    path(
+        "user-by-apartment/<uuid:apartment_uuid>/",
+        get_user_by_apartment_uuid,
+        name="user-by-apartment",
+    ),
+    path(
 
-    path('user/profile/',
-         user_profile,
-         name ='user_profile' ),
-    path('update-profile/', 
-         update_profile,
-        name='update_profile'),
-    path(
-        'apartments_by_id/<str:apartment_id>/', 
-        get_apartment_by_id, 
-        name='get_apartment_by_id'),
-    path(
-        "user-by-apartment/<uuid:apartment_uuid>/", 
-        get_user_by_apartment_uuid, 
-        name="user-by-apartment"),
-    path(
-        'messages/sent/<str:user_uuid>/', 
-        get_send_messages_by_user_uuid, 
-        name='get_send_messages_by_user_uuid'),
-
-    path(
-        'get_owner_details_by_receiver/<int:receiver_id>/', 
-        get_owner_details_by_receiver_id, 
-        name='get_owner_details_by_receiver_id'),
 
     path(
         'messages/received/<str:firebase_uuid>/', 
         get_received_messages_by_user, 
-        name='get-received-messages'),
+        name='get-received-messages'), 
 
-
-]    
-
-    
-
-
+   
+    path(
+          "messages/sent/<str:user_uuid>/",
+          get_send_messages_by_user_uuid,
+          name="get_send_messages_by_user_uuid"
+    ),
+    path(
+        "get_owner_details_by_receiver/<int:receiver_id>/",
+        get_owner_details_by_receiver_id,
+        name="get_owner_details_by_receiver_id",
+    ),
+    path(
+        "get-all-received-booking/",
+        get_all_booking_received,
+        name="get_all_booking_received",
+    ),
+]
 

@@ -149,6 +149,7 @@ const Signup = () => {
         if (loginResponse.ok) {
           localStorage.setItem("user_type", loginData.user_type);
           localStorage.setItem("email", email);
+          localStorage.setItem("id", data.id);
 
           const auth = getAuth();
           await signInWithEmailAndPassword(auth, email, password);
@@ -156,8 +157,10 @@ const Signup = () => {
           // Redirect based on user type
           if (loginData.user_type === "owner") {
             localStorage.setItem("access_token_owner", loginData.access);
+            localStorage.setItem("owner_id", data.user_id);
             router.push("/addapp");
           } else {
+            localStorage.setItem("user_id", data.user_id);
             router.push("/login");
           }
         } else {

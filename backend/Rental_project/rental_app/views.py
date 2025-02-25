@@ -35,6 +35,7 @@ from django.db.models import Q
 
 from django.middleware.csrf import get_token
 from django.core.cache import cache
+from django.contrib.auth import get_user_model
 
 
 from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer, HouseOwnerSerializer, UserSerializer,
@@ -185,6 +186,7 @@ def login_user(request):
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user_id': user.user_id,
+            'id': user.id,
             'email': user.email,
             'name': user.name,
             'user_type': user.user_type
@@ -949,6 +951,15 @@ def bookings_by_user(request, user_id):
     bookings = Booking.objects.filter(user_id=user_id)
     serializer = BookingSerializer(bookings, many=True)
     return Response(serializer.data)
+
+@api_view(['GET'])
+def get_all_booking_received(request):
+    booking_received = Booking.objects.filter(apartment__owner=request.user.pk)
+    if not booking_received:
+        return Response({"message": "No booking available!"}, status=status.HTTP_204_NO_CONTENT)
+    serializer = BookingSerializer(booking_received, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
 
 
 class BookingCreateView(APIView):
