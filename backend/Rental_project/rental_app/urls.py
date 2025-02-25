@@ -8,6 +8,7 @@ from .views import (
     get_house_owner_by_ssn,
     get_owner_details_by_receiver_id,
     get_pending_apartments_for_owner,
+    get_received_messages_by_user,
     get_send_messages_by_user_uuid,
     get_user_by_apartment_uuid,
     register_user,
@@ -281,9 +282,18 @@ urlpatterns = [
         name="user-by-apartment",
     ),
     path(
-        "messages/sent/<str:user_uuid>/",
-        get_send_messages_by_user_uuid,
-        name="get_send_messages_by_user_uuid",
+
+
+    path(
+        'messages/received/<str:firebase_uuid>/', 
+        get_received_messages_by_user, 
+        name='get-received-messages'), 
+
+   
+    path(
+          "messages/sent/<str:user_uuid>/",
+          get_send_messages_by_user_uuid,
+          name="get_send_messages_by_user_uuid"
     ),
     path(
         "get_owner_details_by_receiver/<int:receiver_id>/",
@@ -296,3 +306,4 @@ urlpatterns = [
         name="get_all_booking_received",
     ),
 ]
+

@@ -85,6 +85,7 @@ function ChatInterface() {
       const data = await response.json();
       setOwnerDetails(data);
       setSelectedContactId(data.id);
+      localStorage.setItem("owner_id_number",data.id)
       setSelectedContactName(data.name);
     } catch (error) {
       console.error("Error fetching owner details:", error);
@@ -148,7 +149,7 @@ function ChatInterface() {
   
     try {
       const accessToken = localStorage.getItem("access_token_user");
-      const receiverId = Number(localStorage.getItem("owner_id"));
+      const receiverId = Number(localStorage.getItem("owner_id_number"));
   
       if (isNaN(receiverId)) {
         console.error("Invalid receiver ID");
