@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import { Alert } from "@mui/material";
 
 function AdminChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -15,51 +16,68 @@ function AdminChatInterface() {
   const [notifications, setNotifications] = useState([]);
   const [ownerDetails, setOwnerDetails] = useState(null);
   const [receiverIds, setReceiverIds] = useState([]);
-  const [userId, setUserId] = useState(null);
+  const [ownerIdNumber, setOwnerIdNumber] = useState(null); // Store owner_id_number from localStorage
 
-  // Check if localStorage is available (client-side only)
+  // Get owner_id_number from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userIdFromStorage = localStorage.getItem("user_id");
-      setUserId(userIdFromStorage);
+      const ownerIdFromStorage = localStorage.getItem("owner_id_number");
+      setOwnerIdNumber(ownerIdFromStorage);
     }
   }, []);
 
   // Fetch messages for the current user
   useEffect(() => {
-    if (!userId) return; // Don't fetch messages if userId is not available
-
+    if (!ownerIdNumber) return;
+  
     const fetchMessages = async () => {
       try {
         const accessToken = localStorage.getItem("access_token_user");
-        const response = await fetch(`http://127.0.0.1:8000/api/messages/sent/${userId}/`, {
+  
+        const response = await fetch(`http://127.0.0.1:8000/api/get_messages/user/${ownerIdNumber}/`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
-
+  
         if (!response.ok) {
           throw new Error("Failed to fetch messages");
         }
-
+  
         const data = await response.json();
-        setMessages(data);
-
-        // Extract receiver IDs
-        const receivers = [...new Set(data.map(message => message.receiver))];
-        setReceiverIds(receivers);
-
-        // Fetch owner details for the first receiver ID
-        if (receivers.length > 0) {
-          fetchOwnerDetails(receivers[0]);
+  
+        // Format messages
+        const formattedMessages = data.map((message) => ({
+          ...message,
+          isCurrentUser: String(message.sender) === String(ownerIdNumber),
+          timestamp: message.timestamp || new Date().toISOString(),
+        }));
+  
+        // Sort messages by timestamp (newest to oldest)
+        formattedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
+        setMessages(formattedMessages);
+  
+        // Extract unique contacts (senders & receivers) excluding self
+        const uniqueContacts = [...new Set(data.flatMap(msg => 
+          [msg.sender, msg.receiver].filter(id => String(id) !== String(ownerIdNumber))
+        ))];
+  
+        setReceiverIds(uniqueContacts);
+  
+        // If no contact is selected, set the first contact
+        if (uniqueContacts.length > 0 && !selectedContactId) {
+          setSelectedContactId(uniqueContacts[0]);
+          fetchOwnerDetails(uniqueContacts[0]);
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
-
+  
     fetchMessages();
-  }, [userId]);
+  }, [ownerIdNumber]);
+  
 
   // Fetch owner details using receiver ID
   const fetchOwnerDetails = async (receiverId) => {
@@ -140,14 +158,14 @@ function AdminChatInterface() {
     if (newMessage.trim() === "") return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = localStorage.getItem("access_token_owner");
       const response = await fetch(`http://127.0.0.1:8000/api/chat/send-message/${selectedContactId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ content: newMessage }),
+        body: JSON.stringify({ message: newMessage }),
       });
 
       if (!response.ok) {
@@ -155,17 +173,17 @@ function AdminChatInterface() {
       }
 
       const data = await response.json();
+      console.log("Message sent successfully:", data);
 
       // Add the new message to the messages state
       setMessages((prevMessages) => [
         ...prevMessages,
         {
           id: String(prevMessages.length + 1),
-          content: newMessage,
-          sender: "You",
-          isCurrentUser: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          ownerName: selectedContactName, // Include the owner's name
+          message: newMessage,
+          sender: ownerIdNumber, // Set the sender as the current user
+          isCurrentUser: true, // Mark as sent by the current user
+          timestamp: new Date().toISOString(),
         },
       ]);
 
@@ -179,8 +197,13 @@ function AdminChatInterface() {
   // Handle selecting a contact
   const handleSelectContact = (contactId) => {
     setSelectedContactId(contactId);
-    const selectedContact = ownerDetails ? ownerDetails : "Unknown";
-    setSelectedContactName(selectedContact ? selectedContact.name : "Unknown");
+    fetchOwnerDetails(contactId);
+  
+    // Filter messages only for selected contact
+    const filteredMessages = messages.filter(
+      (msg) => msg.sender === contactId || msg.receiver === contactId
+    );
+    setMessages(filteredMessages)
 
     // Mark notifications as read when selecting a contact
     const notificationIds = notifications
@@ -229,29 +252,24 @@ function AdminChatInterface() {
             {messages.length > 0 ? (
               <div className="space-y-4">
                 {messages.map((message) => (
-                  <div key={message.chat_id} className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}>
-                    <div className={`flex ${message.isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end`}>
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt={message.sender} />
-                        <AvatarFallback>{message.sender[0]}</AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`mx-2 p-3 rounded-lg ${
-                          message.isCurrentUser
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground"
-                        }`}
-                      >
-                        <p className="font-semibold">{message.ownerName}</p> {/* Display owner's name */}
-                        <p>{message.message}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            message.isCurrentUser ? "text-primary-foreground/70" : "text-secondary-foreground/70"
-                          }`}
-                        >
-                          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
+                  <div
+                    key={message.id}
+                    className={`flex ${message.isCurrentUser ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[75%] p-3 rounded-lg ${
+                        message.isCurrentUser
+                          ? "bg-green-500 text-white" // Green background for sent messages
+                          : "bg-white text-black" // White background for received messages
+                      }`}
+                    >
+                      <p>{message.message}</p>
+                      <p className="text-xs mt-1 text-right">
+                        {new Date(message.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}
