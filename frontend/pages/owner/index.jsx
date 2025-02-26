@@ -1,26 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react'
-import Link from "next/link"
-import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from "@/components/ui/navigation-menu"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import OwnerHeader from "./OwnerHeader"
+import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import OwnerHeader from "./OwnerHeader";
 import axios from "axios";
 
 export default function OwnerHome() {
-  const [ownedApartmentCount, setOwnedApartmentCount] = useState(0);
-  const [bookingCount, setBookingCount] = useState(0);
-  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [ownedApartments, setOwnedApartments] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [pendingAppartments, setPendingAppartments] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [tenants, setTenants] = useState([]);
   const ownerId = useRef(0);
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   async function callApi(url) {
     const response = await axios.get(`${API_URL}${url}`, {
       headers: {
-        "Authorization": `Bearer ${localStorage.getItem("access_token_owner")}`,
+        Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
         "Content-Type": "application/json",
       },
       withCredentials: true,
@@ -28,241 +48,289 @@ export default function OwnerHome() {
     return response;
   }
 
-	async function fetchData() {
-		try {
-      const response_total_aparment = await callApi(`/apartment/by-owner/${ownerId.current}`);
-      setOwnedApartmentCount(response_total_aparment.data.total_apartments);
+  async function fetchData() {
+    try {
+      const response_total_aparment = await callApi(
+        `/apartment/by-owner/${ownerId.current}`
+      );
+      setOwnedApartments(response_total_aparment.data.apartments);
       const response_total_booking = await callApi(`/get-all-received-booking`);
-      setBookingCount(response_total_booking.data?.length);
-      const response_notification = await callApi('/get-notifications/');
-      setNotificationCount(response_notification?.data?.length);
+      setBookings(response_total_booking.data);
+      const response_notification = await callApi("/get-notifications/");
+      setNotifications(response_notification.data);
       const response_pending = await callApi(`/pending_apartments_for_owner/`);
-      const data = response_pending.data.filter((item) => item.owner === Number(ownerId.current));
-      setPendingApprovalCount(data.length);      
-		} catch(error) {
-			console.error("An error occured: ", error);
-		}
-	}
-	
-	useEffect(() => { 
+      const data = response_pending.data.filter(
+        (item) => item.owner === Number(ownerId.current)
+      );
+      setPendingAppartments(data);
+      const response_tenants = await callApi(`/get-all-tenants/`);
+      const tenants_data = response_tenants.data.reduce((acc, item) => {
+        acc[item.id] = item;
+        return acc;
+      }, {});
+      setTenants(tenants_data);
+    } catch (error) {
+      console.error("An error occured: ", error);
+    }
+  }
+
+  useEffect(() => {
     ownerId.current = localStorage.getItem("id");
     fetchData();
   }, []);
 
+  const handleViewApartment = () => {
+    console.log("Pressed view");
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 bg-white shadow-md">
-        <OwnerHeader/>
-        </header>
+        <OwnerHeader />
+      </header>
       <main className="flex-1 p-4 sm:p-6 md:p-8">
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Listed Apartments</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Listed Apartments
+              </CardTitle>
               <BuildingIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{ownedApartmentCount}</div>
-              <p className="text-xs text-muted-foreground">+2 from last month</p>
+              <div className="text-2xl font-bold">{ownedApartments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                +2 from last month
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Bookings
+              </CardTitle>
               <CalendarIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{bookingCount}</div>
-              <p className="text-xs text-muted-foreground">+10% from last month</p>
+              <div className="text-2xl font-bold">{bookings.length}</div>
+              <p className="text-xs text-muted-foreground">
+                +10% from last month
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Approvals
+              </CardTitle>
               <AlertCircleIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingApprovalCount}</div>
-              <p className="text-xs text-muted-foreground">Waiting for admin approval</p>
+              <div className="text-2xl font-bold">
+                {pendingAppartments.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Waiting for admin approval
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Notifications</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Notifications
+              </CardTitle>
               <BellIcon className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{notificationCount}</div>
-              <p className="text-xs text-muted-foreground">New bookings, complaints, and approvals</p>
+              <div className="text-2xl font-bold">{notifications.length}</div>
+              <p className="text-xs text-muted-foreground">
+                New bookings, complaints, and approvals
+              </p>
             </CardContent>
           </Card>
         </div>
         <div className="grid gap-4 mt-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Pending Hostel Approvals</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Pending Hostel Approvals
+              </CardTitle>
               <Button size="icon" variant="outline" className="h-8 w-8">
                 <PlusIcon className="h-4 w-4" />
                 <span className="sr-only">Resubmit Request</span>
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hostel Name</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Sunrise Hostel</TableCell>
-                    <TableCell>New York</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Pending</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost">Resubmit</Button>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Green Valley Hostel</TableCell>
-                    <TableCell>San Francisco</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Pending</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost">Resubmit</Button>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+              <div className={"max-h-40 overflow-y-auto scrollbar-hidden"}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Hostel Name</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="max-h-48 overflow-y-auto">
+                    {pendingAppartments &&
+                      pendingAppartments.map((apartment) => (
+                        <TableRow key={apartment.id}>
+                          <TableCell>{apartment.title}</TableCell>
+                          <TableCell>{apartment.location}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">Pending</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              onClick={handleViewApartment}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Recent Notifications</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Recent Notifications
+              </CardTitle>
               <Button size="icon" variant="outline" className="h-8 w-8">
                 <BellIcon className="h-4 w-4" />
                 <span className="sr-only">View All</span>
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Booking</TableCell>
-                    <TableCell>New booking request from John Doe</TableCell>
-                    <TableCell>2023-06-01</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Complaint</TableCell>
-                    <TableCell>New complaint from Jane Smith</TableCell>
-                    <TableCell>2023-06-02</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Approval</TableCell>
-                    <TableCell>Hostel approval request rejected</TableCell>
-                    <TableCell>2023-06-03</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+              <div className={"max-h-40 overflow-y-auto scrollbar-hidden"}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Sl</TableHead>
+                      <TableHead>Message</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {notifications &&
+                      notifications.map((notification, index) => (
+                        <TableRow>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{notification.message}</TableCell>
+                          <TableCell>
+                            {new Date(
+                              notification.timestamp
+                            ).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
         <div className="grid gap-4 mt-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Apartment Management</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Apartment Management
+              </CardTitle>
               <Button size="icon" variant="outline" className="h-8 w-8">
                 <PlusIcon className="h-4 w-4" />
                 <span className="sr-only">Add Apartment</span>
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Rent</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Cozy Studio</TableCell>
-                    <TableCell>New York</TableCell>
-                    <TableCell>$1200</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Available</Badge>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Luxury Apartment</TableCell>
-                    <TableCell>San Francisco</TableCell>
-                    <TableCell>$2500</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Occupied</Badge>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+              <div className={"max-h-40 overflow-y-auto scrollbar-hidden"}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Rent</TableHead>
+                      <TableHead>Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ownedApartments &&
+                      ownedApartments.map((apartment) => (
+                        <TableRow>
+                          <TableCell>{apartment.title}</TableCell>
+                          <TableCell>{apartment.location}</TableCell>
+                          <TableCell>₹ {apartment.rent}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {apartment.hostel_type.replace(/^./, (char) =>
+                                char.toUpperCase()
+                              )}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Booking Management</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Booking Management
+              </CardTitle>
               <Button size="icon" variant="outline" className="h-8 w-8">
                 <PlusIcon className="h-4 w-4" />
                 <span className="sr-only">Add Booking</span>
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>John Doe</TableCell>
-                    <TableCell>2023-06-01</TableCell>
-                    <TableCell>2023-06-05</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">Confirmed</Badge>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Jane Smith</TableCell>
-                    <TableCell>2023-06-10</TableCell>
-                    <TableCell>2023-06-15</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Pending</Badge>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+              <div className={"max-h-40 overflow-y-auto scrollbar-hidden"}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Guest</TableHead>
+                      <TableHead>Check-in</TableHead>
+                      <TableHead>Check-out</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings &&
+                      bookings.map((booking) => (
+                        <TableRow>
+                          <TableCell>{tenants[booking.user]?.name}</TableCell>
+                          <TableCell>
+                            {new Date(
+                              booking.booking_date
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(
+                              booking.checkout_date
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {booking.status.replace(/^./, (char) =>
+                                char.toUpperCase()
+                              )}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
       </main>
     </div>
-  )
+  );
 }
 
 function BuildingIcon(props) {
@@ -287,7 +355,7 @@ function BuildingIcon(props) {
       <path d="M10 14h4" />
       <path d="M10 18h4" />
     </svg>
-  )
+  );
 }
 
 function AlertCircleIcon(props) {
@@ -308,7 +376,7 @@ function AlertCircleIcon(props) {
       <line x1="12" x2="12" y1="8" y2="12" />
       <line x1="12" x2="12.01" y1="16" y2="16" />
     </svg>
-  )
+  );
 }
 
 function BellIcon(props) {
@@ -328,7 +396,7 @@ function BellIcon(props) {
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
-  )
+  );
 }
 
 function HotelIcon(props) {
@@ -356,7 +424,7 @@ function HotelIcon(props) {
       <path d="M8 7h.01" />
       <rect x="4" y="2" width="16" height="20" rx="2" />
     </svg>
-  )
+  );
 }
 
 function PlusIcon(props) {
@@ -376,7 +444,7 @@ function PlusIcon(props) {
       <path d="M5 12h14" />
       <path d="M12 5v14" />
     </svg>
-  )
+  );
 }
 
 function CalendarIcon(props) {
@@ -398,5 +466,5 @@ function CalendarIcon(props) {
       <rect width="18" height="18" x="3" y="4" rx="2" />
       <path d="M3 10h18" />
     </svg>
-  )
+  );
 }

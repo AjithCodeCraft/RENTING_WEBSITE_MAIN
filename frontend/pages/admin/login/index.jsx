@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,11 @@ export default function AdminLogin({ className, ...props }) {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) route.replace("/admin/dashboard"); // Redirect logged-in users
+  }, []);
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">

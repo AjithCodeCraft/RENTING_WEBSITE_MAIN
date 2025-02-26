@@ -75,6 +75,7 @@ from .views import (
     user_profile,
     update_profile,
     get_all_booking_received,
+    get_all_tenants
 )
 
 
@@ -308,7 +309,11 @@ urlpatterns = [
         get_all_booking_received,
         name="get_all_booking_received",
     ),
-
+    path(
+        "get-all-tenants/",
+        get_all_tenants,
+        name="get_all_tenants"
+    ),
     path(
         'get_owner_details_by_user_id/<str:user_id>/', 
         get_owner_details_by_user_id, 
@@ -318,10 +323,10 @@ urlpatterns = [
         get_user_messages,
         name = 'get_user_messages'
     ),
-
     path(
         'messages/user/received/<str:user_id>/', 
         get_received_messages, 
+
         name='get_received_messages'
         ),
     path(

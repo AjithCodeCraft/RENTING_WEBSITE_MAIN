@@ -29,8 +29,12 @@ import StatCard from "./StatCard";
 import AdminLayout from "./adminsidebar";
 import axios from "axios";
 import useApartmentStore from "@/store/apartmentStore";
+import { useRouter } from "next/router";
+import withAuth from "@/hoc/withAuth";
+
 
 const AdminDashboard = () => {
+  const route = useRouter();
   const [pendingCount, setPendingCount] = useState("-");
   const [totalApartments, setTotalApartments] = useState("-");
   const [limit, setLimit] = useState(4);
@@ -83,6 +87,12 @@ const AdminDashboard = () => {
       console.log(error);
     }
   };
+  
+  useEffect(() => {
+    if (!localStorage.getItem("access_token")) {
+      route.push("/admin/login");
+    }
+  });
 
   useEffect(() => {
     getTotalUser();
