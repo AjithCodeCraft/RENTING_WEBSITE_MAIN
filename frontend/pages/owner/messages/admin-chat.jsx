@@ -32,7 +32,7 @@ function AdminChatInterface() {
   
     const fetchMessages = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token_user");
+        const accessToken = localStorage.getItem("access_token_owner");
   
         const response = await fetch(`http://127.0.0.1:8000/api/get_messages/user/${ownerIdNumber}/`, {
           headers: {

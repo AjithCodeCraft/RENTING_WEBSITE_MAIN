@@ -49,13 +49,13 @@ export default function LoginPage({ className, ...props }) {
       if (userType === "owner") {
         localStorage.setItem("access_token_owner", data.access);
         localStorage.setItem("owner_id", data.user_id);
-        localStorage.setItem("id", data.id);
+        localStorage.setItem("owner_id_number", data.id);
   
         Router.push("/owner"); // Replaccess_tokenace with actual owner route
       } else if (userType === "seeker") {
         localStorage.setItem("access_token_user", data.access);
         localStorage.setItem("user_id", data.user_id);
-        localStorage.setItem("id", data.id);
+        localStorage.setItem("user_id_number", data.id);
         
         Router.push("/users"); // Replace with actual user route
       } else {

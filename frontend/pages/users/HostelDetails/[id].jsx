@@ -128,7 +128,7 @@ const HostelDetails = () => {
   
     try {
       const accessToken = localStorage.getItem("access_token_user");
-      const receiverId = Number(localStorage.getItem("owner_id"));
+      const receiverId = Number(localStorage.getItem("owner_id_number"));
   
       if (isNaN(receiverId)) {
         console.error("Invalid receiver ID");

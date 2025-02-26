@@ -94,6 +94,8 @@ export function HostelCards() {
   // Handle card tap
   const handleHostelCardTap = (hostel) => {
     // Navigate to the detailed page using the hostel's ID
+    localStorage.setItem("apartment_name",hostel.title)
+    localStorage.setItem("apartment_id",hostel.apartment_id)
     router.push(`/users/HostelDetails/${hostel.apartment_id}`);
   };
 

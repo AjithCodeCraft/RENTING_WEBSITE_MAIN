@@ -326,6 +326,15 @@ urlpatterns = [
     path(
         'messages/user/received/<str:user_id>/', 
         get_received_messages, 
-        name='get_received_messages'),
+
+        name='get_received_messages'
+        ),
+    path(
+        'apartment/by-owner/<int:owner_id>/', 
+        get_apartments_by_owner, 
+        name='get_apartments_by_owner'
+        ),
+
+
 ]
 
