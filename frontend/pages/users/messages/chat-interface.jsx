@@ -7,18 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 
-function ChatInterface() {
+function UserChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
-  const [selectedContactName, setSelectedContactName] = useState("Select a contact");
+  const [selectedApartmentTitle, setSelectedApartmentTitle] = useState("Select a contact");
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [userId, setUserId] = useState(null);
+  const [apartmentTitles, setApartmentTitles] = useState({});
 
   // Fetch user ID from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userIdFromStorage = localStorage.getItem("user_id");
+      const userIdFromStorage = localStorage.getItem("user_id_number");
       setUserId(userIdFromStorage);
     }
   }, []);
@@ -29,7 +30,7 @@ function ChatInterface() {
 
     try {
       const accessToken = localStorage.getItem("access_token_user");
-      const response = await fetch(`http://127.0.0.1:8000/api/messages/sent/${userId}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/get_messages/user/${userId}/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
@@ -37,15 +38,46 @@ function ChatInterface() {
 
       const data = await response.json();
       const uniqueContacts = [...new Set(data.flatMap((msg) => [msg.sender, msg.receiver]))]
-        .filter((id) => String(id) !== String(userId) && id !== 65); // Exclude user 65
+        .filter((id) => String(id) !== String(userId));
 
       setContacts(uniqueContacts);
+
+      // Fetch apartment names for each contact
+      fetchApartmentTitles(uniqueContacts);
     } catch (error) {
       console.error("Error fetching contacts:", error);
     }
   };
 
-  // Fetch messages
+  // Fetch apartment titles for contacts
+  const fetchApartmentTitles = async (ownerIds) => {
+    const titles = { ...apartmentTitles };
+
+    for (const ownerId of ownerIds) {
+      try {
+        const accessToken = localStorage.getItem("access_token_user");
+        const response = await fetch(`http://127.0.0.1:8000/api/apartment/by-owner/${ownerId}/`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.apartments.length > 0) {
+            titles[ownerId] = data.apartments[0].title; // Store first apartment title
+          } else {
+            titles[ownerId] = `Owner ${ownerId}`; // Fallback name
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching apartment for owner ${ownerId}:`, error);
+        titles[ownerId] = `Owner ${ownerId}`; // Fallback name
+      }
+    }
+
+    setApartmentTitles(titles);
+  };
+
+  // Fetch messages for the selected contact
   const fetchMessages = async () => {
     if (!userId || !selectedContactId) return;
 
@@ -61,12 +93,10 @@ function ChatInterface() {
       if (!response.ok) throw new Error("Failed to fetch messages");
 
       const data = await response.json();
-
-      // Ensure correct message alignment
       const updatedMessages = data.map((message) => ({
         ...message,
         timestamp: message.timestamp || new Date().toISOString(),
-        isSentByCurrentUser: String(message.sender) === String(userId), // Check sender ID
+        isSentByCurrentUser: String(message.sender) === String(userId),
       }));
 
       updatedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -93,7 +123,7 @@ function ChatInterface() {
   // Handle selecting a contact
   const handleSelectContact = (contactId) => {
     setSelectedContactId(contactId);
-    setSelectedContactName(contactId === 65 ? "User 115" : `User ${contactId}`);
+    setSelectedApartmentTitle(apartmentTitles[contactId] || `Owner ${contactId}`);
     fetchMessages();
   };
 
@@ -112,14 +142,12 @@ function ChatInterface() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: newMessage }),
-
-        
       });
 
       if (!response.ok) throw new Error("Failed to send message");
 
       console.log("Message sent:", newMessage);
-      
+
       setMessages((prevMessages) => [
         ...prevMessages,
         {
@@ -157,7 +185,7 @@ function ChatInterface() {
                     <AvatarFallback>{contactId}</AvatarFallback>
                   </Avatar>
                   <div className="flex-grow">
-                    <h3 className="font-semibold">{contactId === 65 ? "User 115" : `User ${contactId}`}</h3>
+                    <h3 className="font-semibold">{apartmentTitles[contactId] || `Owner ${contactId}`}</h3>
                   </div>
                 </div>
               ))
@@ -173,7 +201,7 @@ function ChatInterface() {
         <div className="h-[calc(100vh-4rem)] flex flex-col">
           {/* Chat Header */}
           <div className="bg-primary text-primary-foreground p-4">
-            <h2 className="text-xl font-semibold">{selectedContactName}</h2>
+            <h2 className="text-xl font-semibold">{selectedApartmentTitle}</h2>
           </div>
 
           {/* Chat Messages */}
@@ -194,9 +222,7 @@ function ChatInterface() {
                           : "bg-white text-black border" // Left-aligned messages (received) → White
                       }`}
                     >
-                      <p>
-                        {message.sender === 65 ? "User 115" : `User ${message.sender}`}: {message.message}
-                      </p>
+                      <p>{message.message}</p>
                       <p className="text-xs mt-1 text-right">
                         {new Date(message.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -233,4 +259,4 @@ function ChatInterface() {
   );
 }
 
-export default ChatInterface;
+export default UserChatInterface;

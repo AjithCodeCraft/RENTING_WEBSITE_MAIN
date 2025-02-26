@@ -376,6 +376,29 @@ def get_house_owner_by_ssn(request, ssn):
         return Response({'error': 'House owner details not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_apartments_by_owner(request, owner_id):
+    try:
+        user = User.objects.get(id=owner_id) 
+
+        if user.user_type != 'owner':
+            return Response({'error': 'User is not an owner'}, status=status.HTTP_403_FORBIDDEN)
+
+        apartments = Apartment.objects.filter(owner=user)  
+        apartment_serializer = ApartmentSerializer(apartments, many=True)
+
+        return Response({
+            'owner_id': owner_id,
+            'total_apartments': apartments.count(),
+            'apartments': apartment_serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response({'error': 'Owner not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+
 # Get All Apartments by Owner ID
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
