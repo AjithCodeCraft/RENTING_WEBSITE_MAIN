@@ -1793,3 +1793,15 @@ def get_received_messages(request, user_id):
     # Serialize messages
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_details(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=200)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
