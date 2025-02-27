@@ -1794,7 +1794,16 @@ def get_received_messages(request, user_id):
     serializer = ChatSerializer(messages, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_approved_apartment_by_owner(request):
+    if request.user.user_type == "owner":
+        approved_apartments = Apartment.objects.filter(
+            owner=request.user.pk, hostelapproval__status="approved"
+        ).distinct()
+        serializer = ApartmentSerializer(approved_apartments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response({"message": "You are not an owner"}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

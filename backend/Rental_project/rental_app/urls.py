@@ -76,7 +76,8 @@ from .views import (
     user_profile,
     update_profile,
     get_all_booking_received,
-    get_all_tenants
+    get_all_tenants,
+    get_approved_apartment_by_owner
 )
 
 
@@ -335,14 +336,15 @@ urlpatterns = [
         get_apartments_by_owner, 
         name='get_apartments_by_owner'
         ),
-
+    path(
+        "apartment/approved/by-owner/",
+        get_approved_apartment_by_owner,
+        name="get_approved_apartment_by_owner"
+    ),
     path(
         'get_user_details/<int:user_id>/', 
         get_user_details, 
         name="get_user_details"
         ),
-
-
-
 ]
 
