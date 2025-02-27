@@ -1,6 +1,7 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router"; // Import useRouter
+import { useRouter } from "next/router";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import UserHeader from "../UserHeader";
@@ -9,69 +10,66 @@ import FooterSection from "../footerSection";
 const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
 
 export function HostelCards() {
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [hostels, setHostels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hostelImages, setHostelImages] = useState({}); // Store images for each hostel
 
-  // Fetch hostels with authentication
+  // Fetch hostels and images concurrently
   useEffect(() => {
-    const fetchHostels = async () => {
+    const fetchHostelsAndImages = async () => {
       try {
         const accessToken = localStorage.getItem("access_token_user");
         if (!accessToken) {
           throw new Error("No access token found");
         }
 
-        const response = await fetch("http://localhost:8000/api/apartments/approved/", {
+        const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
         });
 
-        if (response.status === 401) {
-          // Handle unauthorized access
+        if (hostelsResponse.status === 401) {
           throw new Error("Unauthorized access. Please login again.");
         }
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!hostelsResponse.ok) {
+          throw new Error(`HTTP error! status: ${hostelsResponse.status}`);
         }
 
-        const data = await response.json();
-        console.log("Hostels data:", data); // Log hostels data
-        setHostels(data);
+        const hostelsData = await hostelsResponse.json();
+        console.log("Hostels data:", hostelsData);
+        setHostels(hostelsData);
 
-        // Fetch images for each hostel
+        // Fetch images for each hostel concurrently
         const images = {};
-        for (const hostel of data) {
+        const imageFetchPromises = hostelsData.map(async (hostel) => {
           try {
             const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`);
             const imagesData = await imagesResponse.json();
-            console.log(`Images data for hostel ${hostel.apartment_id}:`, imagesData); // Log images data
+            console.log(`Images data for hostel ${hostel.apartment_id}:`, imagesData);
 
-            if (!imagesResponse.ok || !imagesData.images || imagesData.images.length === 0) {
-              // If no images are found, use the default thumbnail
-              images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
-            } else {
+            if (imagesResponse.ok && imagesData.images && imagesData.images.length > 0) {
               images[hostel.apartment_id] = imagesData.images;
+            } else {
+              images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
             }
           } catch (error) {
             console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
-            // If there's an error, use the default thumbnail
             images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
           }
-        }
+        });
 
+        await Promise.all(imageFetchPromises);
         setHostelImages(images);
       } catch (error) {
         console.error("Fetch error:", error);
         setError(error.message);
 
-        // Redirect to login if unauthorized
         if (error.message.includes("Unauthorized")) {
           sessionStorage.removeItem("access_token");
           window.location.href = "/login";
@@ -81,21 +79,21 @@ export function HostelCards() {
       }
     };
 
-    fetchHostels();
+    fetchHostelsAndImages();
   }, []);
 
-  // Filter hostels based on the search query
+  // Filter hostels based on the search query and presence of images
   const filteredHostels = hostels.filter(
     (hostel) =>
-      hostel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hostel.location.toLowerCase().includes(searchQuery.toLowerCase())
+      (hostel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        hostel.location.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      hostelImages[hostel.apartment_id]?.[0]?.image_data !== DEFAULT_THUMBNAIL
   );
 
   // Handle card tap
   const handleHostelCardTap = (hostel) => {
-    // Navigate to the detailed page using the hostel's ID
-    localStorage.setItem("apartment_name",hostel.title)
-    localStorage.setItem("apartment_id",hostel.apartment_id)
+    localStorage.setItem("apartment_name", hostel.title);
+    localStorage.setItem("apartment_id", hostel.apartment_id);
     router.push(`/users/HostelDetails/${hostel.apartment_id}`);
   };
 
@@ -142,14 +140,11 @@ export function HostelCards() {
           let imageUrl;
 
           if (imageData.startsWith("http")) {
-            // If it's a URL, use it directly
             imageUrl = imageData;
           } else if (imageData.startsWith("ffd8")) {
-            // If it's a hex string, convert it to base64
             const bytes = new Uint8Array(imageData.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
             imageUrl = `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}`;
           } else {
-            // Assume it's a base64 string
             imageUrl = `data:image/jpeg;base64,${imageData}`;
           }
 
