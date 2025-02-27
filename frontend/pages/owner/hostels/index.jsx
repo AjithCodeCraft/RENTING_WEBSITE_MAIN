@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 import OwnerHeader from "../OwnerHeader";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -46,12 +47,16 @@ const OwnerHostels = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingApartments, setPendingApartments] = useState([]);
+  const [approvedApartments, setApprovedApartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [markers, setMarkers] = useState([]);
   const [hoveredHostel, setHoveredHostel] = useState(null);
   const mapContainerRef = useRef(null); // Ref for the map container
   const detailsRef = useRef(null); // Ref for the details popup
+  const [curretnTab, setCurrentTab] = useState("approved");
+  const [currentHostels, setCurrentHostels] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Fetch pending apartments and their images
   useEffect(() => {
@@ -71,10 +76,23 @@ const OwnerHostels = () => {
             },
           }
         );
+        // Fetch Approved Apartments
+        const approvedApartmentResponse = await fetch(
+          "http://localhost:8000/api/apartment/approved/by-owner/",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
         if (!apartmentsResponse.ok) {
           throw new Error("Failed to fetch pending apartments");
         }
+        if (!approvedApartmentResponse.ok) {
+          throw new Error("Failed to fetch approved apartments");
+        }
         const apartmentsData = await apartmentsResponse.json();
+        const approvedApartments = await approvedApartmentResponse.json();
 
         // Fetch images for each apartment
         const apartmentsWithImages = await Promise.all(
@@ -113,7 +131,46 @@ const OwnerHostels = () => {
           })
         );
 
+        const approvedApartmentsWithImages = await Promise.all(
+          approvedApartments.map(async (apartment) => {
+            try {
+              const imagesResponse = await fetch(
+                `http://127.0.0.1:8000/api/apartment-images/${apartment.apartment_id}/`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                  },
+                }
+              );
+
+              if (!imagesResponse.ok) {
+                // If no images are found, use the default thumbnail
+                return {
+                  ...apartment,
+                  images: [{ image_data: DEFAULT_THUMBNAIL }],
+                };
+              }
+
+              const imagesData = await imagesResponse.json();
+              return { ...apartment, images: imagesData.images };
+            } catch (error) {
+              console.error(
+                `Error fetching images for apartment ${apartment.apartment_id}:`,
+                error
+              );
+              // If there's an error, use the default thumbnail
+              return {
+                ...apartment,
+                images: [{ image_data: DEFAULT_THUMBNAIL }],
+              };
+            }
+          })
+        );
+        console.log(approvedApartmentsWithImages);
+
+        setApprovedApartments(approvedApartmentsWithImages);
         setPendingApartments(apartmentsWithImages);
+        setCurrentHostels(approvedApartmentsWithImages);
         setLoading(false);
       } catch (error) {
         setError(error.message);
@@ -124,18 +181,45 @@ const OwnerHostels = () => {
     fetchPendingApartments();
   }, []);
 
+  useEffect(() => {
+    const lTotalPages = Math.ceil(
+    currentHostels.length / ITEMS_PER_PAGE
+  );
+    setTotalPages(lTotalPages);
+    setCurrentPage(1);
+  }, [currentHostels])
+
+  const handleApprovedTabClick = () => {
+    setCurrentTab("approved");
+    setCurrentHostels(approvedApartments);
+  }
+
+  const handlePendingTabClick = () => {
+    setCurrentTab("pending");
+    setCurrentHostels(pendingApartments);
+  }
+
   // Calculate total pages
-  const totalPages = Math.ceil(pendingApartments.length / ITEMS_PER_PAGE);
+  
 
   // Get hostels for the current page
-  const currentHostels = pendingApartments.slice(
+  /* const currentPendingHostels = pendingApartments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
-  );
+  ); */
+
+  /* const currentApprovedHostels = approvedApartments.slice(
+    (currentPageApproved - 1) * ITEMS_PER_PAGE,
+    currentPageApproved * ITEMS_PER_PAGE
+  ); */
 
   // Initialize the map
   useEffect(() => {
-    if (!mapContainerRef.current || pendingApartments.length === 0) return;
+    if (
+      !mapContainerRef.current ||
+      pendingApartments.length + approvedApartments.length === 0
+    )
+      return;
 
     const mapInstance = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -155,8 +239,8 @@ const OwnerHostels = () => {
       "top-right"
     );
 
-    // Add markers for each hostel
-    const markers = pendingApartments.map((apartment) => {
+    const allApartments = [...pendingApartments, ...approvedApartments];
+    const markers = allApartments.map((apartment) => {
       const marker = new maplibregl.Marker({
         element: createCustomMarker(HOSTEL_ICON_URL),
       })
@@ -210,7 +294,7 @@ const OwnerHostels = () => {
       mapInstance.remove(); // Clean up the map instance
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [pendingApartments]);
+  }, [pendingApartments, approvedApartments]);
 
   // Center the map on the selected hostel when a hostel card is clicked
   useEffect(() => {
@@ -282,90 +366,107 @@ const OwnerHostels = () => {
               </Button>
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {currentHostels.map((apartment) => {
-              const imageData = apartment.images[0]?.image_data;
-              const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
-                ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
-                : imageData;
+          <Tabs defaultValue="approved" className="space-y-4">
+            <TabsList className="w-full md:w-auto">
+              <TabsTrigger value="approved" className="w-full md:w-auto" onClick={handleApprovedTabClick}>
+                Approved Apartements
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="w-full md:w-auto" onClick={handlePendingTabClick}>
+                Pending Apartements
+              </TabsTrigger>
+            </TabsList>
 
-              return (
-                <div
-                  key={apartment.apartment_id}
-                  className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
-                    selectedHostel?.apartment_id === apartment.apartment_id
-                      ? "scale-105"
-                      : ""
-                  }`}
-                  style={{
-                    backgroundImage: `url(${imageUrl})`,
-                  }}
-                  onClick={() => setSelectedHostel(apartment)}
-                  onMouseEnter={() => setHoveredHostel(apartment)}
-                  onMouseLeave={() => setHoveredHostel(null)}
-                >
-                  <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
-                  <div className="flex flex-row items-center space-x-4 z-10 p-4">
-                    <Image
-                      height="100"
-                      width="100"
-                      alt="Avatar"
-                      src="/manu.png"
-                      className="h-10 w-10 rounded-full border-2 object-cover"
-                    />
-                    <div className="flex flex-col">
-                      <p className="font-normal text-base text-gray-50 relative z-10">
-                        {apartment.title}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {apartment.location}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text content p-4">
-                    <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
-                      {apartment.title}
-                    </h1>
-                    <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
-                      ₹{apartment.rent}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            <TabsContent value={curretnTab} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {currentHostels.map((apartment) => {
+                  const imageData = apartment.images[0]?.image_data;
+                  const imageUrl = imageData.startsWith("ffd8") // Check if it's a hex string
+                    ? `data:image/jpeg;base64,${hexToBase64(imageData)}`
+                    : imageData;
 
-          {/* Pagination */}
-          <div className="mt-8 mb-8">
-            <Pagination>
-              <PaginationContent>
-                {currentPage > 1 && (
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => handlePageChange(currentPage - 1)}
-                    />
-                  </PaginationItem>
-                )}
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <PaginationItem key={i + 1}>
-                    <PaginationLink
-                      onClick={() => handlePageChange(i + 1)}
-                      isActive={currentPage === i + 1}
+                  return (
+                    <div
+                      key={apartment.apartment_id}
+                      className={`w-full group/card cursor-pointer overflow-hidden relative rounded-md shadow-xl max-w-sm mx-auto bg-cover transition-transform transform ${
+                        selectedHostel?.apartment_id === apartment.apartment_id
+                          ? "scale-105"
+                          : ""
+                      }`}
+                      style={{
+                        backgroundImage: `url(${imageUrl})`,
+                      }}
+                      onClick={() => setSelectedHostel(apartment)}
+                      onMouseEnter={() => setHoveredHostel(apartment)}
+                      onMouseLeave={() => setHoveredHostel(null)}
                     >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                {currentPage < totalPages && (
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => handlePageChange(currentPage + 1)}
-                    />
-                  </PaginationItem>
-                )}
-              </PaginationContent>
-            </Pagination>
-          </div>
+                      <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
+                      <div className="flex flex-row items-center space-x-4 z-10 p-4">
+                        <Image
+                          height="100"
+                          width="100"
+                          alt="Avatar"
+                          src="/manu.png"
+                          className="h-10 w-10 rounded-full border-2 object-cover"
+                        />
+                        <div className="flex flex-col">
+                          <p className="font-normal text-base text-gray-50 relative z-10">
+                            {apartment.title}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {apartment.location}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text content p-4">
+                        <h1 className="font-bold text-xl md:text-2xl text-gray-50 relative z-10">
+                          {apartment.title}
+                        </h1>
+                        <p className="font-normal text-sm text-gray-50 relative z-10 my-4">
+                          ₹{apartment.rent}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-8 mb-8">
+                <Pagination>
+                  <PaginationContent>
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() =>
+                            handlePageChange(currentPage - 1)
+                          }
+                        />
+                      </PaginationItem>
+                    )}
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <PaginationItem key={i + 1}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(i + 1)}
+                          isActive={currentPage === i + 1}
+                        >
+                          {i + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    {currentPage < totalPages && (
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() =>
+                            handlePageChange(currentPage + 1)
+                          }
+                        />
+                      </PaginationItem>
+                    )}
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Right Section - Map */}
