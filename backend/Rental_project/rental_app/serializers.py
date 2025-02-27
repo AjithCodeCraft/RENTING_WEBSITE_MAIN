@@ -91,7 +91,7 @@ class SearchFilterSerializer(serializers.ModelSerializer):
 class ChatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chat
-        fields = ["chat_id", "sender", "receiver", "message"]
+        fields = ["chat_id", "sender", "receiver", "message","timestamp"]
         extra_kwargs = {
             "chat_id": {"required": False},
             "sender": {"required": False},

@@ -13,6 +13,7 @@ from .views import (
     get_received_messages_by_user,
     get_send_messages_by_user_uuid,
     get_user_by_apartment_uuid,
+    get_user_details,
     get_user_messages,
     register_user,
     login_user,
@@ -340,6 +341,10 @@ urlpatterns = [
         get_approved_apartment_by_owner,
         name="get_approved_apartment_by_owner"
     ),
-
+    path(
+        'get_user_details/<int:user_id>/', 
+        get_user_details, 
+        name="get_user_details"
+        ),
 ]
 

@@ -1804,3 +1804,13 @@ def get_approved_apartment_by_owner(request):
         serializer = ApartmentSerializer(approved_apartments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response({"message": "You are not an owner"}, status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_details(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=200)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=404)
