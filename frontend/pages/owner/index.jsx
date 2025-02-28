@@ -28,12 +28,15 @@ import { Badge } from "@/components/ui/badge";
 import OwnerHeader from "./OwnerHeader";
 import axios from "axios";
 
+export const abortController = new AbortController();
+
 export default function OwnerHome() {
   const [ownedApartments, setOwnedApartments] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [pendingAppartments, setPendingAppartments] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [loading, setLoading] = useState(true);
   const ownerId = useRef(0);
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -44,6 +47,7 @@ export default function OwnerHome() {
         "Content-Type": "application/json",
       },
       withCredentials: true,
+      signal: abortController.signal,
     });
     return response;
   }
@@ -70,7 +74,11 @@ export default function OwnerHome() {
       }, {});
       setTenants(tenants_data);
     } catch (error) {
-      console.error("An error occured: ", error);
+      if (axios.isCancel(error)) {
+      } else {
+        // Handle other errors normally.
+        console.error("Error fetching data:", error);
+      }
     }
   }
 

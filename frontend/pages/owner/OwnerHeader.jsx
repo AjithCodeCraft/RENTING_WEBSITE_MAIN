@@ -16,8 +16,18 @@ import Link from "next/link";
 import { NavigationMenu, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BellRing, MessageSquareText, User, Settings, HelpCircle, Globe, LogOut } from 'lucide-react'; // Import icons from lucide-react
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { abortController } from ".";
 
 export default function OwnerHeader() {
+  const router = useRouter();
+  const logout = (e) => {
+    e.preventDefault();
+    abortController.abort();
+    localStorage.removeItem("access_token_owner");
+    router.push("/login");
+  };
   return (
     <header className="flex h-20 w-full shrink-0 items-center px-4 md:px-6">
     {/* Mobile Navigation Menu */}
@@ -135,7 +145,7 @@ export default function OwnerHeader() {
                   <span>Language</span>
                 </Link>
                 <Separator />
-                <Link href="#" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                <Link href="#" onClick={logout} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
                   <LogOut className="h-5 w-5" />
                   <span>Sign Out</span>
                 </Link>

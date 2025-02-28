@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/pagination";
 import Link from "next/link";
 import useSearchFilterStore from "@/store/searchFilter";
+import { abortController } from "../owner";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -79,21 +80,28 @@ const UserHostels = () => {
     useEffect(() => {
         const fetchHostels = async () => {
             try {
-                const accessToken = localStorage.getItem("access_token_user");
-                if (!accessToken) throw new Error("No access token found");
+                    const accessToken = localStorage.getItem("access_token_user");
+                    if (!accessToken) throw new Error("No access token found");
 
-                const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
-                    headers: {Authorization: `Bearer ${accessToken}`},
-                });
-                if (!hostelsResponse.ok) throw new Error("Failed to fetch hostels");
-
-                const hostelsData = await hostelsResponse.json();
+                try {
+                    const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
+                        headers: {Authorization: `Bearer ${accessToken}`},
+                        signal: abortController.signal
+                    });
+                    var hostelsData = await hostelsResponse.json();
+                } catch (error) {
+                    if (error.name === "AbortError") {
+                      } else {
+                        console.error("Fetch error:", error);
+                      }
+                }
 
                 const hostelsWithImages = await Promise.all(
                     hostelsData.map(async (hostel) => {
                         try {
                             const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
                                 headers: {Authorization: `Bearer ${accessToken}`},
+                                signal: abortController.signal
                             });
 
                             if (!imagesResponse.ok) return {...hostel, images: [{image_data: DEFAULT_THUMBNAIL}]};
@@ -101,8 +109,11 @@ const UserHostels = () => {
                             const imagesData = await imagesResponse.json();
                             return {...hostel, images: imagesData.images};
                         } catch (error) {
-                            console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
-                            return {...hostel, images: [{image_data: DEFAULT_THUMBNAIL}]};
+                            if (error.name === "AbortError") {
+                            } else {
+                                console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
+                                return {...hostel, images: [{image_data: DEFAULT_THUMBNAIL}]};
+                            }
                         }
                     })
                 );
@@ -111,7 +122,11 @@ const UserHostels = () => {
                 setFilteredHostels(filterApartments(hostelsWithImages, filters));
                 setLoading(false);
             } catch (error) {
-                setError(error.message);
+                if (axios.isCancel(error)) {
+                } else {
+                  console.error("Error fetching data:", error);
+                  setError(error.message);
+                }
                 setLoading(false);
             }
         };
