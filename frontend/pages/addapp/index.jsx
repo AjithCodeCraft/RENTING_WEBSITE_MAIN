@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import OwnerHeader from "../owner/OwnerHeader";
 
 export default function AddApartmentForm() {
   const router = useRouter();
@@ -244,6 +245,10 @@ export default function AddApartmentForm() {
   };
 
   return (
+    <>
+    <header className="sticky top-0 z-50 bg-white shadow-md">
+      <OwnerHeader />
+    </header>
     <div className="max-w-3xl mx-auto my-8">
       {!isVerified && (
         <div className="mb-4">
@@ -269,8 +274,7 @@ export default function AddApartmentForm() {
               <Input
                 {...register("title", { required: true })}
                 placeholder="Enter apartment title"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.title && <p className="text-sm text-red-500">Title is required</p>}
             </div>
 
@@ -280,8 +284,7 @@ export default function AddApartmentForm() {
               <Textarea
                 {...register("description", { required: true })}
                 placeholder="Describe the apartment"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.description && <p className="text-sm text-red-500">Description is required</p>}
             </div>
 
@@ -292,8 +295,7 @@ export default function AddApartmentForm() {
                 type="number"
                 {...register("rent", { required: true })}
                 placeholder="Enter rent amount"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.rent && <p className="text-sm text-red-500">Rent is required</p>}
             </div>
 
@@ -315,8 +317,7 @@ export default function AddApartmentForm() {
                       <SelectItem value="3BHK">3BHK</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              />
+                )} />
               {errors.bhk && <p className="text-sm text-red-500">BHK is required</p>}
             </div>
 
@@ -337,8 +338,7 @@ export default function AddApartmentForm() {
                       <SelectItem value="shared">Shared</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              />
+                )} />
               {errors.room_sharing_type && <p className="text-sm text-red-500">Room sharing type is required</p>}
             </div>
 
@@ -349,8 +349,7 @@ export default function AddApartmentForm() {
                 type="number"
                 {...register("available_beds", { required: true })}
                 placeholder="Available beds"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.available_beds && <p className="text-sm text-red-500">Available beds is required</p>}
             </div>
 
@@ -361,8 +360,7 @@ export default function AddApartmentForm() {
                 type="number"
                 {...register("total_beds", { required: true })}
                 placeholder="Total beds"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.total_beds && <p className="text-sm text-red-500">Total beds is required</p>}
             </div>
 
@@ -394,8 +392,7 @@ export default function AddApartmentForm() {
               <Input
                 {...register("location", { required: true })}
                 placeholder="Enter location"
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               {errors.location && <p className="text-sm text-red-500">Location is required</p>}
             </div>
 
@@ -407,8 +404,7 @@ export default function AddApartmentForm() {
                   type="text"
                   {...register("latitude", { required: true })}
                   placeholder="Enter latitude"
-                  disabled={!isAadharValid && !isVerified}
-                />
+                  disabled={!isAadharValid && !isVerified} />
                 {errors.latitude && <p className="text-sm text-red-500">Latitude is required</p>}
               </div>
               <div>
@@ -417,8 +413,7 @@ export default function AddApartmentForm() {
                   type="text"
                   {...register("longitude", { required: true })}
                   placeholder="Enter longitude"
-                  disabled={!isAadharValid && !isVerified}
-                />
+                  disabled={!isAadharValid && !isVerified} />
                 {errors.longitude && <p className="text-sm text-red-500">Longitude is required</p>}
               </div>
             </div>
@@ -440,8 +435,7 @@ export default function AddApartmentForm() {
                       <SelectItem value="girls">Girls</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              />
+                )} />
               {errors.hostel_type && <p className="text-sm text-red-500">Hostel type is required</p>}
             </div>
 
@@ -462,8 +456,7 @@ export default function AddApartmentForm() {
                       <SelectItem value="short-term">Short-term</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-              />
+                )} />
               {errors.duration && <p className="text-sm text-red-500">Duration is required</p>}
             </div>
 
@@ -472,8 +465,7 @@ export default function AddApartmentForm() {
               <input
                 type="checkbox"
                 {...register("parking_available")}
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               <Label>Parking Available</Label>
             </div>
 
@@ -484,8 +476,7 @@ export default function AddApartmentForm() {
                 type="file"
                 multiple
                 onChange={handleFileChange}
-                disabled={!isAadharValid && !isVerified}
-              />
+                disabled={!isAadharValid && !isVerified} />
               <div className="mt-4">
                 {imageFiles.length > 0 && (
                   <div className="flex flex-wrap gap-4">
@@ -494,8 +485,7 @@ export default function AddApartmentForm() {
                         <img
                           src={URL.createObjectURL(file)}
                           alt={`preview-${index}`}
-                          className="object-cover w-full h-full rounded-md"
-                        />
+                          className="object-cover w-full h-full rounded-md" />
                         <p className="text-xs text-center mt-2">{file.name}</p>
                       </div>
                     ))}
@@ -512,5 +502,6 @@ export default function AddApartmentForm() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
