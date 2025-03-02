@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, use } from "react";
 import {
     Card,
     CardHeader,
@@ -6,27 +6,35 @@ import {
     CardDescription,
     CardContent,
 } from "@/components/ui/card";
-import {
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/router";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import OwnerHeader from "../OwnerHeader";
-import axios from "axios";
-
-const API_URI = process.env.NEXT_PUBLIC_API_URL;
+import FormSelect from "@/components/form/FormSelect";
+import FormInput from "@/components/form/FormInput";
+import useHostelData from "@/hooks/useHostelData";
+import ImageUploader from "@/components/form/ImageUploader";
 
 export default function hostelUpdate() {
     const router = useRouter();
     const [id, setId] = useState(null);
+    const [images, setImages] = useState([]);
+    const [imageFiles, setImageFiles] = useState({});
+
+    const {
+        register,
+        handleSubmit,
+        watch,
+        reset,
+        setValue,
+        getValues,
+        control,
+        formState: { errors },
+    } = useForm();
+
+    useHostelData(id, reset, setImages);
 
     const foodOptions = useRef([
         { label: "Breakfast", value: "1" },
@@ -34,17 +42,43 @@ export default function hostelUpdate() {
         { label: "Dinner", value: "3" },
     ]);
 
-    const {
-        register,
-        handleSubmit,
-        watch,
-        setValue,
-        control,
-        formState: { errors },
-    } = useForm();
+    const hostelTypeOptions = [
+        { label: "Boys", value: "boys" },
+        { label: "Girls", value: "girls" },
+    ];
 
-    const [apartmentData, setApartmentData] = useState();
-    const [selectedFood, setSelectedFood] = useState([]);
+    const durationOptions = [
+        { label: "Long-term", value: "long-term" },
+        { label: "Short-term", value: "short-term" },
+    ];
+
+    const roomSharingOptions = [
+        { label: "Private", value: "private" },
+        { label: "Shared", value: "shared" }
+    ];
+
+    const bhkOptions = [
+        { label: "1BHK", value: "1BHK" },
+        { label: "2BHK", value: "2BHK" },
+        { label: "3BHK", value: "3BHK" }
+    ];
+
+    const watchFields = watch([
+        "title",
+        "description",
+        "rent",
+        "bhk",
+        "available_beds",
+        "total_beds",
+        "room_sharing_type",
+        "location",
+        "latitude",
+        "longitude",
+        "hostel_type",
+        "duration",
+    ]);
+
+    const [isFormValid, setIsFormValid] = useState(true);
 
     useEffect(() => {
         if (router.isReady) {
@@ -52,40 +86,35 @@ export default function hostelUpdate() {
         }
     }, [router.isReady, router.query.id]);
 
-    useEffect(() => {
-        axios
-            .get(`${API_URI}/apartments/${id}`)
-            .then((res) => {
-                setApartmentData(res.data);
-                console.log(res.data);
-            })
-            .catch((err) => console.error(err));
-    }, [id]);
 
-    // testing
     useEffect(() => {
-        console.log(apartmentData);
-    }, [apartmentData]);
+        const isValid = watchFields.every(
+            (field) => field !== undefined && field !== ""
+        );
+        setIsFormValid(isValid);
+    }, [watchFields]);
+
+    useEffect(() => {console.log(images)}, [images]);
 
     // Handle food selection
     const handleFoodSelection = (value) => {
-        const updatedFood = selectedFood.includes(value)
-            ? selectedFood.filter((food) => food !== value) // Remove if already selected
-            : [...selectedFood, value]; // Add if not selected
+        const updatedFood = watch("food")?.includes(value)
+            ? watch("food").filter((food) => food !== value) // Remove if already selected
+            : [...(watch("food") || []), value]; // Add if not selected
 
-        setApartmentData((prev) => ({
-            ...prev,
-            food: updatedFood.map(Number),
-        }));
-        setSelectedFood(updatedFood);
         setValue("food", updatedFood); // Update the form value
     };
-    const handleOnChange = (value, key) => {
-        setApartmentData((prev) => ({
-            ...prev,
-            [key]: value,
-        }));
+
+
+    const handleOnSubmit = () => {
+        const values = getValues();
+        console.log(values);
+        console.log(imageFiles);
     };
+
+    const handleFileUpdate = (file, index) => {
+        setImageFiles(prev => ({...prev, [index]: file}));
+    }
 
     return (
         <>
@@ -101,24 +130,20 @@ export default function hostelUpdate() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={} className="space-y-6">
+                        <form
+                            onSubmit={handleSubmit(handleOnSubmit)}
+                            className="space-y-6"
+                        >
                             {/* Title */}
-                            <div>
-                                <Label>Title</Label>
-                                <Input
-                                    {...register("title", { required: true })}
-                                    placeholder="Apartment Title"
-                                    onChange={(e) =>
-                                        handleOnChange(e.target.value, "title")
-                                    }
-                                    value={apartmentData?.title}
-                                />
-                                {errors.title && (
-                                    <p className="text-sm text-red-500">
-                                        Title is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormInput
+                                label={"Title"}
+                                type="text"
+                                name={"title"}
+                                placeholder={"Apartment Title"}
+                                register={register}
+                                error={errors.title}
+                            />
+
                             {/* Description */}
                             <div>
                                 <Label>Description</Label>
@@ -127,13 +152,6 @@ export default function hostelUpdate() {
                                         required: true,
                                     })}
                                     placeholder="Describe the apartment"
-                                    onChange={(e) =>
-                                        handleOnChange(
-                                            e.target.value,
-                                            "description"
-                                        )
-                                    }
-                                    value={apartmentData?.description}
                                 />
                                 {errors.description && (
                                     <p className="text-sm text-red-500">
@@ -143,128 +161,43 @@ export default function hostelUpdate() {
                             </div>
 
                             {/* Rent */}
-                            <div>
-                                <Label>Rent (per month)</Label>
-                                <Input
-                                    type="number"
-                                    {...register("rent", { required: true })}
-                                    placeholder="Enter rent amount"
-                                    onChange={(e) =>
-                                        handleOnChange(e.target.value, "rent")
-                                    }
-                                    value={apartmentData?.rent}
-                                />
-                                {errors.rent && (
-                                    <p className="text-sm text-red-500">
-                                        Rent is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormInput
+                                label={"Rent (per month)"}
+                                type="decimal"
+                                name={"rent"}
+                                placeholder={"Enter rent amount"}
+                                register={register}
+                                error={errors.rent}
+                            />
 
                             {/* BHK */}
-                            <div>
-                                <Label>BHK</Label>
-                                <Controller
-                                    name="bhk"
-                                    control={control}
-                                    rules={{ required: true }}
-                                    render={({ field }) => (
-                                        <Select
-                                            onValueChange={(value) => {
-                                                field.onChange(value);
-                                                setApartmentData((prev) => ({
-                                                    ...prev,
-                                                    bhk: value,
-                                                }));
-                                            }}
-                                            value={apartmentData?.bhk}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select BHK" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="1BHK">
-                                                    1BHK
-                                                </SelectItem>
-                                                <SelectItem value="2BHK">
-                                                    2BHK
-                                                </SelectItem>
-                                                <SelectItem value="3BHK">
-                                                    3BHK
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.bhk && (
-                                    <p className="text-sm text-red-500">
-                                        BHK is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormSelect
+                                label={"BHK"}
+                                name={"bhk"}
+                                control={control}
+                                options={bhkOptions}
+                                placeholder={"Select BHK"}
+                                error={errors.bhk}
+                            />
                             {/* Room Sharing Type */}
-                            <div>
-                                <Label>Room Sharing Type</Label>
-                                <Controller
-                                    name="room_sharing_type"
-                                    control={control}
-                                    rules={{ required: true }}
-                                    render={({ field }) => (
-                                        <Select
-                                            onValueChange={(value) => {
-                                                field.onChange(value);
-                                                setApartmentData((prev) => ({
-                                                    ...prev,
-                                                    room_sharing_type: value,
-                                                }));
-                                            }}
-                                            value={
-                                                apartmentData?.room_sharing_type
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select sharing type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="private">
-                                                    Private
-                                                </SelectItem>
-                                                <SelectItem value="shared">
-                                                    Shared
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.room_sharing_type && (
-                                    <p className="text-sm text-red-500">
-                                        Room sharing type is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormSelect
+                                label={"Room Sharing Type"}
+                                name={"room_sharing_type"}
+                                control={control}
+                                options={roomSharingOptions}
+                                placeholder={"Select sharing type"}
+                                error={errors.room_sharing_type}
+                            />
+
                             {/* Available Beds */}
-                            <div>
-                                <Label>Available Beds</Label>
-                                <Input
-                                    type="number"
-                                    {...register("available_beds", {
-                                        required: true,
-                                    })}
-                                    placeholder="Available beds"
-                                    onChange={(e) =>
-                                        handleOnChange(
-                                            e.target.value,
-                                            "total_beds"
-                                        )
-                                    }
-                                    value={apartmentData?.total_beds}
-                                />
-                                {errors.available_beds && (
-                                    <p className="text-sm text-red-500">
-                                        Available beds is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormInput
+                                label={"Available Beds"}
+                                type="number"
+                                name={"available_beds"}
+                                placeholder={"Available Beds"}
+                                register={register}
+                                error={errors.available_beds}
+                            />
 
                             {/* Food Options */}
                             <div>
@@ -275,7 +208,7 @@ export default function hostelUpdate() {
                                             key={food.value}
                                             type="button"
                                             variant={
-                                                selectedFood.includes(
+                                                watch("food")?.includes(
                                                     food.value
                                                 )
                                                     ? "default"
@@ -292,174 +225,91 @@ export default function hostelUpdate() {
                             </div>
 
                             {/* Location */}
-                            <div>
-                                <Label>Location</Label>
-                                <Input
-                                    {...register("location", {
-                                        required: true,
-                                    })}
-                                    placeholder="Enter location"
-                                    value={apartmentData?.location}
-                                    onChange={(e) =>
-                                        handleOnChange(
-                                            e.target.value,
-                                            "location"
-                                        )
-                                    }
-                                />
-                                {errors.location && (
-                                    <p className="text-sm text-red-500">
-                                        Location is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormInput
+                                label={"Location"}
+                                type="text"
+                                name={"location"}
+                                placeholder={"Enter location"}
+                                register={register}
+                                error={errors.location}
+                            />
 
                             {/* Latitude and Longitude */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Latitude</Label>
-                                    <Input
-                                        type="number"
-                                        {...register("latitude", {
-                                            required: true,
-                                        })}
-                                        placeholder="Enter latitude"
-                                        value={apartmentData?.latitude}
-                                        onChange={(e) =>
-                                            handleOnChange(
-                                                e.target.value,
-                                                "latitude"
-                                            )
-                                        }
-                                    />
-                                    {errors.latitude && (
-                                        <p className="text-sm text-red-500">
-                                            Latitude is required
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <Label>Longitude</Label>
-                                    <Input
-                                        type="number"
-                                        {...register("longitude", {
-                                            required: true,
-                                        })}
-                                        placeholder="Enter longitude"
-                                        value={apartmentData?.longitude}
-                                        onChange={(e) =>
-                                            handleOnChange(
-                                                e.target.value,
-                                                "longitude"
-                                            )
-                                        }
-                                    />
-                                    {errors.longitude && (
-                                        <p className="text-sm text-red-500">
-                                            Longitude is required
-                                        </p>
-                                    )}
-                                </div>
+                                <FormInput
+                                    label={"Latitude"}
+                                    type="decimal"
+                                    name={"latitude"}
+                                    placeholder={"Enter latitude"}
+                                    register={register}
+                                    error={errors.latitude}
+                                />
+                                <FormInput
+                                    label={"Longitude"}
+                                    type="decimal"
+                                    name={"longitude"}
+                                    placeholder={"Enter longitude"}
+                                    register={register}
+                                    error={errors.longitude}
+                                />
                             </div>
 
                             {/* Hostel Type */}
-                            <div>
-                                <Label>Hostel Type</Label>
-                                <Controller
-                                    name="hostel_type"
-                                    control={control}
-                                    rules={{ required: true }}
-                                    render={({ field }) => (
-                                        <Select
-                                            onValueChange={(value) => {
-                                                field.onChange(value);
-                                                setApartmentData((prev) => ({
-                                                    ...prev,
-                                                    hostel_type: value,
-                                                }));
-                                            }}
-                                            value={apartmentData?.hostel_type}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Hostel Type" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="boys">
-                                                    Boys
-                                                </SelectItem>
-                                                <SelectItem value="girls">
-                                                    Girls
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.hostel_type && (
-                                    <p className="text-sm text-red-500">
-                                        Hostel type is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormSelect
+                                label={"Hostel Type"}
+                                name={"hostel_type"}
+                                control={control}
+                                options={hostelTypeOptions}
+                                placeholder={"Select Hostel Type"}
+                                error={errors.hostel_type}
+                            />
 
                             {/* Duration */}
-                            <div>
-                                <Label>Duration</Label>
-                                <Controller
-                                    name="duration"
-                                    control={control}
-                                    rules={{ required: true }}
-                                    render={({ field }) => (
-                                        <Select
-                                            onValueChange={(value) => {
-                                                field.onChange(value);
-                                                setApartmentData((prev) => ({
-                                                    ...prev,
-                                                    duration: value,
-                                                }));
-                                            }}
-                                            value={apartmentData?.duration}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select Duration" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="long-term">
-                                                    Long-term
-                                                </SelectItem>
-                                                <SelectItem value="short-term">
-                                                    Short-term
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.duration && (
-                                    <p className="text-sm text-red-500">
-                                        Duration is required
-                                    </p>
-                                )}
-                            </div>
+                            <FormSelect
+                                label={"Duration"}
+                                name={"duration"}
+                                control={control}
+                                options={durationOptions}
+                                placeholder={"Select Duration"}
+                                error={errors.duration}
+                            />
 
                             {/* Parking Available */}
                             <div className="flex items-center gap-2">
                                 <input
                                     type="checkbox"
                                     {...register("parking_available")}
-                                    checked={apartmentData?.parking_available}
-                                    onChange={(e) =>
-                                        handleOnChange(
-                                            e.target.checked,
-                                            "parking_available"
-                                        )
-                                    }
                                 />
                                 <Label>Parking Available</Label>
                             </div>
 
-                            {/* Submit Button */}
-                            <Button type="submit" disabled={!isFormValid()}>
-                                Submit
-                            </Button>
+                            <div className="flex justify-center gap-8">
+                                {images && images.map((image, index) => (
+                                        <ImageUploader
+                                            key={image?.image_id || index}
+                                            name={
+                                                index === 0
+                                                    ? "primary"
+                                                    : `img${index}`
+                                            }
+                                            src={image?.image_data}
+                                            onFileSelect={(file) => handleFileUpdate(file, index)}
+                                        />
+                                    ))}
+                            </div>
+
+                            {/* Update, Delete and Cancel buttons */}
+                            <div className="flex justify-center gap-4">
+                                <Button className={"w-[70%]"} type="submit" disabled={!isFormValid}>
+                                    Update
+                                </Button>
+                                <Button className={"w-[15%] bg-red-500 hover:bg-red-600"} type="submit" disabled={!isFormValid}>
+                                    Delete
+                                </Button>
+                                <Button className={"w-[15%] bg-blue-600 hover:bg-blue-500"} type="submit" disabled={!isFormValid}>
+                                    Cancel
+                                </Button>
+                            </div>
                         </form>
                     </CardContent>
                 </Card>

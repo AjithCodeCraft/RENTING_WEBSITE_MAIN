@@ -169,7 +169,6 @@ const OwnerHostels = () => {
             }
           })
         );
-        console.log(approvedApartmentsWithImages);
 
         setApprovedApartments(approvedApartmentsWithImages);
         setPendingApartments(apartmentsWithImages);
