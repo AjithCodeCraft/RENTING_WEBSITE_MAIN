@@ -16,7 +16,7 @@ function UserChatInterface() {
   const [userId, setUserId] = useState(null);
   const [apartmentTitles, setApartmentTitles] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Refs for scrolling
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
@@ -108,7 +108,7 @@ function UserChatInterface() {
       }));
 
       updatedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      
+
       // Check if there are new messages by comparing with current state
       if (JSON.stringify(updatedMessages) !== JSON.stringify(messages)) {
         setMessages(updatedMessages);
@@ -125,15 +125,15 @@ function UserChatInterface() {
   // Fetch messages for the selected contact
   const fetchMessages = async () => {
     if (!userId || !selectedContactId) return;
-    
+
     setIsLoading(true);
-    
+
     // First check if we have cached messages
     if (messagesCache.current[selectedContactId]) {
       setMessages(messagesCache.current[selectedContactId]);
       setIsLoading(false);
       setTimeout(scrollToBottom, 100); // Scroll after a short delay
-      
+
       // Fetch in background to update cache
       updateCachedMessages();
       return;
@@ -159,10 +159,10 @@ function UserChatInterface() {
 
       updatedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       setMessages(updatedMessages);
-      
+
       // Update cache
       messagesCache.current[selectedContactId] = updatedMessages;
-      
+
       setTimeout(scrollToBottom, 100); // Scroll after a short delay
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -170,7 +170,7 @@ function UserChatInterface() {
       setIsLoading(false);
     }
   };
-  
+
   // Update cached messages in the background
   const updateCachedMessages = async () => {
     if (!userId || !selectedContactId) return;
@@ -194,7 +194,7 @@ function UserChatInterface() {
       }));
 
       updatedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-      
+
       // Update state only if there are differences
       if (JSON.stringify(updatedMessages) !== JSON.stringify(messages)) {
         setMessages(updatedMessages);
@@ -213,17 +213,17 @@ function UserChatInterface() {
     }
   };
 
-  // Fetch contacts on mount
+  // Fetch contacts and messages on mount
   useEffect(() => {
     fetchContacts();
-  }, [userId]);
-
-  // Fetch messages when selectedContactId changes
-  useEffect(() => {
     if (selectedContactId) {
       fetchMessages();
-      
-      // Set up interval for checking new messages
+    }
+  }, [userId, selectedContactId]);
+
+  // Set up interval for checking new messages
+  useEffect(() => {
+    if (selectedContactId) {
       const interval = setInterval(checkForNewMessages, 5000);
       return () => clearInterval(interval);
     }
@@ -231,7 +231,9 @@ function UserChatInterface() {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   // Handle selecting a contact
@@ -247,7 +249,7 @@ function UserChatInterface() {
     try {
       const accessToken = localStorage.getItem("access_token_user");
       const receiverId = Number(selectedContactId);
-      
+
       // Optimistically add the message to UI first for immediate feedback
       const tempMessage = {
         id: `temp-${Date.now()}`,
@@ -256,13 +258,13 @@ function UserChatInterface() {
         receiver: selectedContactId,
         timestamp: new Date().toISOString(),
         isSentByCurrentUser: true,
-        sending: true // Flag to show sending status
+        sending: true, // Flag to show sending status
       };
-      
-      setMessages(prevMessages => [...prevMessages, tempMessage]);
+
+      setMessages((prevMessages) => [...prevMessages, tempMessage]);
       const messageToSend = newMessage;
       setNewMessage("");
-      
+
       // Scroll to bottom immediately
       setTimeout(scrollToBottom, 10);
 
@@ -278,24 +280,23 @@ function UserChatInterface() {
       if (!response.ok) throw new Error("Failed to send message");
 
       // Update messages to reflect the sent status
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.id === tempMessage.id 
-            ? { ...msg, sending: false, id: `sent-${Date.now()}` } 
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === tempMessage.id
+            ? { ...msg, sending: false, id: `sent-${Date.now()}` }
             : msg
         )
       );
-      
+
       // Update cache
       messagesCache.current[selectedContactId] = messages;
-      
     } catch (error) {
       console.error("Error sending message:", error);
       // Show error status on the message
-      setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg.id === `temp-${Date.now()}` 
-            ? { ...msg, sending: false, error: true } 
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === `temp-${Date.now()}`
+            ? { ...msg, sending: false, error: true }
             : msg
         )
       );
@@ -368,15 +369,14 @@ function UserChatInterface() {
                     >
                       <p>{message.message}</p>
                       <p className="text-xs mt-1 text-right">
-                        {message.sending 
-                          ? "Sending..." 
-                          : message.error 
-                            ? "Failed to send" 
+                        {message.sending
+                          ? "Sending..."
+                          : message.error
+                            ? "Failed to send"
                             : new Date(message.timestamp).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              })
-                        }
+                              })}
                       </p>
                     </div>
                   </div>
@@ -399,9 +399,9 @@ function UserChatInterface() {
                 onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                 disabled={!selectedContactId}
               />
-              <Button 
-                size="icon" 
-                onClick={handleSendMessage} 
+              <Button
+                size="icon"
+                onClick={handleSendMessage}
                 disabled={!selectedContactId || newMessage.trim() === ""}
               >
                 <Send className="h-4 w-4" />
