@@ -83,7 +83,7 @@ export default function OwnerHome() {
   }
 
   useEffect(() => {
-    ownerId.current = localStorage.getItem("id");
+    ownerId.current = localStorage.getItem("owner_id_number");
     fetchData();
   }, []);
 
