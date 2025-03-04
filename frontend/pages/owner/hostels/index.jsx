@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import OwnerHeader from "../OwnerHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useRouter } from "next/router";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -57,6 +58,8 @@ const OwnerHostels = () => {
   const [curretnTab, setCurrentTab] = useState("approved");
   const [currentHostels, setCurrentHostels] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
+  
+  const router = useRouter();
 
   // Fetch pending apartments and their images
   useEffect(() => {
@@ -166,7 +169,6 @@ const OwnerHostels = () => {
             }
           })
         );
-        console.log(approvedApartmentsWithImages);
 
         setApprovedApartments(approvedApartmentsWithImages);
         setPendingApartments(apartmentsWithImages);
@@ -182,36 +184,20 @@ const OwnerHostels = () => {
   }, []);
 
   useEffect(() => {
-    const lTotalPages = Math.ceil(
-    currentHostels.length / ITEMS_PER_PAGE
-  );
+    const lTotalPages = Math.ceil(currentHostels.length / ITEMS_PER_PAGE);
     setTotalPages(lTotalPages);
     setCurrentPage(1);
-  }, [currentHostels])
+  }, [currentHostels]);
 
   const handleApprovedTabClick = () => {
     setCurrentTab("approved");
     setCurrentHostels(approvedApartments);
-  }
+  };
 
   const handlePendingTabClick = () => {
     setCurrentTab("pending");
     setCurrentHostels(pendingApartments);
-  }
-
-  // Calculate total pages
-  
-
-  // Get hostels for the current page
-  /* const currentPendingHostels = pendingApartments.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  ); */
-
-  /* const currentApprovedHostels = approvedApartments.slice(
-    (currentPageApproved - 1) * ITEMS_PER_PAGE,
-    currentPageApproved * ITEMS_PER_PAGE
-  ); */
+  };
 
   // Initialize the map
   useEffect(() => {
@@ -294,7 +280,7 @@ const OwnerHostels = () => {
       mapInstance.remove(); // Clean up the map instance
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [pendingApartments, approvedApartments]);
+  }, [loading]); // loadint may cause an error /// so use [approvedApartments, pendingApartment] ///
 
   // Center the map on the selected hostel when a hostel card is clicked
   useEffect(() => {
@@ -334,6 +320,15 @@ const OwnerHostels = () => {
     }
   };
 
+
+  const handleClick = (apartment) => {
+    setSelectedHostel(apartment);
+  };
+
+  const handleDoubleClick = (apartmentId) => {
+    router.push(`hostels/${apartmentId}`);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -368,10 +363,18 @@ const OwnerHostels = () => {
           </div>
           <Tabs defaultValue="approved" className="space-y-4">
             <TabsList className="w-full md:w-auto">
-              <TabsTrigger value="approved" className="w-full md:w-auto" onClick={handleApprovedTabClick}>
+              <TabsTrigger
+                value="approved"
+                className="w-full md:w-auto"
+                onClick={handleApprovedTabClick}
+              >
                 Approved Apartements
               </TabsTrigger>
-              <TabsTrigger value="pending" className="w-full md:w-auto" onClick={handlePendingTabClick}>
+              <TabsTrigger
+                value="pending"
+                className="w-full md:w-auto"
+                onClick={handlePendingTabClick}
+              >
                 Pending Apartements
               </TabsTrigger>
             </TabsList>
@@ -395,9 +398,10 @@ const OwnerHostels = () => {
                       style={{
                         backgroundImage: `url(${imageUrl})`,
                       }}
-                      onClick={() => setSelectedHostel(apartment)}
+                      onClick={() => handleClick(apartment)}
                       onMouseEnter={() => setHoveredHostel(apartment)}
                       onMouseLeave={() => setHoveredHostel(null)}
+                      onDoubleClick={() => handleDoubleClick(apartment.apartment_id)}
                     >
                       <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
                       <div className="flex flex-row items-center space-x-4 z-10 p-4">
@@ -437,9 +441,7 @@ const OwnerHostels = () => {
                     {currentPage > 1 && (
                       <PaginationItem>
                         <PaginationPrevious
-                          onClick={() =>
-                            handlePageChange(currentPage - 1)
-                          }
+                          onClick={() => handlePageChange(currentPage - 1)}
                         />
                       </PaginationItem>
                     )}
@@ -456,9 +458,7 @@ const OwnerHostels = () => {
                     {currentPage < totalPages && (
                       <PaginationItem>
                         <PaginationNext
-                          onClick={() =>
-                            handlePageChange(currentPage + 1)
-                          }
+                          onClick={() => handlePageChange(currentPage + 1)}
                         />
                       </PaginationItem>
                     )}

@@ -12,16 +12,18 @@ class AdminAuthentication(BaseAuthentication):
             return None  # No token provided
 
         token = auth_header.split(' ')[1]  # Extract the token
-
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            admin_id = payload.get('admin_id')
+            if not admin_id:
+                return None
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('Token expired')
         except jwt.InvalidTokenError:
             raise AuthenticationFailed('Invalid token')
 
         try:
-            admin = Admin.objects.get(admin_id=payload['admin_id'])
+            admin = Admin.objects.get(admin_id=admin_id)
         except Admin.DoesNotExist:
             raise AuthenticationFailed('Admin not found')
 

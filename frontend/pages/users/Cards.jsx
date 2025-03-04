@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import useSearchFilterStore from "@/store/searchFilter";
 import { abortController } from "../owner";
+import { useRouter } from "next/router";
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -52,6 +53,7 @@ const UserHostels = () => {
     const [hoveredHostel, setHoveredHostel] = useState(null);
     const [tapCount, setTapCount] = useState(0);
     const [tapTimeout, setTapTimeout] = useState(null);
+    const router = useRouter();
 
     const mapContainerRef = useRef(null);
     const detailsRef = useRef(null);
@@ -259,7 +261,7 @@ const UserHostels = () => {
             clearTimeout(tapTimeout);
             setTapCount(0);
             localStorage.setItem("apartment_id", hostel.apartment_id);
-            window.location.href = `/users/HostelDetails/${hostel.apartment_id}`;
+            router.push(`/users/HostelDetails/${hostel.apartment_id}`);
         }
     };
 

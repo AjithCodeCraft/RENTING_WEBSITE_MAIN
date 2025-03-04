@@ -47,7 +47,7 @@ const HostelDetails = () => {
 
   // Fetch apartment_id from localStorage on the client side
   useEffect(() => {
-    const apartmentId = localStorage.getItem("apartment_id")
+    const apartmentId = localStorage.getItem("apartment_id");
     if (apartmentId) {
       setApartmentId(apartmentId)
     } else {

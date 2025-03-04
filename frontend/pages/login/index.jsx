@@ -25,7 +25,7 @@ export default function LoginPage({ className, ...props }) {
         },
         body: JSON.stringify({
           email: email,
-          password_hash: password, // Ensure this matches the expected field in the backend
+          password_hash: password,
         }),
       });
   
