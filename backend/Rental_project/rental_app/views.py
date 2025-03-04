@@ -279,9 +279,10 @@ def get_apartment_by_id(request, apartment_id):
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
-@authentication_classes([SessionAuthentication, TokenAuthentication, AdminAuthentication])
+@authentication_classes([TokenAuthentication, AdminAuthentication])
 def apartment_detail(request, pk):
     """Handles GET (Retrieve), PUT (Update), and DELETE for a specific Apartment."""
+    
 
     try:
         apartment = Apartment.objects.get(apartment_id=pk)
@@ -292,27 +293,15 @@ def apartment_detail(request, pk):
         serializer = ApartmentSerializer(apartment)
         return Response(serializer.data)
 
-    if not request.user.is_authenticated:
-        return Response({"message": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-
     if request.method == "PUT":
         serializer = ApartmentSerializer(apartment, data=request.data, partial=True)
         if serializer.is_valid():
-            if (
-                    (hasattr(request.user,
-                             "user_type") and request.user.user_type == "owner" and request.user.id == apartment.owner)
-                    or hasattr(request.user, "admin_id")
-            ):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
+            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == "DELETE":
-        if (
-                (hasattr(request.user,
-                         "user_type") and request.user.user_type == "owner" and request.user.id == apartment.owner)
-                or hasattr(request.user, "admin_id")
-        ):
             apartment.delete()
             return Response({'message': 'Apartment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     return Response({"message": "You don't have enough rights!"}, status=status.HTTP_403_FORBIDDEN)
@@ -439,6 +428,7 @@ def add_apartment_image(request):
     """Upload an image to MongoDB GridFS and link it to an apartment."""
     apartment_uuid = request.data.get('apartment_uuid')
     file = request.FILES.get('image')
+    is_primary = True if request.data.get("is_primary") == 'true' else False
 
     if not apartment_uuid or not file:
         return JsonResponse({'error': 'Missing apartment UUID or image file'}, status=400)
@@ -454,7 +444,8 @@ def add_apartment_image(request):
     # Save reference in ApartmentImage model
     apartment_image = ApartmentImage.objects.create(
         apartment=apartment,
-        image_path=str(file_id)  # Store GridFS file ID
+        image_path=str(file_id),  # Store GridFS file ID
+        is_primary=is_primary
     )
 
     return JsonResponse({
@@ -466,13 +457,6 @@ def add_apartment_image(request):
 
 @api_view(['GET'])
 def get_apartment_images(request, apartment_id):
-    # Generate a unique cache key for this apartment
-    cache_key = f"apartment_images_{apartment_id}"
-    
-    # Check if the data is already cached
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        return JsonResponse(cached_data, status=200)
 
     try:
         # Ensure apartment_id is a string
@@ -507,7 +491,6 @@ def get_apartment_images(request, apartment_id):
 
         # Cache the response data for 5 minutes (300 seconds)
         response_data = {"images": image_list}
-        cache.set(cache_key, response_data, timeout=300)
 
         return JsonResponse(response_data, status=200)
 

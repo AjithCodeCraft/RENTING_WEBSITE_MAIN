@@ -29,10 +29,11 @@ const useHostelData = (id, reset, setImages) => {
                     ...image,
                     image_data: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`
                 }));
-                for (let i = 0; i < 3 - data.length; i++) {
+                const data_length = data.length;
+                for (let i = 0; i < 3 - data_length; i++) {
                     data.push({"image_data": null});
                 }
-                setImages(data);
+                setImages(data.slice(0, 3));
             })
             .catch(console.error);
     }

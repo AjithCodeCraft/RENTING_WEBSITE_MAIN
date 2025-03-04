@@ -58,7 +58,9 @@ const ImageUploader = ({ name, src, onFileSelect }) => {
         onMouseOver={handleMouseOver}
         onMouseLeave={handleMouseLeave}
       >
-        <p className={`text-black px-3 py-2 rounded shadow-lg duration-200 ${updateStyle}`}>Update</p>
+        <p className={`text-black px-3 py-2 rounded shadow-lg duration-200 ${updateStyle}`}>
+          {imageSrc ? "Update" : "Add +"}
+        </p>
       </div>
 
       {/* Hidden file input */}

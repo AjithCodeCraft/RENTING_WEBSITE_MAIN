@@ -326,7 +326,7 @@ const OwnerHostels = () => {
   };
 
   const handleDoubleClick = (apartmentId) => {
-    router.push(`\hostels\\${apartmentId}`);
+    router.push(`hostels/${apartmentId}`);
   };
 
   if (loading) {
