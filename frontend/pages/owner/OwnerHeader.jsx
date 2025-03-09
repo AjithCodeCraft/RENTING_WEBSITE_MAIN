@@ -19,6 +19,7 @@ import { BellRing, MessageSquareText, User, Settings, HelpCircle, Globe, LogOut 
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { abortController } from ".";
+import Image from "next/image";
 
 export default function OwnerHeader() {
   const router = useRouter();
@@ -40,7 +41,15 @@ export default function OwnerHeader() {
       </SheetTrigger>
       <SheetContent side="left" className="bg-white">
         <Link href="#" prefetch={false}>
-          <ShirtIcon className="h-6 w-6" />
+           <div className="h-100 w-10"> 
+                     <Image 
+                       src="/g88.png" 
+                       alt="Logo" 
+                       width={50} 
+                       height={50} 
+                       className="h-15 w-15"
+                     />
+                   </div>
           <span className="sr-only">ShadCN</span>
         </Link>
         <div className="grid gap-2 py-9">
@@ -59,7 +68,15 @@ export default function OwnerHeader() {
   
     {/* Desktop Navigation Menu */}
     <Link href="#" className="mr-6 hidden lg:flex" prefetch={false}>
-      <ShirtIcon className="h-6 w-6" />
+        <div className="h-100 w-10"> 
+                  <Image 
+                    src="/g88.png" 
+                    alt="Logo" 
+                    width={50} 
+                    height={50} 
+                    className="h-15 w-15"
+                  />
+                </div>
       <span className="sr-only">ShadCN</span>
     </Link>
     <NavigationMenu className="hidden lg:flex">
