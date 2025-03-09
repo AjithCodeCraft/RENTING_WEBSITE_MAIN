@@ -62,7 +62,7 @@ export default function LoginPage({ className, ...props }) {
         console.log("Error: Unexpected user type");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.log("Login error:", error);
       setErrorMessage(error.message || "An error occurred during login");
     }
   };
@@ -78,8 +78,8 @@ export default function LoginPage({ className, ...props }) {
             <Image 
               src="/g88.png" 
               alt="Logo" 
-              width={40} 
-              height={40} 
+              width={50} 
+              height={50} 
               className="h-15 w-15"
             />
           </div>
