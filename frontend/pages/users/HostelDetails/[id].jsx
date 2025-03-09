@@ -1,14 +1,15 @@
 "use client"
+
 import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon, AlertCircleIcon, CalendarIcon } from "lucide-react"
+import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon, AlertCircleIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import UserHeader from "../UserHeader"
 import { useState, useEffect } from "react"
 import { addDays, format, differenceInDays } from "date-fns"
-import 'react-modern-calendar-datepicker/lib/DatePicker.css'
-import { Calendar } from 'react-modern-calendar-datepicker'
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const DEFAULT_THUMBNAIL = "/default-image.jpg"
@@ -18,7 +19,6 @@ const hexToBase64 = (hex) => {
   return Buffer.from(bytes).toString("base64")
 }
 
-// Helper functions for date handling
 const dateToCalendarFormat = (date) => ({
   year: date.getFullYear(),
   month: date.getMonth() + 1,
@@ -44,10 +44,10 @@ const HostelDetails = () => {
   const [isBookingPopupOpen, setIsBookingPopupOpen] = useState(false)
   const [bookingDetails, setBookingDetails] = useState(null)
   const [bookingExpiryDate, setBookingExpiryDate] = useState(null)
+  const [paymentLink, setPaymentLink] = useState(null)
 
-  // Fetch apartment_id from localStorage on the client side
   useEffect(() => {
-    const apartmentId = localStorage.getItem("apartment_id");
+    const apartmentId = localStorage.getItem("apartment_id")
     if (apartmentId) {
       setApartmentId(apartmentId)
     } else {
@@ -56,7 +56,6 @@ const HostelDetails = () => {
     }
   }, [])
 
-  // Fetch apartment details and images
   useEffect(() => {
     if (!apartment_id) return
 
@@ -93,15 +92,15 @@ const HostelDetails = () => {
         }
         const imagesData = await imagesResponse.json()
 
-        const imagesWithBase64 = imagesData.images.map((image) => {
-          if (image.image_data.startsWith("ffd8")) {
+        const imagesWithBase64 = imagesData.images?.map((image) => {
+          if (image.image_data?.startsWith("ffd8")) {
             return {
               ...image,
               image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
             }
           }
           return image
-        })
+        }) || []
 
         const apartmentWithImages = {
           ...apartmentData,
@@ -124,20 +123,20 @@ const HostelDetails = () => {
   }
 
   const handleSendMessage = async () => {
-    if (!message || message.trim() === "") return;
-  
+    if (!message || message.trim() === "") return
+
     try {
-      const accessToken = localStorage.getItem("access_token_user");
-      const receiverId = Number(localStorage.getItem("owner_id_number"));
-  
+      const accessToken = localStorage.getItem("access_token_user")
+      const receiverId = Number(localStorage.getItem("owner_id_number"))
+
       if (isNaN(receiverId)) {
-        console.error("Invalid receiver ID");
-        return;
+        console.error("Invalid receiver ID")
+        return
       }
-  
-      const requestBody = JSON.stringify({ message: message });
-      console.log("Sending:", requestBody);
-  
+
+      const requestBody = JSON.stringify({ message: message })
+      console.log("Sending:", requestBody)
+
       const response = await fetch(
         `http://127.0.0.1:8000/api/chat/send-message/${receiverId}`,
         {
@@ -148,22 +147,21 @@ const HostelDetails = () => {
           },
           body: requestBody,
         }
-      );
-  
+      )
+
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Failed to send message:", errorData);
-        throw new Error(errorData.message || "Failed to send message");
+        const errorData = await response.json()
+        console.error("Failed to send message:", errorData)
+        throw new Error(errorData.message || "Failed to send message")
       }
-  
-      // Close the message popup and show success popup
-      setIsMessagePopupOpen(false);
-      setIsSuccessPopupOpen(true);
-      setMessage("");
+
+      setIsMessagePopupOpen(false)
+      setIsSuccessPopupOpen(true)
+      setMessage("")
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending message:", error)
     }
-  };
+  }
 
   const closeSuccessPopup = () => {
     setIsSuccessPopupOpen(false)
@@ -177,19 +175,20 @@ const HostelDetails = () => {
     setSelectedReview(null)
   }
 
-  const handleDateSelection = (newValue) => {
-    if (newValue.from) {
-      const startDate = calendarFormatToDate(newValue.from)
+  const handleDateSelection = (dates) => {
+    const [start, end] = dates
+    if (start) {
+      const startDate = dateToCalendarFormat(start)
       let endDate
 
       if (duration === "short-term") {
-        endDate = dateToCalendarFormat(addDays(startDate, 7))
+        endDate = dateToCalendarFormat(addDays(start, 7))
       } else {
-        endDate = dateToCalendarFormat(addDays(startDate, 30))
+        endDate = dateToCalendarFormat(addDays(start, 30))
       }
 
-      setSelectedDayRange({ from: newValue.from, to: endDate })
-      setBookingExpiryDate(addDays(startDate, 30))
+      setSelectedDayRange({ from: startDate, to: endDate })
+      setBookingExpiryDate(addDays(start, 30))
     }
   }
 
@@ -215,15 +214,60 @@ const HostelDetails = () => {
       const startDate = calendarFormatToDate(selectedDayRange.from)
       const endDate = calendarFormatToDate(selectedDayRange.to)
       const expiryDate = addDays(startDate, 30)
+      const amount = calculateTotalAmount()
 
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const accessToken = localStorage.getItem("access_token_user")
+      const user_id = localStorage.getItem("user_id_number")
+      
+
+      const bookingResponse = await fetch("http://127.0.0.1:8000/api/booking/create/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          user: user_id,
+          apartment: apartment_id
+        }),
+      })
+
+      if (!bookingResponse.ok) {
+        throw new Error("Failed to create booking")
+      }
+
+      const bookingData = await bookingResponse.json()
+      const booking_id = bookingData.booking_id // Retrieve the booking_id
+      console.log(booking_id)
+
+      // Step 2: Generate the payment link using the booking_id
+      const paymentResponse = await fetch("http://127.0.0.1:8000/api/payment/url/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          user_id: user_id,
+          apartment_id: apartment_id,
+          amount: amount,
+          booking_id: booking_id,
+        }),
+      })
+
+      if (!paymentResponse.ok) {
+        throw new Error("Failed to generate payment link")
+      }
+
+      const paymentData = await paymentResponse.json()
+      setPaymentLink(paymentData.payment_url) // Store the payment link
 
       setBookingDetails({
         startDate,
         endDate,
         expiryDate,
-        amount: calculateTotalAmount(),
-        duration: duration
+        amount: amount,
+        duration: duration,
       })
 
       setIsBookingPopupOpen(true)
@@ -301,19 +345,50 @@ const HostelDetails = () => {
         </div>
 
         <div className="border rounded p-2">
-          <Calendar
-            value={selectedDayRange}
+          <DatePicker
+            selected={selectedDayRange.from ? calendarFormatToDate(selectedDayRange.from) : null}
             onChange={handleDateSelection}
-            shouldHighlightWeekends
-            minimumDate={new Date()}
+            startDate={selectedDayRange.from ? calendarFormatToDate(selectedDayRange.from) : null}
+            endDate={selectedDayRange.to ? calendarFormatToDate(selectedDayRange.to) : null}
+            selectsRange
+            inline
+            minDate={new Date()}
+            calendarClassName="custom-calendar"
+            renderCustomHeader={({
+              monthDate,
+              decreaseMonth,
+              increaseMonth,
+              prevMonthButtonDisabled,
+              nextMonthButtonDisabled,
+            }) => (
+              <div className="flex items-center justify-between px-4 py-2">
+                <button
+                  onClick={decreaseMonth}
+                  disabled={prevMonthButtonDisabled}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  {"<"}
+                </button>
+                <span className="font-semibold text-lg">
+                  {format(monthDate, "MMMM yyyy")}
+                </span>
+                <button
+                  onClick={increaseMonth}
+                  disabled={nextMonthButtonDisabled}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  {">"}
+                </button>
+              </div>
+            )}
           />
         </div>
 
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span>₹{hostel?.rent} x {selectedDayRange.to ? 
-              `${differenceInDays(calendarFormatToDate(selectedDayRange.to), 
-              calendarFormatToDate(selectedDayRange.from)) + 1} nights` : 
+            <span>₹{hostel?.rent} x {selectedDayRange.to ?
+              `${differenceInDays(calendarFormatToDate(selectedDayRange.to),
+              calendarFormatToDate(selectedDayRange.from)) + 1} nights` :
               "Select dates"}</span>
             <span>₹{calculateTotalAmount()}</span>
           </div>
@@ -323,8 +398,8 @@ const HostelDetails = () => {
           </div>
         </div>
 
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           onClick={handleBooking}
           disabled={!selectedDayRange.from || !selectedDayRange.to}
         >
@@ -546,6 +621,14 @@ const HostelDetails = () => {
                   Booking will be automatically cancelled if payment is not received.
                 </AlertDescription>
               </Alert>
+              {paymentLink && (
+                <div>
+                  <p className="font-semibold">Payment Link:</p>
+                  <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                    {paymentLink}
+                  </a>
+                </div>
+              )}
               <Button className="w-full" onClick={() => setIsBookingPopupOpen(false)}>
                 Close
               </Button>
