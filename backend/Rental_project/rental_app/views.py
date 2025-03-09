@@ -171,16 +171,19 @@ def register_user(request):
 @api_view(['POST'])
 def login_user(request):
     email = request.data.get('email')
-    password = request.data.get('password_hash')  # Use password_hash for login
+    password = request.data.get('password_hash')  # Assuming password_hash is sent from frontend
 
     if not email or not password:
         return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Authenticate using Firebase
         user = User.objects.get(email=email)
 
-        # Since Firebase handles authentication, we don't check the password manually
+        # Check if the provided password matches the stored hash
+        if not check_password(password, user.password_hash):  # Ensure `password_hash` is the hashed password field in your User model
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -191,8 +194,10 @@ def login_user(request):
             'name': user.name,
             'user_type': user.user_type
         }, status=status.HTTP_200_OK)
+
     except User.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 @api_view(['GET'])
@@ -1206,7 +1211,7 @@ def generate_payment_url(request):
                 "description": "Apartment Booking Payment",
                 "notify": {"sms": True, "email": True},
                 "reminder_enable": True,
-                "callback_url": "http://127.0.0.1:8000/payment/callback/",
+                "callback_url": "http://127.0.0.1:8000/api/payment/callback/",
                 "callback_method": "get",
                 "reference_id": razorpay_order["id"]  # ✅ Store correct order ID
             }
