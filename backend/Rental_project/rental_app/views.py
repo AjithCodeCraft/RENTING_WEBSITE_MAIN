@@ -49,6 +49,7 @@ from .serializers import (ApartmentSerializer, CheckOwnerVerificationSerializer,
 SECRET_KEY = settings.SECRET_KEY
 
 
+
 @api_view(['POST'])
 def send_otp(request):
     email = request.data.get('email')
@@ -59,7 +60,7 @@ def send_otp(request):
 
     # Check if email already exists in MongoDB
     if User.objects.filter(email=email).exists():
-        return Response({'error': 'Email already exists in MongoDB'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Email already exists please login'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Generate a 6-digit OTP
     otp = random.randint(100000, 999999)
