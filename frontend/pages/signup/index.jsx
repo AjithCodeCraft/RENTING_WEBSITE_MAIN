@@ -59,6 +59,7 @@ const Signup = () => {
   const [otpButtonColor, setOtpButtonColor] = useState("bg-green-500");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -178,7 +179,25 @@ const Signup = () => {
   };
 
   const handleGetOtp = async () => {
+    // Clear any previous errors
+    setErrorMessage('');
+    
+    // Basic email validation before making the request
+    if (!email) {
+        setErrorMessage('Email is required');
+        return;
+    }
+
+    // Simple email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        setErrorMessage('Please enter a valid email address');
+        return;
+    }
+
     try {
+        setLoading(true); // Add loading state if you have one
+        
         const response = await fetch("http://localhost:8000/api/send_otp/", {
             method: "POST",
             headers: {
@@ -187,23 +206,44 @@ const Signup = () => {
             body: JSON.stringify({ email }),
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error("OTP Error Response:", errorData);
-            throw new Error(errorData.message || "Failed to send OTP");
+            // Handle different error cases
+            if (response.status === 400) {
+                // Bad request errors (validation, email exists, etc.)
+                throw new Error(data.error || 'Invalid request');
+            } else if (response.status === 500) {
+                // Server errors
+                throw new Error(data.error || 'Server error, please try again later');
+            } else {
+                // Other HTTP errors
+                throw new Error(data.message || `Request failed with status ${response.status}`);
+            }
         }
 
-        const data = await response.json();
-        console.log("OTP Response:", data); // Debug log
-        
+        // Success case
+        console.log("OTP Response:", data);
         setOtpSent(true);
         setIsOtpDialogOpen(true);
         setCountdown(45);
+        
     } catch (error) {
-        console.error("OTP Error:", error);
-        setErrorMessage(error.message || "An error occurred");
+        console.log("OTP Error:", error);
+        
+        // More specific error messages for different cases
+        if (error.name === 'AbortError') {
+            setErrorMessage('Request timed out');
+        } else if (error.message.includes('Failed to fetch')) {
+            setErrorMessage('Network error - please check your connection');
+        } else {
+            setErrorMessage(error.message || "An unexpected error occurred");
+        }
+    } finally {
+        setLoading(false); // Ensure loading is turned off
     }
 };
+
 
   const handleVerifyOtp = async () => {
     // Check if all OTP slots are filled
