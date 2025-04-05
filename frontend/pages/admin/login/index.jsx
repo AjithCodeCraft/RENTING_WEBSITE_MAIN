@@ -15,6 +15,8 @@ export default function AdminLogin({ className, ...props }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [emailMessageStyle, setEmailMessageStyle] = useState('hidden');
   const [errorMessageStyle, setErrorMessageStyle] = useState('hidden');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const route = useRouter();
 
   const isValidEmail = (email) => {
@@ -30,6 +32,7 @@ export default function AdminLogin({ className, ...props }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/login-admin/`;
 
@@ -54,10 +57,40 @@ export default function AdminLogin({ className, ...props }) {
     }
   };
 
+  const validate_login = async (token) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/token/verify/`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+      if (response.data.message) {
+        setIsLoggedIn(true);
+      }
+    } catch (error) {
+      setIsLoggedIn(false);
+    }
+  }
+
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (token) route.replace("/admin/dashboard"); // Redirect logged-in users
+    if (token) validate_login(token);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) route.replace("/admin/dashboard");
+  }, [isLoggedIn]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full">
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-gray-300 border-t-green-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">

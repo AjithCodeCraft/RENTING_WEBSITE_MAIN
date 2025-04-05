@@ -30,8 +30,6 @@ import AdminLayout from "./adminsidebar";
 import axios from "axios";
 import useApartmentStore from "@/store/apartmentStore";
 import { useRouter } from "next/router";
-import withAuth from "@/hoc/withAuth";
-
 
 const AdminDashboard = () => {
   const route = useRouter();

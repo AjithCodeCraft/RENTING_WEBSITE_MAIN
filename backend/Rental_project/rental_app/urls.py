@@ -15,6 +15,7 @@ from .views import (
     get_user_by_apartment_uuid,
     get_user_details,
     get_user_messages,
+    is_logged_admin_in,
     register_user,
     login_user,
     apartment_detail,
@@ -77,7 +78,7 @@ from .views import (
     update_profile,
     get_all_booking_received,
     get_all_tenants,
-    get_approved_apartment_by_owner
+    get_approved_apartment_by_owner,
 )
 
 
@@ -287,19 +288,15 @@ urlpatterns = [
         get_user_by_apartment_uuid,
         name="user-by-apartment",
     ),
-    
-
-
     path(
-        'messages/received/<str:firebase_uuid>/', 
-        get_received_messages_by_user, 
-        name='get-received-messages'), 
-
-   
+        "messages/received/<str:firebase_uuid>/",
+        get_received_messages_by_user,
+        name="get-received-messages",
+    ),
     path(
-          "messages/sent/<str:user_uuid>/",
-          get_send_messages_by_user_uuid,
-          name="get_send_messages_by_user_uuid"
+        "messages/sent/<str:user_uuid>/",
+        get_send_messages_by_user_uuid,
+        name="get_send_messages_by_user_uuid",
     ),
     path(
         "get_owner_details_by_receiver/<int:receiver_id>/",
@@ -311,40 +308,30 @@ urlpatterns = [
         get_all_booking_received,
         name="get_all_booking_received",
     ),
+    path("get-all-tenants/", get_all_tenants, name="get_all_tenants"),
     path(
-        "get-all-tenants/",
-        get_all_tenants,
-        name="get_all_tenants"
+        "get_owner_details_by_user_id/<str:user_id>/",
+        get_owner_details_by_user_id,
+        name="get_owner_details_by_user_id",
     ),
     path(
-        'get_owner_details_by_user_id/<str:user_id>/', 
-        get_owner_details_by_user_id, 
-        name='get_owner_details_by_user_id'),
-    path(
-        'get_messages/user/<int:user_id>/',
-        get_user_messages,
-        name = 'get_user_messages'
+        "get_messages/user/<int:user_id>/", get_user_messages, name="get_user_messages"
     ),
     path(
-        'messages/user/received/<str:user_id>/', 
-        get_received_messages, 
-
-        name='get_received_messages'
-        ),
+        "messages/user/received/<str:user_id>/",
+        get_received_messages,
+        name="get_received_messages",
+    ),
     path(
-        'apartment/by-owner/<int:owner_id>/', 
-        get_apartments_by_owner, 
-        name='get_apartments_by_owner'
-        ),
+        "apartment/by-owner/<int:owner_id>/",
+        get_apartments_by_owner,
+        name="get_apartments_by_owner",
+    ),
     path(
         "apartment/approved/by-owner/",
         get_approved_apartment_by_owner,
-        name="get_approved_apartment_by_owner"
+        name="get_approved_apartment_by_owner",
     ),
-    path(
-        'get_user_details/<int:user_id>/', 
-        get_user_details, 
-        name="get_user_details"
-        ),
+    path("get_user_details/<int:user_id>/", get_user_details, name="get_user_details"),
+    path("token/verify/", is_logged_admin_in, name="token_verify"),
 ]
-

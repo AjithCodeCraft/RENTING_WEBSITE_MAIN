@@ -1,69 +1,90 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { StarIcon, MapPinIcon, Share2Icon, HeartIcon, MessageCircleIcon, XIcon, AlertCircleIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import UserHeader from "../UserHeader"
-import { useState, useEffect } from "react"
-import { addDays, format, differenceInDays } from "date-fns"
-import DatePicker from "react-datepicker"
-import "react-datepicker/dist/react-datepicker.css"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import Image from "next/image";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  StarIcon,
+  MapPinIcon,
+  Share2Icon,
+  HeartIcon,
+  MessageCircleIcon,
+  XIcon,
+  AlertCircleIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import UserHeader from "../UserHeader";
+import { useState, useEffect } from "react";
+import { addDays, format, differenceInDays } from "date-fns";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-const DEFAULT_THUMBNAIL = "/default-image.jpg"
+const DEFAULT_THUMBNAIL = "/default-image.jpg";
 
 const hexToBase64 = (hex) => {
-  const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)))
-  return Buffer.from(bytes).toString("base64")
-}
+  const bytes = new Uint8Array(
+    hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)),
+  );
+  return Buffer.from(bytes).toString("base64");
+};
 
 const dateToCalendarFormat = (date) => ({
   year: date.getFullYear(),
   month: date.getMonth() + 1,
-  day: date.getDate()
-})
+  day: date.getDate(),
+});
 
 const calendarFormatToDate = (calendarDate) => {
-  if (!calendarDate) return null
-  return new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day)
-}
+  if (!calendarDate) return null;
+  return new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
+};
 
 const HostelDetails = () => {
-  const [hostel, setHostel] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false)
-  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false)
-  const [message, setMessage] = useState("")
-  const [selectedReview, setSelectedReview] = useState(null)
-  const [duration, setDuration] = useState("short-term")
-  const [selectedDayRange, setSelectedDayRange] = useState({ from: null, to: null })
-  const [apartment_id, setApartmentId] = useState(null)
-  const [isBookingPopupOpen, setIsBookingPopupOpen] = useState(false)
-  const [bookingDetails, setBookingDetails] = useState(null)
-  const [bookingExpiryDate, setBookingExpiryDate] = useState(null)
-  const [paymentLink, setPaymentLink] = useState(null)
+  const [hostel, setHostel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isMessagePopupOpen, setIsMessagePopupOpen] = useState(false);
+  const [isSuccessPopupOpen, setIsSuccessPopupOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [duration, setDuration] = useState("short-term");
+  const [selectedDayRange, setSelectedDayRange] = useState({
+    from: null,
+    to: null,
+  });
+  const [apartment_id, setApartmentId] = useState(null);
+  const [isBookingPopupOpen, setIsBookingPopupOpen] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState(null);
+  const [bookingExpiryDate, setBookingExpiryDate] = useState(null);
+  const [paymentLink, setPaymentLink] = useState(null);
+
+  const openRazorpayGatway = () => window.open(paymentLink, "_blank");
 
   useEffect(() => {
-    const apartmentId = localStorage.getItem("apartment_id")
+    const apartmentId = localStorage.getItem("apartment_id");
     if (apartmentId) {
-      setApartmentId(apartmentId)
+      setApartmentId(apartmentId);
     } else {
-      setError("Apartment ID not found in localStorage")
-      setLoading(false)
+      setError("Apartment ID not found in localStorage");
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    if (!apartment_id) return
+    if (!apartment_id) return;
 
     const fetchApartmentDetails = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token_user")
+        const accessToken = localStorage.getItem("access_token_user");
         if (!accessToken) {
-          throw new Error("No access token found")
+          throw new Error("No access token found");
         }
 
         const apartmentResponse = await fetch(
@@ -72,12 +93,12 @@ const HostelDetails = () => {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
-        )
+          },
+        );
         if (!apartmentResponse.ok) {
-          throw new Error("Failed to fetch apartment details")
+          throw new Error("Failed to fetch apartment details");
         }
-        const apartmentData = await apartmentResponse.json()
+        const apartmentData = await apartmentResponse.json();
 
         const imagesResponse = await fetch(
           `http://127.0.0.1:8000/api/apartment-images/${apartment_id}/`,
@@ -85,57 +106,61 @@ const HostelDetails = () => {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
-          }
-        )
+          },
+        );
         if (!imagesResponse.ok) {
-          throw new Error("Failed to fetch apartment images")
+          throw new Error("Failed to fetch apartment images");
         }
-        const imagesData = await imagesResponse.json()
+        const imagesData = await imagesResponse.json();
 
-        const imagesWithBase64 = imagesData.images?.map((image) => {
-          if (image.image_data?.startsWith("ffd8")) {
-            return {
-              ...image,
-              image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
+        const imagesWithBase64 =
+          imagesData.images?.map((image) => {
+            if (image.image_data?.startsWith("ffd8")) {
+              return {
+                ...image,
+                image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
+              };
             }
-          }
-          return image
-        }) || []
+            return image;
+          }) || [];
 
         const apartmentWithImages = {
           ...apartmentData,
-          images: imagesWithBase64.length > 0 ? imagesWithBase64 : [{ image_url: DEFAULT_THUMBNAIL }],
-        }
+          images:
+            imagesWithBase64.length > 0
+              ? imagesWithBase64
+              : [{ image_url: DEFAULT_THUMBNAIL }],
+        };
 
-        setHostel(apartmentWithImages)
-        setLoading(false)
+        setHostel(apartmentWithImages);
+        setLoading(false);
       } catch (error) {
-        setError(error.message)
-        setLoading(false)
+        setError(error.message);
+        setLoading(false);
       }
-    }
+    };
 
-    fetchApartmentDetails()
-  }, [apartment_id])
+    fetchApartmentDetails();
+  }, [apartment_id]);
 
   const toggleMessagePopup = () => {
-    setIsMessagePopupOpen(!isMessagePopupOpen)
-  }
+    setIsMessagePopupOpen(!isMessagePopupOpen);
+  };
 
   const handleSendMessage = async () => {
-    if (!message || message.trim() === "") return
+    if (!message || message.trim() === "") return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user")
-      const receiverId = Number(localStorage.getItem("owner_id_number"))
+      const accessToken = localStorage.getItem("access_token_user");
+      const receiverId = Number(localStorage.getItem("owner_id_number"));
 
       if (isNaN(receiverId)) {
-        console.error("Invalid receiver ID")
-        return
+        console.error("Invalid receiver ID");
+        return;
       }
 
-      const requestBody = JSON.stringify({ message: message })
-      console.log("Sending:", requestBody)
+      const requestBody = JSON.stringify({ message: message });
+      console.log("Sending:", requestBody);
 
       const response = await fetch(
         `http://127.0.0.1:8000/api/chat/send-message/${receiverId}`,
@@ -146,121 +171,126 @@ const HostelDetails = () => {
             "Content-Type": "application/json",
           },
           body: requestBody,
-        }
-      )
+        },
+      );
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error("Failed to send message:", errorData)
-        throw new Error(errorData.message || "Failed to send message")
+        const errorData = await response.json();
+        console.error("Failed to send message:", errorData);
+        throw new Error(errorData.message || "Failed to send message");
       }
 
-      setIsMessagePopupOpen(false)
-      setIsSuccessPopupOpen(true)
-      setMessage("")
+      setIsMessagePopupOpen(false);
+      setIsSuccessPopupOpen(true);
+      setMessage("");
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("Error sending message:", error);
     }
-  }
+  };
 
   const closeSuccessPopup = () => {
-    setIsSuccessPopupOpen(false)
-  }
+    setIsSuccessPopupOpen(false);
+  };
 
   const handleReviewClick = (review) => {
-    setSelectedReview(review)
-  }
+    setSelectedReview(review);
+  };
 
   const closeReviewPopup = () => {
-    setSelectedReview(null)
-  }
+    setSelectedReview(null);
+  };
 
   const handleDateSelection = (dates) => {
-    const [start, end] = dates
+    const [start, end] = dates;
     if (start) {
-      const startDate = dateToCalendarFormat(start)
-      let endDate
+      const startDate = dateToCalendarFormat(start);
+      let endDate;
 
       if (duration === "short-term") {
-        endDate = dateToCalendarFormat(addDays(start, 7))
+        endDate = dateToCalendarFormat(addDays(start, 7));
       } else {
-        endDate = dateToCalendarFormat(addDays(start, 30))
+        endDate = dateToCalendarFormat(addDays(start, 30));
       }
 
-      setSelectedDayRange({ from: startDate, to: endDate })
-      setBookingExpiryDate(addDays(start, 30))
+      setSelectedDayRange({ from: startDate, to: endDate });
+      setBookingExpiryDate(addDays(start, 30));
     }
-  }
+  };
 
   const handleDurationChange = (newDuration) => {
-    setDuration(newDuration)
+    setDuration(newDuration);
     if (selectedDayRange.from) {
-      const startDate = calendarFormatToDate(selectedDayRange.from)
+      const startDate = calendarFormatToDate(selectedDayRange.from);
       const endDate = dateToCalendarFormat(
-        addDays(startDate, newDuration === "short-term" ? 7 : 30)
-      )
-      setSelectedDayRange(prev => ({ ...prev, to: endDate }))
+        addDays(startDate, newDuration === "short-term" ? 7 : 30),
+      );
+      setSelectedDayRange((prev) => ({ ...prev, to: endDate }));
     }
-  }
+  };
 
   const handleBooking = async () => {
     if (!selectedDayRange.from || !selectedDayRange.to) {
-      setError("Please select your stay dates")
-      return
+      setError("Please select your stay dates");
+      return;
     }
 
     try {
-      setLoading(true)
-      const startDate = calendarFormatToDate(selectedDayRange.from)
-      const endDate = calendarFormatToDate(selectedDayRange.to)
-      const expiryDate = addDays(startDate, 30)
-      const amount = calculateTotalAmount()
+      setLoading(true);
+      const startDate = calendarFormatToDate(selectedDayRange.from);
+      const endDate = calendarFormatToDate(selectedDayRange.to);
+      const expiryDate = addDays(startDate, 30);
+      const amount = calculateTotalAmount();
 
-      const accessToken = localStorage.getItem("access_token_user")
-      const user_id = localStorage.getItem("user_id_number")
-      
+      const accessToken = localStorage.getItem("access_token_user");
+      const user_id = localStorage.getItem("user_id_number");
 
-      const bookingResponse = await fetch("http://127.0.0.1:8000/api/booking/create/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+      const bookingResponse = await fetch(
+        "http://127.0.0.1:8000/api/booking/create/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            user: user_id,
+            apartment: apartment_id,
+          }),
         },
-        body: JSON.stringify({
-          user: user_id,
-          apartment: apartment_id
-        }),
-      })
+      );
 
       if (!bookingResponse.ok) {
-        throw new Error("Failed to create booking")
+        throw new Error("Failed to create booking");
       }
 
-      const bookingData = await bookingResponse.json()
-      const booking_id = bookingData.booking_id // Retrieve the booking_id
-      console.log(booking_id)
+      const bookingData = await bookingResponse.json();
+      const booking_id = bookingData.booking_id; // Retrieve the booking_id
+      console.log(booking_id);
 
       // Step 2: Generate the payment link using the booking_id
-      const paymentResponse = await fetch("http://127.0.0.1:8000/api/payment/url/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+      const paymentResponse = await fetch(
+        "http://127.0.0.1:8000/api/payment/url/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            user_id: user_id,
+            apartment_id: apartment_id,
+            amount: amount,
+            booking_id: booking_id,
+          }),
         },
-        body: JSON.stringify({
-          user_id: user_id,
-          apartment_id: apartment_id,
-          amount: amount,
-          booking_id: booking_id,
-        }),
-      })
+      );
 
       if (!paymentResponse.ok) {
-        throw new Error("Failed to generate payment link")
+        throw new Error("Failed to generate payment link");
       }
 
-      const paymentData = await paymentResponse.json()
-      setPaymentLink(paymentData.payment_url) // Store the payment link
+      const paymentData = await paymentResponse.json();
+      setPaymentLink(paymentData.payment_url); // Store the payment link
 
       setBookingDetails({
         startDate,
@@ -268,39 +298,52 @@ const HostelDetails = () => {
         expiryDate,
         amount: amount,
         duration: duration,
-      })
+      });
 
-      setIsBookingPopupOpen(true)
+      setIsBookingPopupOpen(true);
     } catch (err) {
-      setError("Failed to process booking")
+      setError("Failed to process booking");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const calculateTotalAmount = () => {
-    if (!selectedDayRange.from || !selectedDayRange.to || !hostel?.rent) return 0
-    const startDate = calendarFormatToDate(selectedDayRange.from)
-    const endDate = calendarFormatToDate(selectedDayRange.to)
-    const days = differenceInDays(endDate, startDate) + 1
-    return hostel.rent * days
-  }
+    if (!selectedDayRange.from || !selectedDayRange.to || !hostel?.rent)
+      return 0;
+    const startDate = calendarFormatToDate(selectedDayRange.from);
+    const endDate = calendarFormatToDate(selectedDayRange.to);
+    const days = differenceInDays(endDate, startDate) + 1;
+    return hostel.rent * days;
+  };
 
   const getRemainingDays = () => {
-    if (!bookingExpiryDate) return null
-    return differenceInDays(bookingExpiryDate, new Date())
-  }
+    if (!bookingExpiryDate) return null;
+    return differenceInDays(bookingExpiryDate, new Date());
+  };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen text-red-500">Error: {error}</div>
+    return (
+      <div className="flex justify-center items-center h-screen text-red-500">
+        Error: {error}
+      </div>
+    );
   }
 
   if (!hostel) {
-    return <div className="flex justify-center items-center h-screen">No data found</div>
+    return (
+      <div className="flex justify-center items-center h-screen">
+        No data found
+      </div>
+    );
   }
 
   const renderBookingCard = () => (
@@ -311,7 +354,9 @@ const HostelDetails = () => {
         </CardTitle>
         <CardDescription className="flex items-center gap-2 mt-2">
           <StarIcon className="h-4 w-4 text-yellow-400" />
-          <span>{hostel?.rating} · {hostel?.reviews} reviews</span>
+          <span>
+            {hostel?.rating} · {hostel?.reviews} reviews
+          </span>
         </CardDescription>
       </CardHeader>
 
@@ -321,7 +366,7 @@ const HostelDetails = () => {
             <AlertCircleIcon className="h-4 w-4 text-blue-500" />
             <AlertTitle className="text-blue-700">Payment Deadline</AlertTitle>
             <AlertDescription className="text-blue-600">
-              Complete payment by {format(bookingExpiryDate, 'PPP')}
+              Complete payment by {format(bookingExpiryDate, "PPP")}
               <div className="mt-1 text-sm font-medium">
                 {getRemainingDays()} days remaining
               </div>
@@ -344,12 +389,24 @@ const HostelDetails = () => {
           </Button>
         </div>
 
-        <div className="border rounded p-2">
+        <div className="border rounded p-2 flex justify-center content-center">
           <DatePicker
-            selected={selectedDayRange.from ? calendarFormatToDate(selectedDayRange.from) : null}
+            selected={
+              selectedDayRange.from
+                ? calendarFormatToDate(selectedDayRange.from)
+                : null
+            }
             onChange={handleDateSelection}
-            startDate={selectedDayRange.from ? calendarFormatToDate(selectedDayRange.from) : null}
-            endDate={selectedDayRange.to ? calendarFormatToDate(selectedDayRange.to) : null}
+            startDate={
+              selectedDayRange.from
+                ? calendarFormatToDate(selectedDayRange.from)
+                : null
+            }
+            endDate={
+              selectedDayRange.to
+                ? calendarFormatToDate(selectedDayRange.to)
+                : null
+            }
             selectsRange
             inline
             minDate={new Date()}
@@ -386,10 +443,17 @@ const HostelDetails = () => {
 
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span>₹{hostel?.rent} x {selectedDayRange.to ?
-              `${differenceInDays(calendarFormatToDate(selectedDayRange.to),
-              calendarFormatToDate(selectedDayRange.from)) + 1} nights` :
-              "Select dates"}</span>
+            <span>
+              ₹{hostel?.rent} x{" "}
+              {selectedDayRange.to
+                ? `${
+                    differenceInDays(
+                      calendarFormatToDate(selectedDayRange.to),
+                      calendarFormatToDate(selectedDayRange.from),
+                    ) + 1
+                  } nights`
+                : "Select dates"}
+            </span>
             <span>₹{calculateTotalAmount()}</span>
           </div>
           <div className="flex justify-between font-semibold">
@@ -410,7 +474,7 @@ const HostelDetails = () => {
         </p>
       </CardContent>
     </Card>
-  )
+  );
 
   return (
     <>
@@ -441,7 +505,11 @@ const HostelDetails = () => {
                     <HeartIcon className="h-4 w-4 mr-2" />
                     Save
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={toggleMessagePopup}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleMessagePopup}
+                  >
                     <MessageCircleIcon className="h-4 w-4 mr-2" />
                     Message
                   </Button>
@@ -480,14 +548,21 @@ const HostelDetails = () => {
 
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Private room in hostel hosted by {hostel.host?.name}</h2>
+                <h2 className="text-xl font-semibold">
+                  Private room in hostel hosted by {hostel.host?.name}
+                </h2>
                 <p className="text-muted-foreground">
-                  {hostel.guests} guests · {hostel.bedrooms} bedroom · {hostel.beds} bed · {hostel.bathrooms} private
-                  bathroom
+                  {hostel.guests} guests · {hostel.bedrooms} bedroom ·{" "}
+                  {hostel.beds} bed · {hostel.bathrooms} private bathroom
                 </p>
               </div>
               <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                <Image src="/placeholder-user.jpg" alt={`Host ${hostel.host?.name}`} fill className="object-cover" />
+                <Image
+                  src="/placeholder-user.jpg"
+                  alt={`Host ${hostel.host?.name}`}
+                  fill
+                  className="object-cover"
+                />
               </div>
             </div>
 
@@ -501,7 +576,9 @@ const HostelDetails = () => {
             <Separator />
 
             <div>
-              <h3 className="text-lg font-semibold mb-2">What this place offers</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                What this place offers
+              </h3>
               <div className="grid grid-cols-2 gap-4">
                 {hostel.amenities?.map((amenity, index) => (
                   <div key={index} className="flex items-center gap-2">
@@ -532,7 +609,9 @@ const HostelDetails = () => {
                       </div>
                       <span className="font-semibold">{review.username}</span>
                     </div>
-                    <p className="text-muted-foreground mt-2">{review.review}</p>
+                    <p className="text-muted-foreground mt-2">
+                      {review.review}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -608,28 +687,40 @@ const HostelDetails = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <p className="font-semibold">Booking Details:</p>
-                <p>Check-in: {format(bookingDetails.startDate, 'PPP')}</p>
-                <p>Check-out: {format(bookingDetails.endDate, 'PPP')}</p>
-                <p>Duration: {bookingDetails.duration === 'short-term' ? '7 days' : '30 days'}</p>
+                <p>Check-in: {format(bookingDetails.startDate, "PPP")}</p>
+                <p>Check-out: {format(bookingDetails.endDate, "PPP")}</p>
+                <p>
+                  Duration:{" "}
+                  {bookingDetails.duration === "short-term"
+                    ? "7 days"
+                    : "30 days"}
+                </p>
                 <p>Total Amount: ₹{bookingDetails.amount}</p>
               </div>
               <Alert className="bg-yellow-50 border-yellow-200">
                 <AlertCircleIcon className="h-4 w-4 text-yellow-600" />
-                <AlertTitle className="text-yellow-800">Important Notice</AlertTitle>
+                <AlertTitle className="text-yellow-800">
+                  Important Notice
+                </AlertTitle>
                 <AlertDescription className="text-yellow-700">
-                  Complete your payment before {format(bookingDetails.expiryDate, 'PPP')} to confirm your booking.
-                  Booking will be automatically cancelled if payment is not received.
+                  Complete your payment before{" "}
+                  {format(bookingDetails.expiryDate, "PPP")} to confirm your
+                  booking. Booking will be automatically cancelled if payment is
+                  not received.
                 </AlertDescription>
               </Alert>
               {paymentLink && (
-                <div>
-                  <p className="font-semibold">Payment Link:</p>
-                  <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-                    {paymentLink}
-                  </a>
-                </div>
+                <Button
+                  className="w-full bg-white border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white"
+                  onClick={openRazorpayGatway}
+                >
+                  Open Payment Gateway
+                </Button>
               )}
-              <Button className="w-full" onClick={() => setIsBookingPopupOpen(false)}>
+              <Button
+                className="w-full"
+                onClick={() => setIsBookingPopupOpen(false)}
+              >
                 Close
               </Button>
             </CardContent>
@@ -637,7 +728,7 @@ const HostelDetails = () => {
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
-export default HostelDetails
+export default HostelDetails;
