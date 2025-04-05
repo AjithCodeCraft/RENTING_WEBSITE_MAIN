@@ -1632,7 +1632,7 @@ def check_owner_verification(request):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         except HouseOwner.DoesNotExist:
-            return Response({'error': 'House owner not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Owner Not Verified Yet! Please Verify'}, status=status.HTTP_404_NOT_FOUND)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
