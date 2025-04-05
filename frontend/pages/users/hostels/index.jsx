@@ -49,11 +49,18 @@ export function HostelCards() {
         const images = {};
         const imageFetchPromises = hostelsData.map(async (hostel) => {
           try {
-            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`);
+            const imagesResponse = await fetch(
+              `http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`
+            );
+            
+            if (!imagesResponse.ok) {
+              throw new Error(`Failed to fetch images for hostel ${hostel.apartment_id}`);
+            }
+            
             const imagesData = await imagesResponse.json();
             console.log(`Images data for hostel ${hostel.apartment_id}:`, imagesData);
 
-            if (imagesResponse.ok && imagesData.images && imagesData.images.length > 0) {
+            if (imagesData.images && imagesData.images.length > 0) {
               images[hostel.apartment_id] = imagesData.images;
             } else {
               images[hostel.apartment_id] = [{ image_data: DEFAULT_THUMBNAIL }];
@@ -71,7 +78,7 @@ export function HostelCards() {
         setError(error.message);
 
         if (error.message.includes("Unauthorized")) {
-          sessionStorage.removeItem("access_token");
+          localStorage.removeItem("access_token_user");
           window.location.href = "/login";
         }
       } finally {
@@ -94,6 +101,8 @@ export function HostelCards() {
   const handleHostelCardTap = (hostel) => {
     localStorage.setItem("apartment_name", hostel.title);
     localStorage.setItem("apartment_id", hostel.apartment_id);
+    console.log("Stored owner_id:", hostel.owner);
+
     router.push(`/users/HostelDetails/${hostel.apartment_id}`);
   };
 

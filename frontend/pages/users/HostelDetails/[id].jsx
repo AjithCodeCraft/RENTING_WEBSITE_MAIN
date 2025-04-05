@@ -87,6 +87,7 @@ const HostelDetails = () => {
           throw new Error("No access token found");
         }
 
+        // Fetch apartment details
         const apartmentResponse = await fetch(
           `http://127.0.0.1:8000/api/apartments_by_id/${apartment_id}/`,
           {
@@ -100,6 +101,7 @@ const HostelDetails = () => {
         }
         const apartmentData = await apartmentResponse.json();
 
+        // Fetch apartment images
         const imagesResponse = await fetch(
           `http://127.0.0.1:8000/api/apartment-images/${apartment_id}/`,
           {
@@ -113,6 +115,7 @@ const HostelDetails = () => {
         }
         const imagesData = await imagesResponse.json();
 
+        // Process images
         const imagesWithBase64 =
           imagesData.images?.map((image) => {
             if (image.image_data?.startsWith("ffd8")) {
@@ -124,6 +127,7 @@ const HostelDetails = () => {
             return image;
           }) || [];
 
+        // Combine apartment data with images
         const apartmentWithImages = {
           ...apartmentData,
           images:
@@ -132,11 +136,45 @@ const HostelDetails = () => {
               : [{ image_url: DEFAULT_THUMBNAIL }],
         };
 
+        // Fetch owner details
+        const ownerResponse = await fetch(
+          `http://localhost:8000/api/owner-by-apartment/${apartment_id}/`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          },
+        );
+        
+        if (!ownerResponse.ok) {
+          throw new Error("Failed to fetch owner details");
+        }
+        
+        const ownerData = await ownerResponse.json();
+        
+        if (ownerData.success) {
+          // Store owner information in localStorage
+          localStorage.setItem("selected_owner_id", ownerData.user.id);
+        
+          
+        } else {
+          console.error("Failed to get owner details:", ownerData.error);
+        
+        }
+
+        // Set the hostel data
         setHostel(apartmentWithImages);
         setLoading(false);
       } catch (error) {
+        console.error("Error in fetchApartmentDetails:", error);
         setError(error.message);
         setLoading(false);
+        
+        // If we have apartment data but owner fetch failed, still store the basic owner ID
+        if (apartmentData?.owner) {
+          
+          console.log("Error fallback owner ID stored:", apartmentData.owner);
+        }
       }
     };
 
@@ -152,7 +190,7 @@ const HostelDetails = () => {
 
     try {
       const accessToken = localStorage.getItem("access_token_user");
-      const receiverId = Number(localStorage.getItem("owner_id_number"));
+      const receiverId = Number(localStorage.getItem("selected_owner_id"));
 
       if (isNaN(receiverId)) {
         console.error("Invalid receiver ID");

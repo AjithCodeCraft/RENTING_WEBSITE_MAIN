@@ -2057,3 +2057,39 @@ def get_user_details(request, user_id):
 @authentication_classes([AdminAuthentication])
 def is_logged_admin_in(request):
     return Response({"message": "Admin logged in!"}, status=status.HTTP_200_OK)
+
+
+
+
+
+class OwnerDetailsByApartmentView(APIView):
+   
+    def get(self, request, apartment_id):
+        try:
+            # Get the apartment object
+            apartment = get_object_or_404(Apartment, apartment_id=apartment_id)
+            
+            # Get the HouseOwner through the apartment's owner field
+            house_owner = apartment.owner
+            
+            # Get the User through the HouseOwner's owner field
+            user = house_owner.owner
+            
+            # Serialize both User and HouseOwner data
+            user_serializer = UserSerializer(user)
+            house_owner_serializer = HouseOwnerSerializer(house_owner)
+            
+            return Response({
+                'success': True,
+                'apartment_id': str(apartment_id),
+                'apartment_title': apartment.title,
+                'user': user_serializer.data,
+                'house_owner': house_owner_serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to retrieve owner details'
+            }, status=status.HTTP_400_BAD_REQUEST)

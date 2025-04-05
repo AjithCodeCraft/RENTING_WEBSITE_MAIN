@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import (
+   
+    OwnerDetailsByApartmentView,
     add_house_owner,
     check_owner_verification,
     get_apartment_by_id,
@@ -334,4 +336,6 @@ urlpatterns = [
     ),
     path("get_user_details/<int:user_id>/", get_user_details, name="get_user_details"),
     path("token/verify/", is_logged_admin_in, name="token_verify"),
+    path('owner-by-apartment/<uuid:apartment_id>/', OwnerDetailsByApartmentView.as_view()),
+
 ]

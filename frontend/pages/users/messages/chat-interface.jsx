@@ -53,7 +53,7 @@ function UserChatInterface() {
       // Fetch apartment names for each contact
       fetchApartmentTitles(uniqueContacts);
     } catch (error) {
-      console.error("Error fetching contacts:", error);
+      console.log("Error fetching contacts:", error);
     }
   };
 
@@ -319,7 +319,9 @@ function UserChatInterface() {
                   onClick={() => handleSelectContact(contactId)}
                 >
                   <Avatar className="w-10 h-10 mr-3">
-                    <AvatarFallback>{contactId}</AvatarFallback>
+                    <AvatarFallback>
+                      {apartmentTitles[contactId] ? apartmentTitles[contactId].charAt(0).toUpperCase() : "O"}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-grow">
                     <h3 className="font-semibold">{apartmentTitles[contactId] || `Owner ${contactId}`}</h3>
