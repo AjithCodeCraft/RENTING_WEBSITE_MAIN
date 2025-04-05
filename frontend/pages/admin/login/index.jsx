@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { GalleryVerticalEnd } from "lucide-react";
 import Image from "next/image";
 import axios from 'axios';
+import useLoginValidation from '@/hooks/useLoginValidation';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function AdminLogin({ className, ...props }) {
   const [email, setEmail] = useState('');
@@ -15,7 +17,6 @@ export default function AdminLogin({ className, ...props }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [emailMessageStyle, setEmailMessageStyle] = useState('hidden');
   const [errorMessageStyle, setErrorMessageStyle] = useState('hidden');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const route = useRouter();
 
@@ -57,42 +58,9 @@ export default function AdminLogin({ className, ...props }) {
     }
   };
 
-  const validate_login = async (token) => {
-    setLoading(true);
-    try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/token/verify/`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      if (response.data.message) {
-        setIsLoggedIn(true);
-      }
-    } catch (error) {
-      setIsLoggedIn(false);
-    }
-  }
+  useLoginValidation(setLoading, "/admin/dashboard");
 
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (token) validate_login(token);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (isLoggedIn) route.replace("/admin/dashboard");
-  }, [isLoggedIn]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-full">
-        <div className="h-6 w-6 animate-spin rounded-full border-4 border-gray-300 border-t-green-600" />
-      </div>
-    )
-  }
-
-  return (
+  return loading ? <Spinner /> : (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">

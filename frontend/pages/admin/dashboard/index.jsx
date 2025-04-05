@@ -30,6 +30,9 @@ import AdminLayout from "./adminsidebar";
 import axios from "axios";
 import useApartmentStore from "@/store/apartmentStore";
 import { useRouter } from "next/router";
+import { Spinner } from "@/components/ui/Spinner";
+import useLoginValidation from "@/hooks/useLoginValidation";
+import { ISOLanguage } from "@maptiler/client";
 
 const AdminDashboard = () => {
   const route = useRouter();
@@ -37,8 +40,11 @@ const AdminDashboard = () => {
   const [totalApartments, setTotalApartments] = useState("-");
   const [limit, setLimit] = useState(4);
   const [activeUsers, setActiveUsers] = useState("-");
+  const [loading, setLoading] = useState(true);
   const pendingSection = useRef(null);
   const { setApprovedApartments, setAllUsers } = useApartmentStore();
+
+  useLoginValidation(setLoading, "/admin/dashboard");
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -85,18 +91,12 @@ const AdminDashboard = () => {
       console.log(error);
     }
   };
-  
-  useEffect(() => {
-    if (!localStorage.getItem("access_token")) {
-      route.push("/admin/login");
-    }
-  });
 
   useEffect(() => {
     getTotalUser();
   }, []);
 
-  return (
+  return loading ? <Spinner /> : (
     <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6 lg:ml-[20%]">
         <div className="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0">
