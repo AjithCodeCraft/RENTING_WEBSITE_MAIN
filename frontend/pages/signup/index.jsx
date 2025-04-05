@@ -178,36 +178,32 @@ const Signup = () => {
   };
 
   const handleGetOtp = async () => {
-    const userData = {
-      email,
-    };
-
     try {
-      const response = await fetch("http://localhost:8000/api/send_otp/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+        const response = await fetch("http://localhost:8000/api/send_otp/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email }),
+        });
 
-      const data = await response.json();
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("OTP Error Response:", errorData);
+            throw new Error(errorData.message || "Failed to send OTP");
+        }
 
-      if (response.ok) {
+        const data = await response.json();
+        console.log("OTP Response:", data); // Debug log
+        
         setOtpSent(true);
         setIsOtpDialogOpen(true);
-        setCountdown(45); // Start the countdown
-      } else {
-        if (data.message === "Email already exists") {
-          setErrorMessage("Account already exists. Please log in.");
-        } else {
-          setErrorMessage(data.message || "Failed to send OTP. Please try again.");
-        }
-      }
+        setCountdown(45);
     } catch (error) {
-      setErrorMessage("An error occurred. Please try again.");
+        console.error("OTP Error:", error);
+        setErrorMessage(error.message || "An error occurred");
     }
-  };
+};
 
   const handleVerifyOtp = async () => {
     // Check if all OTP slots are filled
