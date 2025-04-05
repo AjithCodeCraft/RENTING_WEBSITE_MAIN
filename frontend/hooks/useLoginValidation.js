@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
 
-const useLoginValidation = async (setLoading, redirectTo) => {
+const useLoginValidation = async (setLoading, redirectToIfLoggedIn) => {
    const [isLoggedIn, setIsLoggedIn] = useState(false);
    const [loginValidationCmplete, setLoginValidationComplete] = useState(false);
    const route = useRouter(); 
@@ -27,7 +27,6 @@ const useLoginValidation = async (setLoading, redirectTo) => {
    };
 
    useEffect(() => {
-      debugger
       const token = localStorage.getItem("access_token");
       if (token) validateLogin(token);
       else {
@@ -40,8 +39,8 @@ const useLoginValidation = async (setLoading, redirectTo) => {
 
    useEffect(() => {
       if (isLoggedIn) {
-         if (route.pathname != "/admin/dashboard") {
-            route.replace(redirectTo);
+         if (route.pathname != redirectToIfLoggedIn) {
+            route.replace(redirectToIfLoggedIn);
          } else setLoading(false);
       }
       if (!isLoggedIn && loginValidationCmplete) setLoading(false);
