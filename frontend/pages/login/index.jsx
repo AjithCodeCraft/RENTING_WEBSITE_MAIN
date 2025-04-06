@@ -2,21 +2,26 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GalleryVerticalEnd } from "lucide-react";
+import { GalleryVerticalEnd, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
 import { useState } from "react";
 import Router from "next/router";
 import axiosInstance from "@/axios/axios";
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function LoginPage({ className, ...props }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    setLoading(true);
+    setErrorMessage("");
+
     try {
       const response = await fetch("http://localhost:8000/api/login/", {
         method: "POST",
@@ -28,35 +33,34 @@ export default function LoginPage({ className, ...props }) {
           password_hash: password,
         }),
       });
-  
+
       // Parse JSON response
       const data = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
       }
-  
+
       // Save the token to session storage
       sessionStorage.setItem("access_token", data.access);
-      
+
       localStorage.setItem("user_type", data.user_type);
-      // localStorage.setItem("", data.access);
       localStorage.setItem("email", email);
-  
+
       // Check user_type and navigate accordingly
       const userType = data.user_type; // Assuming user_type is in the response
-  
+
       if (userType === "owner") {
         localStorage.setItem("access_token_owner", data.access);
         localStorage.setItem("owner_id", data.user_id);
         localStorage.setItem("owner_id_number", data.id);
-  
-        Router.push("/owner"); // Replaccess_tokenace with actual owner route
+
+        Router.push("/owner"); // Replace with actual owner route
       } else if (userType === "seeker") {
         localStorage.setItem("access_token_user", data.access);
         localStorage.setItem("user_id", data.user_id);
         localStorage.setItem("user_id_number", data.id);
-        
+
         Router.push("/users"); // Replace with actual user route
       } else {
         console.log("Error: Unexpected user type");
@@ -64,31 +68,29 @@ export default function LoginPage({ className, ...props }) {
     } catch (error) {
       console.log("Login error:", error);
       setErrorMessage(error.message || "An error occurred during login");
+    } finally {
+      setLoading(false);
     }
   };
-  
-  
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-    <div className="flex flex-col gap-4 p-6 md:p-10">
-      <div className="flex justify-center gap-2 md:justify-start">
-        <a href="#" className="flex items-center gap-2 font-medium">
-          <div className="h-100 w-10"> 
-            <Image 
-              src="/g88.png" 
-              alt="Logo" 
-              width={50} 
-              height={50} 
-              className="h-15 w-15"
-            />
-          </div>
-          <h1 className="text-green-800 "> Hostelio</h1>
-        
-        </a>
-      </div>
-    
-    
+      <div className="flex flex-col gap-4 p-6 md:p-10">
+        <div className="flex justify-center gap-2 md:justify-start">
+          <a href="#" className="flex items-center gap-2 font-medium">
+            <div className="h-100 w-10">
+              <Image
+                src="/g88.png"
+                alt="Logo"
+                width={50}
+                height={50}
+                className="h-15 w-15"
+              />
+            </div>
+            <h1 className="text-green-800">Hostelio</h1>
+          </a>
+        </div>
+
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
             <form className={cn("flex flex-col gap-6", className)} {...props} onSubmit={handleSubmit}>
@@ -117,19 +119,28 @@ export default function LoginPage({ className, ...props }) {
                       Forgot your password?
                     </a>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                 </div>
                 {errorMessage && (
                   <div className="text-red-500 text-sm text-center">{errorMessage}</div>
                 )}
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Spinner /> : "Login"}
                 </Button>
               </div>
               <div className="text-center text-sm">
