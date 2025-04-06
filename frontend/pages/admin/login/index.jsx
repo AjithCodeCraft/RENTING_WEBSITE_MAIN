@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GalleryVerticalEnd } from "lucide-react";
+import { GalleryVerticalEnd, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import axios from 'axios';
 import useLoginValidation from '@/hooks/useLoginValidation';
@@ -17,7 +17,8 @@ export default function AdminLogin({ className, ...props }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [emailMessageStyle, setEmailMessageStyle] = useState('hidden');
   const [errorMessageStyle, setErrorMessageStyle] = useState('hidden');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const route = useRouter();
 
   const isValidEmail = (email) => {
@@ -34,6 +35,7 @@ export default function AdminLogin({ className, ...props }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessageStyle("hidden");
 
     const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/login-admin/`;
 
@@ -42,7 +44,6 @@ export default function AdminLogin({ className, ...props }) {
       password_hash: password
     };
     try {
-      setErrorMessageStyle("hidden");
       const response = await axios.post(API_URL, login_credentials, {
         headers: {
           "Content-Type": "application/json"
@@ -52,15 +53,17 @@ export default function AdminLogin({ className, ...props }) {
       localStorage.setItem("access_token", response.data.access);
       route.push("/admin/dashboard");
     } catch(error) {
-      setErrorMessage(error.response.data.error);
+      setErrorMessage(error.response?.data?.error || "An error occurred. Please try again.");
       setErrorMessageStyle("");
-      console.log(error);
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useLoginValidation(setLoading, "/admin/dashboard");
 
-  return loading ? <Spinner /> : (
+  return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
@@ -100,17 +103,26 @@ export default function AdminLogin({ className, ...props }) {
                       Forgot your password?
                     </a>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                 </div>
                 <p className={`mt-1 text-xs text-red-500 ${errorMessageStyle}`}>{errorMessage}</p>
-                <Button type="submit" className="w-full">
-                  Login
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Spinner /> : "Login"}
                 </Button>
               </div>
               <div className="text-center text-sm">
