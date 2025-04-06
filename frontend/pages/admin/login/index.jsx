@@ -9,6 +9,7 @@ import Image from "next/image";
 import axios from 'axios';
 import useLoginValidation from '@/hooks/useLoginValidation';
 import { Spinner } from '@/components/ui/Spinner';
+import { motion } from "framer-motion";
 
 export default function AdminLogin({ className, ...props }) {
   const [email, setEmail] = useState('');
@@ -67,12 +68,26 @@ export default function AdminLogin({ className, ...props }) {
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
-          <a href="#" className="flex items-center gap-2 font-medium">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <GalleryVerticalEnd className="size-4" />
-            </div>
-            Acme Inc.
-          </a>
+        <a href="#" className="flex items-center gap-2 font-medium">
+  <div className="flex items-center justify-center">
+    <Image
+      src="/logo.png"
+      alt="Hostelio Logo"
+      width={50}
+      height={50}
+      className="h-12 w-12"  
+    />
+  </div>
+  <motion.span
+    initial={{ opacity: 0, x: -10 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.6, ease: "easeOut" }}
+    className="text-green-800 text-2xl font-bold"
+  >
+    Hostelio
+  </motion.span>
+</a>
+
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-[65%] flex justify-center">
@@ -124,12 +139,6 @@ export default function AdminLogin({ className, ...props }) {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Spinner /> : "Login"}
                 </Button>
-              </div>
-              <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <a href="/admin/signup" className="underline underline-offset-4">
-                  Sign up
-                </a>
               </div>
             </form>
           </div>

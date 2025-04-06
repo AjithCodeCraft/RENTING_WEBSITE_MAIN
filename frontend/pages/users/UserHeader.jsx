@@ -19,6 +19,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BellRing, MessageSquareText, User, Settings, HelpCircle, Globe, LogOut } from 'lucide-react';
 import { useRouter } from "next/router";
 import axios from "axios";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 // Icon Components
 function MenuIcon(props) {
@@ -117,9 +119,16 @@ export default function UserHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="bg-white">
-          <Link href="#" prefetch={false}>
-            <ShirtIcon className="h-6 w-6" />
-            <span className="sr-only">ShadCN</span>
+          <Link href="/" className="flex items-center space-x-2" prefetch={false}>
+            <Image src="/logo.png" alt="Hostelio Logo" width={50} height={50} />
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="text-2xl font-bold text-gray-900 dark:text-white"
+            >
+              Hostelio
+            </motion.span>
           </Link>
           <div className="grid gap-2 py-9">
             <Link href="/users" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
@@ -136,9 +145,16 @@ export default function UserHeader() {
       </Sheet>
 
       {/* Desktop Navigation Menu */}
-      <Link href="#" className="mr-6 hidden lg:flex" prefetch={false}>
-        <ShirtIcon className="h-6 w-6" />
-        <span className="sr-only">ShadCN</span>
+      <Link href="/" className="mr-6 hidden lg:flex items-center space-x-2" prefetch={false}>
+        <Image src="/logo.png" alt="Hostelio Logo" width={50} height={50} />
+        <motion.span
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-2xl font-bold text-gray-900 dark:text-white"
+        >
+          Hostelio
+        </motion.span>
       </Link>
       <NavigationMenu className="hidden lg:flex">
         <NavigationMenuList>
@@ -175,9 +191,7 @@ export default function UserHeader() {
       {/* Right Side Icons and Avatar */}
       <div className="ml-auto flex gap-2">
         <div className="flex items-center gap-8">
-          <Link href="">
-            <BellRing className="h-8 w-8" />
-          </Link>
+        
           <Link href="/users/messages">
             <MessageSquareText className="h-8 w-8" />
           </Link>
@@ -201,7 +215,6 @@ export default function UserHeader() {
                   </Avatar>
                   <div>
                     <p className="font-semibold">{user.name}</p>
-
                   </div>
                 </div>
                 <Separator />
