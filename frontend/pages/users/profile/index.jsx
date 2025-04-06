@@ -109,7 +109,7 @@ export default function ProfilePage() {
         formData,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
           },
         }
       );
@@ -226,13 +226,7 @@ export default function ProfilePage() {
               <p className="text-[#86909c]">{user.phone}</p>
             </div>
 
-            {/* Location Section */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-[#3e435d] mb-4">Location</h3>
-              <p className="text-[#86909c]">
-                Latitude: {user.latitude || "Not provided"}, Longitude: {user.longitude || "Not provided"}
-              </p>
-            </div>
+           
           </CardContent>
 
           {/* Edit Profile Button */}
