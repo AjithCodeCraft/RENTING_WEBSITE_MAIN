@@ -32,6 +32,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { motion } from "framer-motion";
 
 const Signup = () => {
   const router = useRouter();
@@ -181,7 +182,7 @@ const Signup = () => {
   const handleGetOtp = async () => {
     // Clear any previous errors
     setErrorMessage('');
-    
+
     // Basic email validation before making the request
     if (!email) {
         setErrorMessage('Email is required');
@@ -197,7 +198,7 @@ const Signup = () => {
 
     try {
         setLoading(true); // Add loading state if you have one
-        
+
         const response = await fetch("http://localhost:8000/api/send_otp/", {
             method: "POST",
             headers: {
@@ -227,10 +228,10 @@ const Signup = () => {
         setOtpSent(true);
         setIsOtpDialogOpen(true);
         setCountdown(45);
-        
+
     } catch (error) {
         console.log("OTP Error:", error);
-        
+
         // More specific error messages for different cases
         if (error.name === 'AbortError') {
             setErrorMessage('Request timed out');
@@ -243,7 +244,6 @@ const Signup = () => {
         setLoading(false); // Ensure loading is turned off
     }
 };
-
 
   const handleVerifyOtp = async () => {
     // Check if all OTP slots are filled
@@ -305,7 +305,7 @@ const Signup = () => {
 
   return (
     <TooltipProvider>
-      <div className="w-full lg:grid lg:h-screen lg:grid-cols-2 xl:h-screen bg-white text-gray-900">
+      <div className="w-full lg:grid lg:h-screen lg:grid-cols-2 xl:h-screen bg-white text-gray-900 p-4">
         {/* Dropdown for Role Selection */}
         <div className="absolute top-4 left-4">
           <DropdownMenu>
@@ -326,149 +326,163 @@ const Signup = () => {
         </div>
 
         {/* Signup Form */}
-        <div className="mx-auto max-w-sm my-auto">
-          <h1 className="text-2xl font-bold mb-4 text-center">Sign Up</h1>
-          <p className="text-center text-muted-foreground mb-6">
-            Enter your information to create an account
-          </p>
-          <form onSubmit={handleSignup}>
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="first-name">First name</Label>
-                  <Input
-                    id="first-name"
-                    placeholder="Enter First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="rounded-[3px]"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="last-name">Last name</Label>
-                  <Input
-                    id="last-name"
-                    placeholder="Enter Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="rounded-[3px]"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter Your Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-[3px]"
-                    required
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleGetOtp}
-                    className={`rounded-[3px] ${otpButtonColor}`}
-                    disabled={otpVerified}
-                  >
-                    {otpButtonText}
-                  </Button>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" type="tel" placeholder="+91XXXXXXXXXX" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
-              </div>
-              <div className="grid gap-2 relative">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="flex items-center">
-                    Password
-                    <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
-                      <TooltipTrigger
-                        asChild
-                        onMouseEnter={handleMouseEnter}
-                        onMouseLeave={handleMouseLeave}
-                      >
-                        <CircleAlert className="ml-2 cursor-pointer text-gray-500 h-4" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" align="start" className="p-4 bg-white border rounded-[3px] shadow-lg">
-                        <div className="text-xs text-[#464646]">
-                          <p>Contain 8 to 30 characters</p>
-                          <p>Contain both lower- and upper-case letters</p>
-                          <p>Contain a number</p>
-                          <p>Contain a special character, e.g.: -!@#$%^&*+</p>
-                          <p>
-                            Not contain a letter or number sequence, e.g.: ‘abc’,
-                            ‘123’, ‘4444’, ‘qwerty
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </Label>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    className="rounded-[3px] pr-10"
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      validatePassword(e.target.value);
-                    }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
-                  </button>
-                </div>
-                <p className={`mt-1 ${passwordStrengthColor} text-xs`}>{passwordValidationMessage}</p>
-              </div>
-              <div className="grid gap-2 relative">
-                <Label htmlFor="confirm-password">Re-enter Password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirm-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    className="rounded-[3px] pr-10"
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      validatePasswordMatch(e.target.value);
-                    }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
-                  </button>
-                </div>
-                <p className={`mt-1 ${passwordMatchColor} text-xs`}>{passwordMatchMessage}</p>
-              </div>
-              {errorMessage && (
-                <span className="text-red-600 font-bold">{errorMessage}</span>
-              )}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSigningUp || !otpVerified}
+        <div className="mx-auto max-w-sm my-auto p-4">
+          <div className="flex flex-col items-center mb-4">
+            <a href="#" className="flex items-center gap-2 font-medium mb-2">
+              <Image
+                src="/logo.png"
+                alt="Hostelio Logo"
+                width={50}
+                height={50}
+                className="h-10 w-10"
+              />
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-green-800 text-xl font-bold"
               >
-                {isSigningUp ? "Signing Up..." : "Create an account"}
-              </Button>
+                Hostelio
+              </motion.span>
+            </a>
+       
+          </div>
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="first-name">First name</Label>
+                <Input
+                  id="first-name"
+                  placeholder="Enter First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="rounded-[3px]"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="last-name">Last name</Label>
+                <Input
+                  id="last-name"
+                  placeholder="Enter Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="rounded-[3px]"
+                  required
+                />
+              </div>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter Your Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-[3px]"
+                  required
+                />
+                <Button
+                  type="button"
+                  onClick={handleGetOtp}
+                  className={`rounded-[3px] ${otpButtonColor}`}
+                  disabled={otpVerified}
+                >
+                  {otpButtonText}
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input id="phone" type="tel" placeholder="+91XXXXXXXXXX" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+            </div>
+            <div className="grid gap-2 relative">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="flex items-center">
+                  Password
+                  <Tooltip open={showTooltip} onOpenChange={setShowTooltip}>
+                    <TooltipTrigger
+                      asChild
+                      onMouseEnter={handleMouseEnter}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      <CircleAlert className="ml-2 cursor-pointer text-gray-500 h-4" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" className="p-4 bg-white border rounded-[3px] shadow-lg">
+                      <div className="text-xs text-[#464646]">
+                        <p>Contain 8 to 30 characters</p>
+                        <p>Contain both lower- and upper-case letters</p>
+                        <p>Contain a number</p>
+                        <p>Contain a special character, e.g.: -!@#$%^&*+</p>
+                        <p>
+                          Not contain a letter or number sequence, e.g.: ‘abc’,
+                          ‘123’, ‘4444’, ‘qwerty
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  className="rounded-[3px] pr-10"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    validatePassword(e.target.value);
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
+                </button>
+              </div>
+              <p className={`mt-1 ${passwordStrengthColor} text-xs`}>{passwordValidationMessage}</p>
+            </div>
+            <div className="grid gap-2 relative">
+              <Label htmlFor="confirm-password">Re-enter Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  className="rounded-[3px] pr-10"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    validatePasswordMatch(e.target.value);
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 text-gray-500" /> : <Eye className="h-4 text-gray-500" />}
+                </button>
+              </div>
+              <p className={`mt-1 ${passwordMatchColor} text-xs`}>{passwordMatchMessage}</p>
+            </div>
+            {errorMessage && (
+              <span className="text-red-600 font-bold">{errorMessage}</span>
+            )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSigningUp || !otpVerified}
+            >
+              {isSigningUp ? "Signing Up..." : "Create an account"}
+            </Button>
           </form>
-          <p className="mt-4 text-center">
+          <p className="mt-2 text-center">
             Already have an account?{" "}
             <Link href="/login" className="text-[#2dac5c] hover:underline">
               Log in
@@ -476,7 +490,7 @@ const Signup = () => {
           </p>
         </div>
 
-        <div className="relative hidden bg-muted lg:block">
+        <div className="relative hidden bg-muted lg:block p-4">
           <div className="absolute inset-y-0 left-0 w-px bg-border"></div>
           <Image
             src={userRole === "seeker" ? "/tree-house.jpg" : "/forent.png"}
@@ -489,7 +503,7 @@ const Signup = () => {
 
       {/* OTP Dialog */}
       <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen} >
-        <DialogContent className="sm:max-w-md bg-white">
+        <DialogContent className="sm:max-w-md bg-white p-4">
           <DialogHeader>
             <DialogTitle>Enter OTP</DialogTitle>
           </DialogHeader>
