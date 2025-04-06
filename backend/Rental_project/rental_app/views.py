@@ -1312,6 +1312,8 @@ def payment_callback(request):
                     },
                 )
 
+                Booking.objects.filter(booking_id=booking_id).update(status="completed")
+
                 if result.modified_count > 0:
                     try:
                         # ✅ Fetch and update booking record in SQL DB
@@ -1468,25 +1470,24 @@ def generate_payment_url(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@api_view(["GET"])
 def check_payment_status(request, order_id):
     try:
         # Get payment details from Razorpay
-        payment = razorpay_client.order.fetch(order_id)
+        # payment = razorpay_client.order.fetch(order_id)
+        # Getting data from the db see if ever breaks
 
-        if payment["status"] == "paid":
-            # Update payment status in your database
-            Payment.objects.filter(razorpay_order_id=order_id).update(
-                payment_status="paid",
-                razorpay_payment_id=payment["id"],
-                razorpay_signature=payment.get("signature", ""),
-            )
+        payment = Payment.objects.filter(razorpay_order_id=order_id).first()
+
+        if not payment:
             return JsonResponse(
-                {"message": "Payment successful", "status": "paid"}, status=200
+                {"message": "Payment failed", "status": "pending"}, status=200
             )
-        else:
-            return JsonResponse(
-                {"message": "Payment pending", "status": "pending"}, status=200
-            )
+
+        return JsonResponse(
+            {"message": "Payment successful", "status": payment.payment_status},
+            status=200,
+        )
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -2059,37 +2060,40 @@ def is_logged_admin_in(request):
     return Response({"message": "Admin logged in!"}, status=status.HTTP_200_OK)
 
 
-
-
-
 class OwnerDetailsByApartmentView(APIView):
-   
+
     def get(self, request, apartment_id):
         try:
             # Get the apartment object
             apartment = get_object_or_404(Apartment, apartment_id=apartment_id)
-            
+
             # Get the HouseOwner through the apartment's owner field
             house_owner = apartment.owner
-            
+
             # Get the User through the HouseOwner's owner field
             user = house_owner.owner
-            
+
             # Serialize both User and HouseOwner data
             user_serializer = UserSerializer(user)
             house_owner_serializer = HouseOwnerSerializer(house_owner)
-            
-            return Response({
-                'success': True,
-                'apartment_id': str(apartment_id),
-                'apartment_title': apartment.title,
-                'user': user_serializer.data,
-                'house_owner': house_owner_serializer.data
-            }, status=status.HTTP_200_OK)
-            
+
+            return Response(
+                {
+                    "success": True,
+                    "apartment_id": str(apartment_id),
+                    "apartment_title": apartment.title,
+                    "user": user_serializer.data,
+                    "house_owner": house_owner_serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
         except Exception as e:
-            return Response({
-                'success': False,
-                'error': str(e),
-                'message': 'Failed to retrieve owner details'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "success": False,
+                    "error": str(e),
+                    "message": "Failed to retrieve owner details",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
