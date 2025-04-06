@@ -104,7 +104,7 @@ const AdminDashboard = () => {
             Dashboard
           </h2>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground font-bold text-black-100">
               Welcome back, Admin
             </span>
           </div>
