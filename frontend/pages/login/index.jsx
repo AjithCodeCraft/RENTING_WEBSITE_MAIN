@@ -9,6 +9,7 @@ import { useState } from "react";
 import Router from "next/router";
 import axiosInstance from "@/axios/axios";
 import { Spinner } from '@/components/ui/Spinner';
+import { motion } from "framer-motion";
 
 export default function LoginPage({ className, ...props }) {
   const [email, setEmail] = useState("");
@@ -80,14 +81,21 @@ export default function LoginPage({ className, ...props }) {
           <a href="#" className="flex items-center gap-2 font-medium">
             <div className="h-100 w-10">
               <Image
-                src="/g88.png"
+                src="/logo.png"
                 alt="Logo"
                 width={50}
                 height={50}
                 className="h-15 w-15"
               />
             </div>
-            <h1 className="text-green-800">Hostelio</h1>
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="text-green-800 text-2xl font-bold"
+            >
+              Hostelio
+            </motion.span>
           </a>
         </div>
 
@@ -144,7 +152,7 @@ export default function LoginPage({ className, ...props }) {
                 </Button>
               </div>
               <div className="text-center text-sm">
-                Don&apos;t have an account?{" "}
+                Don&apos;t have an account?{""}
                 <a href="/signup" className="underline underline-offset-4">
                   Sign up
                 </a>
