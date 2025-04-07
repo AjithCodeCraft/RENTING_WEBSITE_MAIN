@@ -6,8 +6,8 @@ const usePaymentConfirmation = (razorpayOrderId, setPaymentStatus, setPaymentFai
       if (!razorpayOrderId) return;
 
       let elapsedTime = 0;
-      const interval = 5000;
-      const maxTime = 180000;
+      const interval = 5000; // 5 Seconds
+      const maxTime = 180000; // 3 Minutes
 
       const paymentConfirmationInteval = setInterval(async () => {
          try {
