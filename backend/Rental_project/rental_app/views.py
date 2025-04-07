@@ -23,6 +23,7 @@ from django.conf import settings
 from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import transaction
 from .models import (
     HostelApproval,
     HouseOwner,
@@ -1328,14 +1329,20 @@ def payment_callback(request):
                     },
                 )
 
-                Booking.objects.filter(booking_id=booking_id).update(status="completed")
-
                 if result.modified_count > 0:
                     try:
-                        # ✅ Fetch and update booking record in SQL DB
-                        booking = Booking.objects.get(booking_id=booking_id)
-                        booking.status = "confirmed"
-                        booking.save()
+                        with transaction.atomic():
+                            # ✅ Fetch and update booking record in SQL DB
+                            booking = Booking.objects.select_for_update().get(booking_id=booking_id)
+                            available_beds = booking.apartment.available_beds
+                            if available_beds > 0:
+                                booking.status = "confirmed"
+                                booking.save()
+                                Apartment.objects.filter(pk=booking.apartment.pk).update(available_beds=available_beds-1)
+                            else:
+                                booking.status = "cancelled"
+                                booking.save()
+                                return Response({"message": "Payment failed"}, status=status.HTTP_400_BAD_REQUEST)
 
                         return HttpResponse(close_tab_script())
                     except Booking.DoesNotExist:

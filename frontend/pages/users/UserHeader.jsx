@@ -14,9 +14,21 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import Link from "next/link";
-import { NavigationMenu, NavigationMenuList, NavigationMenuLink } from "@/components/ui/navigation-menu";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BellRing, MessageSquareText, User, Settings, HelpCircle, Globe, LogOut } from 'lucide-react';
+import {
+  BellRing,
+  MessageSquareText,
+  User,
+  Settings,
+  HelpCircle,
+  Globe,
+  LogOut,
+} from "lucide-react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Image from "next/image";
@@ -58,9 +70,7 @@ function ShirtIcon(props) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path
-        d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"
-      />
+      <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
     </svg>
   );
 }
@@ -74,11 +84,14 @@ export default function UserHeader() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/user/profile", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/user/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
+            },
           },
-        });
+        );
         setUser({
           name: response.data.name,
           avatarUrl: response.data.avatarUrl || "https://github.com/shadcn.png",
@@ -96,7 +109,7 @@ export default function UserHeader() {
 
   const logout = (e) => {
     e.preventDefault();
-    localStorage.removeItem("access_token_owner");
+    localStorage.removeItem("access_token_user");
     router.push("/login");
   };
 
@@ -119,7 +132,11 @@ export default function UserHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="bg-white">
-          <Link href="/" className="flex items-center space-x-2" prefetch={false}>
+          <Link
+            href="/"
+            className="flex items-center space-x-2"
+            prefetch={false}
+          >
             <Image src="/logo.png" alt="Hostelio Logo" width={50} height={50} />
             <motion.span
               initial={{ opacity: 0, x: -10 }}
@@ -131,13 +148,25 @@ export default function UserHeader() {
             </motion.span>
           </Link>
           <div className="grid gap-2 py-9">
-            <Link href="/users" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            <Link
+              href="/users"
+              className="flex w-full items-center py-2 text-lg font-semibold"
+              prefetch={false}
+            >
               Home
             </Link>
-            <Link href="/users/hostels" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            <Link
+              href="/users/hostels"
+              className="flex w-full items-center py-2 text-lg font-semibold"
+              prefetch={false}
+            >
               Hostels
             </Link>
-            <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            <Link
+              href="#"
+              className="flex w-full items-center py-2 text-lg font-semibold"
+              prefetch={false}
+            >
               Contact
             </Link>
           </div>
@@ -145,7 +174,11 @@ export default function UserHeader() {
       </Sheet>
 
       {/* Desktop Navigation Menu */}
-      <Link href="/" className="mr-6 hidden lg:flex items-center space-x-2" prefetch={false}>
+      <Link
+        href="/"
+        className="mr-6 hidden lg:flex items-center space-x-2"
+        prefetch={false}
+      >
         <Image src="/logo.png" alt="Hostelio Logo" width={50} height={50} />
         <motion.span
           initial={{ opacity: 0, x: -10 }}
@@ -191,7 +224,6 @@ export default function UserHeader() {
       {/* Right Side Icons and Avatar */}
       <div className="ml-auto flex gap-2">
         <div className="flex items-center gap-8">
-        
           <Link href="/users/messages">
             <MessageSquareText className="h-8 w-8" />
           </Link>
@@ -202,7 +234,12 @@ export default function UserHeader() {
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar>
                   <AvatarImage src={user.avatarUrl} />
-                  <AvatarFallback>{user.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                  <AvatarFallback>
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </SheetTrigger>
@@ -211,7 +248,12 @@ export default function UserHeader() {
                 <div className="flex items-center gap-3 px-4">
                   <Avatar>
                     <AvatarImage src={user.avatarUrl} />
-                    <AvatarFallback>{user.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="font-semibold">{user.name}</p>
@@ -219,24 +261,40 @@ export default function UserHeader() {
                 </div>
                 <Separator />
                 <div className="space-y-2">
-                  <Link href="/users/profile" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                  <Link
+                    href="/users/profile"
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg"
+                  >
                     <User className="h-5 w-5" />
                     <span>View Profile</span>
                   </Link>
-                  <Link href="#" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                  <Link
+                    href="#"
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg"
+                  >
                     <Settings className="h-5 w-5" />
                     <span>Settings & Privacy</span>
                   </Link>
-                  <Link href="#" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                  <Link
+                    href="#"
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg"
+                  >
                     <HelpCircle className="h-5 w-5" />
                     <span>Help</span>
                   </Link>
-                  <Link href="#" className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                  <Link
+                    href="#"
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg"
+                  >
                     <Globe className="h-5 w-5" />
                     <span>Language</span>
                   </Link>
                   <Separator />
-                  <Link href="#" onClick={logout} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg">
+                  <Link
+                    href="#"
+                    onClick={logout}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 rounded-lg"
+                  >
                     <LogOut className="h-5 w-5" />
                     <span>Sign Out</span>
                   </Link>
