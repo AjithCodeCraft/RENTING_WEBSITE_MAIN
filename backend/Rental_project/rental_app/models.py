@@ -170,10 +170,11 @@ class Chat(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     message = models.TextField()
+    is_read = models.BooleanField(default=False) 
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        ordering = ['timestamp']
+        ordering = ['-timestamp']
 
 class Notification(models.Model):
     notification_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)

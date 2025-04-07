@@ -41,6 +41,13 @@ const HostelDetails = () => {
    const [message, setMessage] = useState("");
    const [selectedReview, setSelectedReview] = useState(null);
    const [duration, setDuration] = useState("short-term");
+   const ratingCounts = {
+      5: 120, // Number of 5-star reviews
+      4: 85,  // Number of 4-star reviews
+      3: 45,  // Number of 3-star reviews
+      2: 20,  // Number of 2-star reviews
+      1: 10   // Number of 1-star reviews
+   };
    const [selectedDayRange, setSelectedDayRange] = useState({
       from: null,
       to: null,
@@ -435,12 +442,11 @@ const HostelDetails = () => {
                   <span>
                      ₹{hostel?.rent} x{" "}
                      {selectedDayRange.to
-                        ? `${
-                             differenceInDays(
-                                calendarFormatToDate(selectedDayRange.to),
-                                calendarFormatToDate(selectedDayRange.from)
-                             ) + 1
-                          } nights`
+                        ? `${differenceInDays(
+                           calendarFormatToDate(selectedDayRange.to),
+                           calendarFormatToDate(selectedDayRange.from)
+                        ) + 1
+                        } nights`
                         : "Select dates"}
                   </span>
                   <span>₹{calculateTotalAmount()}</span>
@@ -450,11 +456,14 @@ const HostelDetails = () => {
                   <span>₹{calculateTotalAmount()}</span>
                </div>
             </div>
+            {hostel?.available_beds === 0 && (
+               <p className="text-red-500 text-center">No rooms available</p>
+            )}
 
             <Button
                className="w-full"
                onClick={handleBooking}
-               disabled={!selectedDayRange.from || !selectedDayRange.to}
+               disabled={!selectedDayRange.from || !selectedDayRange.to || hostel?.available_beds === 0}
             >
                Book Now
             </Button>
@@ -539,13 +548,8 @@ const HostelDetails = () => {
                            private bathroom
                         </p>
                      </div>
-                     <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                        <Image
-                           src="/placeholder-user.jpg"
-                           alt={`Host ${hostel.host?.name}`}
-                           fill
-                           className="object-cover"
-                        />
+                     <div className="relative w-12 h-12 rounded-full">
+                        <p></p>
                      </div>
                   </div>
 
@@ -561,41 +565,77 @@ const HostelDetails = () => {
                   <div>
                      <h3 className="text-lg font-semibold mb-2">What this place offers</h3>
                      <div className="grid grid-cols-2 gap-4">
+                        {/* Display food options */}
+                        {hostel.food?.map((foodOption, index) => (
+                           <div key={`food-${index}`} className="flex items-center gap-2">
+                              <StarIcon className="h-5 w-5" />
+                              <span>
+                                 {foodOption === 1 ? 'Breakfast' :
+                                    foodOption === 2 ? 'Lunch' :
+                                       foodOption === 3 ? 'Dinner' : 'Unknown'}
+                              </span>
+                           </div>
+                        ))}
+
+                        {/* Display amenities */}
                         {hostel.amenities?.map((amenity, index) => (
-                           <div key={index} className="flex items-center gap-2">
+                           <div key={`amenity-${index}`} className="flex items-center gap-2">
                               <StarIcon className="h-5 w-5" />
                               <span>{amenity}</span>
                            </div>
                         ))}
+
+                        {/* Display other features */}
+                        <div className="flex items-center gap-2">
+                           <StarIcon className="h-5 w-5" />
+                           <span>{hostel.bhk}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                           <StarIcon className="h-5 w-5" />
+                           <span>{hostel.hostel_type === 'boys' ? 'Boys Hostel' : 'Girls Hostel'}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                           <StarIcon className="h-5 w-5" />
+                           <span>{hostel.parking_available ? 'Parking Available' : 'No Parking'}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                           <StarIcon className="h-5 w-5" />
+                           <span>{hostel.room_sharing_type === 'shared' ? 'Shared Room' : 'Private Room'}</span>
+                        </div>
                      </div>
                   </div>
-
+                  <Separator />
                   <div>
-                     <h3 className="text-lg font-semibold mb-2">Reviews</h3>
-                     <div className="space-y-4">
-                        {hostel.reviewsData?.map((review, index) => (
-                           <div
-                              key={index}
-                              className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
-                              onClick={() => handleReviewClick(review)}
-                           >
-                              <div className="flex items-center gap-2">
-                                 <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                                    <Image
-                                       src={review.userImage || "/placeholder-user.jpg"}
-                                       alt={`User ${review.username}`}
-                                       fill
-                                       className="object-cover"
-                                    />
+                     <div>
+                        <h3 className="text-lg font-semibold mb-2">Customer Reviews</h3>
+
+                        <div className="space-y-2">
+                           {[5, 4, 3, 2, 1].map((rating) => (
+                              <div key={rating} className="flex items-center gap-2">
+                                 <span className="font-semibold">{rating} Stars:</span>
+                                 <div className="flex items-center">
+                                    {[...Array(5)].map((_, i) => (
+                                       <svg
+                                          key={i}
+                                          className={`w-4 h-4 fill-current ${i < rating ? 'text-yellow-500' : 'text-gray-300'}`}
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          viewBox="0 0 20 20"
+                                       >
+                                          <path d="M10 1l2.44 6.9h6.56l-5.4 4.23 2.1 6.97-5.4-4.23-5.4 4.23 2.1-6.97-5.4-4.23h6.56L10 1z" />
+                                       </svg>
+                                    ))}
                                  </div>
-                                 <span className="font-semibold">{review.username}</span>
+                                 <span className="ml-2">{ratingCounts[rating]} reviews</span>
                               </div>
-                              <p className="text-muted-foreground mt-2">{review.review}</p>
-                           </div>
-                        ))}
+                           ))}
+                        </div>
                      </div>
                   </div>
                </div>
+
 
                <div className="lg:sticky lg:top-4 lg:self-start py-20">{renderBookingCard()}</div>
             </div>
