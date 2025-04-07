@@ -182,6 +182,8 @@ const UserHostels = () => {
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation({ lat: latitude, lng: longitude });
+                    localStorage.setItem("user_lat", latitude);
+                    localStorage.setItem("user_lng", longitude);
                     const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
                         .setLngLat([longitude, latitude])
                         .setPopup(new maplibregl.Popup().setText("Your Location"))

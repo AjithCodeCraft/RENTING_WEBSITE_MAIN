@@ -21,6 +21,9 @@ const hexToBase64 = (hex) => {
    return Buffer.from(bytes).toString("base64");
 };
 
+
+
+
 const dateToCalendarFormat = (date) => ({
    year: date.getFullYear(),
    month: date.getMonth() + 1,
@@ -42,11 +45,11 @@ const HostelDetails = () => {
    const [selectedReview, setSelectedReview] = useState(null);
    const [duration, setDuration] = useState("short-term");
    const ratingCounts = {
-      5: 120, // Number of 5-star reviews
-      4: 85,  // Number of 4-star reviews
-      3: 45,  // Number of 3-star reviews
-      2: 20,  // Number of 2-star reviews
-      1: 10   // Number of 1-star reviews
+      5: Math.floor(Math.random() * 200) + 50,  // 50 to 249
+      4: Math.floor(Math.random() * 150) + 30,  // 30 to 179
+      3: Math.floor(Math.random() * 100) + 10,  // 10 to 109
+      2: Math.floor(Math.random() * 50) + 5,    // 5 to 54
+      1: Math.floor(Math.random() * 30) + 1     // 1 to 30
    };
    const [selectedDayRange, setSelectedDayRange] = useState({
       from: null,
@@ -178,6 +181,20 @@ const HostelDetails = () => {
 
    const toggleMessagePopup = () => {
       setIsMessagePopupOpen(!isMessagePopupOpen);
+   };
+
+   const userLocation = {
+      lat: parseFloat(localStorage.getItem("user_lat")),
+      lng: parseFloat(localStorage.getItem("user_lng")),
+    };
+
+   const handleGetDirections = () => {
+      if (hostel && userLocation) {
+         const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${hostel.latitude},${hostel.longitude}`;
+         window.open(url, "_blank");
+      } else {
+         console.error("Hostel or user location is not available");
+      }
    };
 
    const handleSendMessage = async () => {
@@ -486,12 +503,11 @@ const HostelDetails = () => {
                      <h1 className="text-3xl font-bold">{hostel.title}</h1>
                      <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
-                           <StarIcon className="h-5 w-5 text-yellow-400" />
-                           <span className="font-semibold">{hostel.rating}</span>
-                           <span className="text-muted-foreground">·</span>
-                           <span className="underline">{hostel.reviews} reviews</span>
-                           <span className="text-muted-foreground">·</span>
-                           <MapPinIcon className="h-5 w-5" />
+                           <MapPinIcon
+                              className="h-5 w-5 cursor-pointer text-blue-600 hover:text-blue-800"
+                              onClick={handleGetDirections}
+                              title="Get Directions"
+                           />
                            <span>{hostel.location}</span>
                         </div>
                         <div className="flex gap-2">
