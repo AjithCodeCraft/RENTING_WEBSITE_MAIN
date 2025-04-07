@@ -28,6 +28,7 @@ import {
   HelpCircle,
   Globe,
   LogOut,
+  Heart, // Add this import
 } from "lucide-react";
 import { useRouter } from "next/router";
 import axios from "axios";
@@ -224,6 +225,14 @@ export default function UserHeader() {
           <Link href="/users/messages">
             <MessageSquareText className="h-8 w-8" />
           </Link>
+          <div className="relative">
+  <Link href="/users/wishlist">
+    <Heart className="h-8 w-8" />
+    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+      3
+    </span>
+  </Link>
+</div>
 
           {/* Avatar Popup */}
           <Sheet>
