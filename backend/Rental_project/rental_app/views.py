@@ -17,7 +17,7 @@ import razorpay
 from pymongo import MongoClient
 import datetime
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from .authentication import AdminAuthentication
 from django.conf import settings
 from firebase_admin import auth
@@ -1263,6 +1263,22 @@ class PaymentInitiateView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def close_tab_script():
+    return """
+    <html>
+        <head>
+            <title>Payment Completed</title>
+            <script>
+                // Close the tab
+                window.close();
+            </script>
+        </head>
+        <body>
+        </body>
+    </html>
+    """
+
+
 @csrf_exempt
 def payment_callback(request):
     if request.method == "GET":
@@ -1321,17 +1337,7 @@ def payment_callback(request):
                         booking.status = "confirmed"
                         booking.save()
 
-                        return JsonResponse(
-                            {
-                                "message": "Payment successful and booking confirmed",
-                                "status": "paid",
-                                "booking_status": "confirmed",
-                                "booking_id": str(
-                                    booking_id
-                                ),  # ✅ Convert UUID to string
-                            },
-                            status=200,
-                        )
+                        return HttpResponse(close_tab_script())
                     except Booking.DoesNotExist:
                         return JsonResponse(
                             {"error": "Booking not found in SQL DB"}, status=404
