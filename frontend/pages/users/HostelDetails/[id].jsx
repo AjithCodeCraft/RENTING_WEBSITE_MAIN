@@ -13,6 +13,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/Spinner";
 import usePaymentConfirmation from "@/hooks/usePaymentConfirmation";
+import axios from "axios";
+
 
 const DEFAULT_THUMBNAIL = "/default-image.jpg";
 
@@ -51,6 +53,8 @@ const HostelDetails = () => {
       2: Math.floor(Math.random() * 50) + 5,    // 5 to 54
       1: Math.floor(Math.random() * 30) + 1     // 1 to 30
    };
+   const [modalMessage, setModalMessage] = useState("");
+   const [showModal, setShowModal] = useState(false);
    const [selectedDayRange, setSelectedDayRange] = useState({
       from: null,
       to: null,
@@ -65,6 +69,10 @@ const HostelDetails = () => {
    const [razorpayOrderId, setRazorpayOrderId] = useState(null);
    const [paymentStatus, setPaymentStatus] = useState(false);
    const [paymentFailed, setPaymentFailed] = useState(false);
+   const [saved, setSaved] = useState(false);
+   const [saving, setSaving] = useState(false);
+   const [userLocation, setUserLocation] = useState({ lat: null, lng: null });
+
 
    const openRazorpayGatway = () => {
       setPaymentLoading(true);
@@ -179,14 +187,60 @@ const HostelDetails = () => {
       fetchApartmentDetails();
    }, [apartment_id]);
 
+
+
    const toggleMessagePopup = () => {
       setIsMessagePopupOpen(!isMessagePopupOpen);
    };
 
-   const userLocation = {
-      lat: parseFloat(localStorage.getItem("user_lat")),
-      lng: parseFloat(localStorage.getItem("user_lng")),
-    };
+   const closeModal = () => {
+      setShowModal(false);
+      setModalMessage("");
+   };
+
+   useEffect(() => {
+      const checkWishlist = async () => {
+         const apartmentId = localStorage.getItem("apartment_id");
+         const token = localStorage.getItem("access_token_user");
+
+         if (!apartmentId || !token) {
+            console.log("Apartment ID or token is missing.");
+            return;
+         }
+
+         try {
+            const response = await axios.get("http://localhost:8000/api/wishlist/get-item", {
+               headers: {
+                  Authorization: `Bearer ${token}`,
+               },
+            });
+
+            const items = response.data || [];
+            const found = items.some(
+               (item) => item.apartment === apartmentId
+            );
+
+            if (found) {
+               console.log("Apartment is in the wishlist.");
+            } else {
+               console.log("Apartment is not in the wishlist.");
+            }
+
+            setSaved(found);
+         } catch (err) {
+            console.error("Error checking wishlist:", err);
+         }
+      };
+
+      checkWishlist();
+   }, []);
+
+   useEffect(() => {
+      // This code runs only on the client side
+      const lat = parseFloat(localStorage.getItem("user_lat"));
+      const lng = parseFloat(localStorage.getItem("user_lng"));
+      setUserLocation({ lat, lng });
+   }, []);
 
    const handleGetDirections = () => {
       if (hostel && userLocation) {
@@ -196,6 +250,39 @@ const HostelDetails = () => {
          console.error("Hostel or user location is not available");
       }
    };
+
+   const handleAddToWishlist = async () => {
+      const apartmentId = localStorage.getItem("apartment_id");
+      const token = localStorage.getItem("access_token_user");
+
+      if (!apartmentId || !token) {
+         setModalMessage("Missing apartment ID or token");
+         return;
+      }
+
+      setSaving(true);
+
+      try {
+         await axios.post(
+            `http://localhost:8000/api/wishlist/add-item/${apartmentId}`,
+            {},
+            {
+               headers: {
+                  Authorization: `Bearer ${token}`,
+               },
+            }
+         );
+
+         setSaved(true);
+         setModalMessage("Apartment saved to wishlist successfully!");
+      } catch (error) {
+         console.log("Error saving to wishlist:", error);
+         setModalMessage(error.response?.data || "Something went wrong");
+      } finally {
+         setSaving(false);
+      }
+   };
+
 
    const handleSendMessage = async () => {
       if (!message || message.trim() === "") return;
@@ -375,6 +462,40 @@ const HostelDetails = () => {
       return <div className="flex justify-center items-center h-screen">No data found</div>;
    }
 
+
+
+   const Modal = ({ message, onClose }) => {
+      let displayMessage = "Something went wrong";
+
+      if (typeof message === "string") {
+         displayMessage = message;
+      } else if (typeof message === "object") {
+         if (message.error) {
+            displayMessage = message.error;
+         } else if (message.message?.apartment?.[0]) {
+            displayMessage = message.message.apartment[0];
+         }
+      }
+
+      return (
+         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+               <p className="text-gray-800">{displayMessage}</p>
+               <button
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  onClick={onClose}
+               >
+                  OK
+               </button>
+            </div>
+         </div>
+      );
+   };
+
+
+
+
+
    const renderBookingCard = () => (
       <Card className="p-6">
          <CardHeader className="p-0">
@@ -515,10 +636,25 @@ const HostelDetails = () => {
                               <Share2Icon className="h-4 w-4 mr-2" />
                               Share
                            </Button>
-                           <Button variant="ghost" size="sm">
-                              <HeartIcon className="h-4 w-4 mr-2" />
-                              Save
+                           <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleAddToWishlist}
+                              disabled={saving || saved}
+                           >
+                              <HeartIcon
+                                 className={`h-4 w-4 mr-2 ${saved ? "text-green-500" : ""}`}
+                                 strokeWidth={2}
+                                 fill={saved ? "currentColor" : "none"}
+                              />
+                              {saving ? "Saving..." : saved ? "Saved" : "Save"}
                            </Button>
+                           {modalMessage && (
+                              <Modal
+                                 message={modalMessage}
+                                 onClose={() => setModalMessage(null)}
+                              />
+                           )}
                            <Button variant="ghost" size="sm" onClick={toggleMessagePopup}>
                               <MessageCircleIcon className="h-4 w-4 mr-2" />
                               Message

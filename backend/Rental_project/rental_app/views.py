@@ -1624,26 +1624,41 @@ def login_admin(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_item_wishlist(request, apartment_id):
-    apartment = Apartment.objects.get(apartment_id=apartment_id)
-
-    if not apartment:
+    try:
+        apartment = Apartment.objects.get(apartment_id=apartment_id)
+    except Apartment.DoesNotExist:
         return Response(
-            {"message": "No apartment found with the give ID!"},
+            {"message": "No apartment found with the given ID!"},
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    wishlist_serializer = WishlistSerializer(data={"apartment": apartment_id})
+    # Check if already in wishlist (to avoid duplicate errors)
+    if Wishlist.objects.filter(user=request.user, apartment=apartment).exists():
+        return Response(
+            {"error": "Apartment already in Wishlist!"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Include user ID in the data explicitly
+    wishlist_data = {
+        "user": request.user.id,
+        "apartment": apartment_id
+    }
+
+    wishlist_serializer = WishlistSerializer(data=wishlist_data)
 
     if wishlist_serializer.is_valid():
-        wishlist_serializer.save(user=request.user)
+        wishlist_serializer.save()
         return Response(wishlist_serializer.data, status=status.HTTP_200_OK)
+
     return Response(
         {
             "message": wishlist_serializer.errors,
-            "error": "Apartment already in Wishlist!",
+            "error": "Failed to add to wishlist.",
         },
         status=status.HTTP_400_BAD_REQUEST,
     )
+
 
 
 @api_view(["GET"])

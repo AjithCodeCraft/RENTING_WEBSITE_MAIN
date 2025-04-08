@@ -120,7 +120,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
-        fields = ["wishlist_id", "user", "owner", "description", "apartment", "created_at"]
+        fields = ["wishlist_id", "user", "apartment", "created_at"]
         extra_kwargs = {
             "user": {"required": False},
             "apartment": {"required": False},

@@ -150,8 +150,11 @@ class Payment(models.Model):
 class Wishlist(models.Model):
     wishlist_id = models.UUIDField(default=uuid4, primary_key=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    apartment = models.OneToOneField(Apartment, on_delete=models.CASCADE)
+    apartment = models.ForeignKey(Apartment, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'apartment']
 
 
 class Bid(models.Model):
