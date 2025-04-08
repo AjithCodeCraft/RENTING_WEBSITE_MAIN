@@ -120,13 +120,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
-        fields = ["wishlist_id", "user", "apartment", "created_at"]
-        extra_kwargs = {
-            "user": {"required": False},
-            "apartment": {"required": False},
-            "wishlist_id": {"read_only": True},
-            "created_id": {"read_only": True}
-        }
+        fields = '__all__'
 
 
 class HostelApprovalSerializer(serializers.ModelSerializer):

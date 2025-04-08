@@ -202,36 +202,41 @@ const HostelDetails = () => {
       const checkWishlist = async () => {
          const apartmentId = localStorage.getItem("apartment_id");
          const token = localStorage.getItem("access_token_user");
-
+   
          if (!apartmentId || !token) {
             console.log("Apartment ID or token is missing.");
             return;
          }
-
+   
          try {
             const response = await axios.get("http://localhost:8000/api/wishlist/get-item", {
                headers: {
                   Authorization: `Bearer ${token}`,
                },
             });
-
+   
             const items = response.data || [];
-            const found = items.some(
-               (item) => item.apartment === apartmentId
-            );
-
+   
+            if (items.length === 0) {
+               console.log("Wishlist is empty.");
+               setSaved(false);
+               return;
+            }
+   
+            const found = items.some((item) => item.apartment === apartmentId);
+   
             if (found) {
                console.log("Apartment is in the wishlist.");
             } else {
                console.log("Apartment is not in the wishlist.");
             }
-
+   
             setSaved(found);
          } catch (err) {
             console.error("Error checking wishlist:", err);
          }
       };
-
+   
       checkWishlist();
    }, []);
 

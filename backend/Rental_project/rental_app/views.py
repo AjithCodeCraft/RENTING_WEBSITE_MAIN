@@ -1627,49 +1627,26 @@ def add_item_wishlist(request, apartment_id):
     try:
         apartment = Apartment.objects.get(apartment_id=apartment_id)
     except Apartment.DoesNotExist:
-        return Response(
-            {"message": "No apartment found with the given ID!"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Apartment not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    # Check if already in wishlist (to avoid duplicate errors)
+    # Check if this user already has this apartment
     if Wishlist.objects.filter(user=request.user, apartment=apartment).exists():
         return Response(
-            {"error": "Apartment already in Wishlist!"},
-            status=status.HTTP_400_BAD_REQUEST,
+            {"error": "This apartment is already in your wishlist"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Include user ID in the data explicitly
-    wishlist_data = {
-        "user": request.user.id,
-        "apartment": apartment_id
-    }
-
-    wishlist_serializer = WishlistSerializer(data=wishlist_data)
-
-    if wishlist_serializer.is_valid():
-        wishlist_serializer.save()
-        return Response(wishlist_serializer.data, status=status.HTTP_200_OK)
-
-    return Response(
-        {
-            "message": wishlist_serializer.errors,
-            "error": "Failed to add to wishlist.",
-        },
-        status=status.HTTP_400_BAD_REQUEST,
-    )
-
+    # Create the wishlist item
+    wishlist_item = Wishlist.objects.create(user=request.user, apartment=apartment)
+    serializer = WishlistSerializer(wishlist_item)
+    
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_wishlist(request):
     wishlist = Wishlist.objects.filter(user=request.user)
-
-    if not wishlist:
-        return Response(
-            {"message": "Wish list is empty!"}, status=status.HTTP_404_NOT_FOUND
-        )
 
     serializer = WishlistSerializer(wishlist, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1766,36 +1743,7 @@ def get_approved_apartments(request):
     )
     serialized_apartments = ApartmentSerializer(approved_apartments, many=True).data
 
-    for apartment in serialized_apartments:
-        apartment_id = apartment[
-            "apartment_id"
-        ]  # Ensure this matches your Apartment model's field
-
-        apartment_images = ApartmentImage.objects.filter(apartment_id=apartment_id)
-        image_list = []
-
-        for img in apartment_images:
-            try:
-
-                gridfs_file = fs.get(ObjectId(img.image_path))
-                image_data = base64.b64encode(gridfs_file.read()).decode(
-                    "utf-8"
-                )  # Convert to base64
-
-                image_list.append(
-                    {
-                        "gridfs_id": str(gridfs_file._id),
-                        "image_id": str(img.image_id),
-                        "filename": gridfs_file.filename,
-                        "image_data": image_data,
-                        "is_primary": img.is_primary,
-                    }
-                )
-            except Exception as e:
-                print(f"Error retrieving image from GridFS: {e}")
-
-        # Attach image list to the apartment data
-        apartment["hostel_images"] = image_list
+    
 
     return JsonResponse(serialized_apartments, safe=False)
 
