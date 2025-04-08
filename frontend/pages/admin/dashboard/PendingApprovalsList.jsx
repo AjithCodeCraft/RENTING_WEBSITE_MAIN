@@ -8,7 +8,7 @@ import useApartmentStore from "@/store/apartmentStore";
 import { ownerDocument } from "@mui/material";
 
 const PendingApprovalsList = ({
-  props: { limit, setPendingCount, updateTotalApartmentCount },
+  limit, setPendingCount, updateTotalApartmentCount
 }) => {
   const [unapprovedApartments, setUnapprovedApartments] = useState([]);
 

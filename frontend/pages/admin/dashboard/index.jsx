@@ -62,11 +62,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const pendingApprovalListProps = {
-    limit,
-    setPendingCount,
-    updateTotalApartmentCount,
-  };
+
 
   const scrollToPendingSection = () => {
     pendingSection.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,7 +158,11 @@ const AdminDashboard = () => {
                   <CardTitle>Pending Approvals</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <PendingApprovalsList props={pendingApprovalListProps} />
+                  <PendingApprovalsList 
+                    limit={limit}
+                    setPendingCount={setPendingCount}
+                    updateTotalApartmentCount={updateTotalApartmentCount}
+                  />
                 </CardContent>
               </Card>
               <Card className="col-span-1 lg:col-span-3">

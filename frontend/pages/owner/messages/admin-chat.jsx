@@ -36,7 +36,7 @@ function AdminChatInterface() {
     if (!ownerIdNumber) return;
 
     // Create the worker
-    workerRef.current = new Worker(new URL("./worker", import.meta.url));
+    workerRef.current = new Worker('/workers/worker.js');
 
     workerRef.current.onmessage = (e) => {
       if (e.data.type === "newMessages") {

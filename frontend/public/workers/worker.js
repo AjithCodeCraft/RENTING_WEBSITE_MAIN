@@ -15,7 +15,7 @@ self.onmessage = function (e) {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
         .then((response) => response.json())
-        .then((data) => {
+        .then((data) => { 
           self.postMessage({
             type: "newMessages",
             data: data,

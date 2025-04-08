@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/Spinner";
 import usePaymentConfirmation from "@/hooks/usePaymentConfirmation";
 import axios from "axios";
+import { useRouter } from "next/router";
 
 
 const DEFAULT_THUMBNAIL = "/default-image.jpg";
@@ -22,6 +23,8 @@ const hexToBase64 = (hex) => {
    const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
    return Buffer.from(bytes).toString("base64");
 };
+
+
 
 
 
@@ -59,6 +62,7 @@ const HostelDetails = () => {
       from: null,
       to: null,
    });
+   const router = useRouter()
    const [apartment_id, setApartmentId] = useState(null);
    const [isBookingPopupOpen, setIsBookingPopupOpen] = useState(false);
    const [bookingDetails, setBookingDetails] = useState(null);
@@ -89,15 +93,23 @@ const HostelDetails = () => {
       }
    }, [paymentStatus, paymentFailed]);
 
+   
    useEffect(() => {
-      const apartmentId = localStorage.getItem("apartment_id");
-      if (apartmentId) {
-         setApartmentId(apartmentId);
-      } else {
-         setError("Apartment ID not found in localStorage");
-         setLoading(false);
-      }
-   }, []);
+           if (router.isReady) {
+            setApartmentId(router.query.id);
+           }
+       }, [router]);
+
+
+   // useEffect(() => {
+   //    const apartmentId = localStorage.getItem("apartment_id");
+   //    if (apartmentId) {
+   //       setApartmentId(apartmentId);
+   //    } else {
+   //       setError("Apartment ID not found in localStorage");
+   //       setLoading(false);
+   //    }
+   // }, []);
 
    useEffect(() => {
       if (!apartment_id) return;
@@ -200,10 +212,9 @@ const HostelDetails = () => {
 
    useEffect(() => {
       const checkWishlist = async () => {
-         const apartmentId = localStorage.getItem("apartment_id");
          const token = localStorage.getItem("access_token_user");
    
-         if (!apartmentId || !token) {
+         if (!apartment_id || !token) {
             console.log("Apartment ID or token is missing.");
             return;
          }
@@ -223,7 +234,7 @@ const HostelDetails = () => {
                return;
             }
    
-            const found = items.some((item) => item.apartment === apartmentId);
+            const found = items.some((item) => item.apartment === apartment_id);
    
             if (found) {
                console.log("Apartment is in the wishlist.");
@@ -238,7 +249,7 @@ const HostelDetails = () => {
       };
    
       checkWishlist();
-   }, []);
+   }, [apartment_id]);
 
    useEffect(() => {
       // This code runs only on the client side

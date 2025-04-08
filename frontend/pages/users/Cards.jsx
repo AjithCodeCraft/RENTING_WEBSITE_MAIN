@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import {Button} from "@/components/ui/button";
 import {LocateFixed} from "lucide-react";
 import Image from "next/image";
+
 import {
     Pagination,
     PaginationContent,
@@ -80,61 +81,75 @@ const UserHostels = () => {
     };
 
     useEffect(() => {
+        const abortController = new AbortController(); // Create controller inside useEffect
+        let isMounted = true; // Track if component is mounted
+    
         const fetchHostels = async () => {
             try {
-                    const accessToken = localStorage.getItem("access_token_user");
-                    if (!accessToken) throw new Error("No access token found");
-
-                try {
-                    const hostelsResponse = await fetch("http://localhost:8000/api/apartments/approved/", {
-                        headers: {Authorization: `Bearer ${accessToken}`},
+                const accessToken = localStorage.getItem("access_token_user");
+                if (!accessToken) throw new Error("No access token found");
+    
+                // Fetch hostels
+                const hostelsResponse = await fetch(
+                    "http://localhost:8000/api/apartments/approved/", 
+                    {
+                        headers: { Authorization: `Bearer ${accessToken}` },
                         signal: abortController.signal
-                    });
-                    var hostelsData = await hostelsResponse.json();
-                } catch (error) {
-                    if (error.name === "AbortError") {
-                      } else {
-                        console.error("Fetch error:", error);
-                      }
-                }
-
+                    }
+                );
+                
+                if (!isMounted) return; // Don't proceed if unmounted
+                
+                const hostelsData = await hostelsResponse.json();
+    
+                // Fetch images for each hostel
                 const hostelsWithImages = await Promise.all(
                     hostelsData.map(async (hostel) => {
                         try {
-                            const imagesResponse = await fetch(`http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`, {
-                                headers: {Authorization: `Bearer ${accessToken}`},
-                                signal: abortController.signal
-                            });
-
-                            if (!imagesResponse.ok) return {...hostel, images: [{image_data: DEFAULT_THUMBNAIL}]};
-
-                            const imagesData = await imagesResponse.json();
-                            return {...hostel, images: imagesData.images};
-                        } catch (error) {
-                            if (error.name === "AbortError") {
-                            } else {
-                                console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
-                                return {...hostel, images: [{image_data: DEFAULT_THUMBNAIL}]};
+                            const imagesResponse = await fetch(
+                                `http://127.0.0.1:8000/api/apartment-images/${hostel.apartment_id}/`,
+                                {
+                                    headers: { Authorization: `Bearer ${accessToken}` },
+                                    signal: abortController.signal
+                                }
+                            );
+    
+                            if (!imagesResponse.ok) {
+                                return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
                             }
+    
+                            const imagesData = await imagesResponse.json();
+                            return { ...hostel, images: imagesData.images };
+                        } catch (error) {
+                            if (error.name !== "AbortError") {
+                                console.error(`Error fetching images for hostel ${hostel.apartment_id}:`, error);
+                            }
+                            return { ...hostel, images: [{ image_data: DEFAULT_THUMBNAIL }] };
                         }
                     })
                 );
-
+    
+                if (!isMounted) return; // Check again before state update
+                
                 setHostels(hostelsWithImages);
                 setFilteredHostels(filterApartments(hostelsWithImages, filters));
                 setLoading(false);
             } catch (error) {
-                if (axios.isCancel(error)) {
-                } else {
-                  console.error("Error fetching data:", error);
-                  setError(error.message);
+                if (error.name !== "AbortError" && isMounted) {
+                    console.error("Error fetching data:", error);
+                    setError(error.message);
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         };
-
+    
         fetchHostels();
-    }, []);
+    
+        return () => {
+            isMounted = false;
+            abortController.abort(); // Cleanup on unmount
+        };
+    }, [filters]); // Add filters to dependencies if it's used in filterApartments
 
     useEffect(() => {
         if (hostels.length > 0) {
