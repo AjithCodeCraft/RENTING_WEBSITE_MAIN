@@ -81,6 +81,7 @@ from .views import (
     get_all_booking_received,
     get_all_tenants,
     get_approved_apartment_by_owner,
+    send_password_reset_email
 )
 
 
@@ -337,5 +338,8 @@ urlpatterns = [
     path("get_user_details/<int:user_id>/", get_user_details, name="get_user_details"),
     path("token/verify/", is_logged_admin_in, name="token_verify"),
     path('owner-by-apartment/<uuid:apartment_id>/', OwnerDetailsByApartmentView.as_view()),
+       path(
+        "password-reset/", send_password_reset_email, name="send_password_reset_email"
+    ),
 
 ]
