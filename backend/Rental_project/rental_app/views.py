@@ -54,6 +54,7 @@ from django.db.models import Q
 from django.middleware.csrf import get_token
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
+import requests
 
 
 from .serializers import (
@@ -229,9 +230,7 @@ def register_user(request):
 @api_view(["POST"])
 def login_user(request):
     email = request.data.get("email")
-    password = request.data.get(
-        "password_hash"
-    )  # Assuming password_hash is sent from frontend
+    password = request.data.get("password_hash")
 
     if not email or not password:
         return Response(
@@ -240,25 +239,42 @@ def login_user(request):
         )
 
     try:
-        user = User.objects.get(email=email)
+        # Verify user with Firebase Authentication
+        firebase_user = auth.get_user_by_email(email)
 
-        # Check if the provided password matches the stored hash
-        if not check_password(
-            password, user.password_hash
-        ):  # Ensure `password_hash` is the hashed password field in your User model
+        # Firebase does not store passwords, so we need to sign in using Firebase REST API
+
+        firebase_api_key = "AIzaSyAihvpMjjiwUtWpsr5OP0YhoI96sujJNEo"  # Replace with your Firebase API Key
+        firebase_auth_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={firebase_api_key}"
+
+        payload = {"email": email, "password": password, "returnSecureToken": True}
+
+        response = requests.post(firebase_auth_url, json=payload)
+        firebase_data = response.json()
+
+        if "error" in firebase_data:
             return Response(
                 {"error": "Invalid email or password"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Generate JWT tokens
+        # Check if the user exists in the Django database
+        user = User.objects.get(email=email)
+
+        # If the stored password is different, update it
+        if not check_password(password, user.password):
+            user.password = make_password(password)
+            user.save()
+
+        # Generate JWT token
         refresh = RefreshToken.for_user(user)
+
         return Response(
             {
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
-                "user_id": user.user_id,
                 "id": user.id,
+                "user_id": user.user_id,
                 "email": user.email,
                 "name": user.name,
                 "user_type": user.user_type,
@@ -269,6 +285,12 @@ def login_user(request):
     except User.DoesNotExist:
         return Response(
             {"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    except Exception as e:
+        return Response(
+            {"error": f"Unexpected error: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -2110,3 +2132,39 @@ class OwnerDetailsByApartmentView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+@api_view(["POST"])
+def send_password_reset_email(request):
+    email = request.data.get("email")
+
+    if not email:
+        return Response({"error": "Email is required"}, status=400)
+
+    try:
+        # Check if user exists first
+        try:
+            user = auth.get_user_by_email(email)
+        except auth.UserNotFoundError:
+            return Response({"error": "No user found with this email"}, status=404)
+        except ValueError as e:
+            return Response({"error": f"Invalid email: {str(e)}"}, status=400)
+
+        # Generate password reset link
+        try:
+            link = auth.generate_password_reset_link(email)
+            
+            send_mail(
+                subject="Reset Your Password",
+                message=f"Click the link below to reset your password:\n{link}",
+                from_email="FortiFit <alameena068@gmail.com>",
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return Response({"message": "Password reset email sent"}, status=200)
+            
+        except FirebaseError as e:
+            return Response({"error": f"Firebase error: {str(e)}"}, status=500)
+
+    except Exception as e:
+        return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
