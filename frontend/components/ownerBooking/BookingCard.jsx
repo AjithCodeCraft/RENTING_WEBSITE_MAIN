@@ -1,20 +1,24 @@
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Calendar, ArrowUpDown, ChevronsUpDown } from "lucide-react";
 
-const BookingCard = ({ title, value, icon, subtext }) => {
+export const BookingCard = ({ title, value, description, icon }) => {
+  const Icon = icon === "Calendar" ? Calendar : 
+               icon === "ArrowUpDown" ? ArrowUpDown : ChevronsUpDown;
+
   return (
-    <Card className="w-full h-32 bg-white">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 bg-white">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">
+          {title}
+        </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{subtext}</p>
+        <p className="text-xs text-muted-foreground">
+          {description}
+        </p>
       </CardContent>
     </Card>
   );
 };
-
-export default BookingCard;
