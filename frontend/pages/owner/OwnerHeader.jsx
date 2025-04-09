@@ -20,8 +20,13 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { abortController } from ".";
 import Image from "next/image";
+import axios from "axios";
 
 export default function OwnerHeader() {
+  // Removed duplicate declaration of router
+  const [user, setUser] = useState({ name: "", avatarUrl: "" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const router = useRouter();
   const logout = (e) => {
     e.preventDefault();
@@ -29,6 +34,31 @@ export default function OwnerHeader() {
     localStorage.removeItem("access_token_owner");
     router.push("/login");
   };
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(
+          "http://127.0.0.1:8000/api/user/profile",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
+            },
+          },
+        );
+        setUser({
+          name: response.data.name,
+          avatarUrl: response.data.avatarUrl || "https://github.com/shadcn.png",
+        });
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
   return (
     <header className="flex h-20 w-full shrink-0 items-center px-4 md:px-6">
     {/* Mobile Navigation Menu */}
@@ -59,8 +89,8 @@ export default function OwnerHeader() {
           <Link href="/owner/hostels" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
             Hostels
           </Link>
-          <Link href="#" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
-            Contact
+          <Link href="/owner/bookings" className="flex w-full items-center py-2 text-lg font-semibold" prefetch={false}>
+            Bookings
           </Link>
         </div>
       </SheetContent>
@@ -101,11 +131,11 @@ export default function OwnerHeader() {
         </NavigationMenuLink>
         <NavigationMenuLink asChild>
           <Link
-            href="#"
+            href="/owner/bookings"
             className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
             prefetch={false}
           >
-            Contact
+            Bookings
           </Link>
         </NavigationMenuLink>
       </NavigationMenuList>
@@ -137,7 +167,7 @@ export default function OwnerHeader() {
                   <AvatarFallback>CN</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">Ajith S</p>
+                <p className="font-semibold">{user.name}</p>
                   <p className="text-sm text-muted-foreground">View Profile</p>
                 </div>
               </div>
