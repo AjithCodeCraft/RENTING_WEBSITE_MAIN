@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,6 @@ const WishlistPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedWishlistId, setSelectedWishlistId] = useState(null);
 
-  
   const fetchWishlist = useCallback(async () => {
     try {
       const accessToken = localStorage.getItem("access_token_user");
@@ -123,21 +122,16 @@ const WishlistPage = () => {
       console.error('Error fetching wishlist:', error);
       setLoading(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
     fetchWishlist();
   }, [fetchWishlist]);
 
-  
-
   const removeFromWishlist = async (wishlistId) => {
     try {
-      
-      const previousWishlist = [...wishlist];
       setWishlist(prev => prev.filter(item => item.wishlist_id !== wishlistId));
-  
-      
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/wishlist/delete-item/${wishlistId}`,
         {
@@ -148,29 +142,19 @@ const WishlistPage = () => {
           }
         }
       );
-  
-      
+
       if (!response.ok) {
         throw new Error('Failed to remove from wishlist');
       }
-  
-      
-      await fetchWishlist();
-  
     } catch (error) {
       console.error('Error:', error);
-    
-      setWishlist(previousWishlist);
-    
       alert('Failed to remove item. Please try again.');
     }
   };
 
-
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // Your existing delete logic
       await removeFromWishlist(selectedWishlistId);
     } finally {
       setIsDeleting(false);
@@ -240,7 +224,7 @@ const WishlistPage = () => {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setSelectedWishlistId(hostel.wishlist_id); // Changed from hostel.id to hostel.wishlist_id
+                        setSelectedWishlistId(hostel.wishlist_id);
                         setIsDeleteModalOpen(true);
                       }}
                     >
@@ -254,7 +238,6 @@ const WishlistPage = () => {
               ))}
             </div>
 
-            {/* Modal placed here at the same level as the grid */}
             <Dialog
               open={isDeleteModalOpen}
               onClose={() => setIsDeleteModalOpen(false)}
@@ -278,10 +261,7 @@ const WishlistPage = () => {
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => {
-                      handleDelete(selectedWishlistId);
-                      setIsDeleteModalOpen(false);
-                    }}
+                    onClick={handleDelete}
                     disabled={isDeleting}
                   >
                     {isDeleting ? 'Deleting...' : 'Remove'}
