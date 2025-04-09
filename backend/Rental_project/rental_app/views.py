@@ -506,14 +506,20 @@ def get_house_owner_by_ssn(request, ssn):
 @permission_classes([IsAuthenticated])
 def get_apartments_by_owner(request, owner_id):
     try:
+        # 1. Get the User
         user = User.objects.get(id=owner_id)
 
+        # 2. Check if the user is an owner
         if user.user_type != "owner":
             return Response(
                 {"error": "User is not an owner"}, status=status.HTTP_403_FORBIDDEN
             )
 
-        apartments = Apartment.objects.filter(owner=user)
+        
+        house_owner = HouseOwner.objects.get(owner=user)
+
+        # 4. Now filter apartments by the HouseOwner
+        apartments = Apartment.objects.filter(owner=house_owner)
         apartment_serializer = ApartmentSerializer(apartments, many=True)
 
         return Response(
@@ -526,8 +532,10 @@ def get_apartments_by_owner(request, owner_id):
         )
 
     except User.DoesNotExist:
-        return Response({"error": "Owner not found"}, status=status.HTTP_404_NOT_FOUND)
-
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    except HouseOwner.DoesNotExist:
+        return Response({"error": "HouseOwner profile not found"}, status=status.HTTP_404_NOT_FOUND)
+    
 
 MONGO_URI = os.getenv("MONGO_HOST")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")

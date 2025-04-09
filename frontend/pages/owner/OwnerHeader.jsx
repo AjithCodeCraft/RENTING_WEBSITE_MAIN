@@ -114,9 +114,7 @@ export default function OwnerHeader() {
     {/* Right Side Icons and Avatar */}
     <div className="ml-auto flex gap-2">
       <div className="flex items-center gap-8">
-        <Link href="">
-          <BellRing className="h-8 w-8" />
-        </Link>
+        
         <Link href="/owner/messages">
           <MessageSquareText className="h-8 w-8" />
         </Link>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
@@ -28,112 +28,116 @@ const WishlistPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedWishlistId, setSelectedWishlistId] = useState(null);
 
-  useEffect(() => {
-    const fetchWishlist = async () => {
-      try {
-        const accessToken = localStorage.getItem("access_token_user");
-        if (!accessToken) throw new Error("No access token found");
+  
+  const fetchWishlist = useCallback(async () => {
+    try {
+      const accessToken = localStorage.getItem("access_token_user");
+      if (!accessToken) throw new Error("No access token found");
 
-        const wishlistResponse = await fetch('http://localhost:8000/api/wishlist/get-item', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+      const wishlistResponse = await fetch('http://localhost:8000/api/wishlist/get-item', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-        if (!wishlistResponse.ok) {
-          throw new Error('Failed to fetch wishlist');
-        }
-
-        const wishlistData = await wishlistResponse.json();
-
-        if (!Array.isArray(wishlistData)) {
-          throw new Error('Wishlist data is not an array');
-        }
-
-        const wishlistWithDetails = await Promise.all(
-          wishlistData.map(async (item) => {
-            if (!item || !item.apartment) {
-              throw new Error('Invalid wishlist item');
-            }
-
-            const apartmentResponse = await fetch(
-              `http://127.0.0.1:8000/api/apartments_by_id/${item.apartment}/`,
-              {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              }
-            );
-
-            if (!apartmentResponse.ok) {
-              throw new Error(`Failed to fetch details for apartment ${item.apartment}`);
-            }
-
-            const apartmentData = await apartmentResponse.json();
-
-            const imagesResponse = await fetch(
-              `http://127.0.0.1:8000/api/apartment-images/${item.apartment}/`,
-              {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              }
-            );
-
-            if (!imagesResponse.ok) {
-              throw new Error(`Failed to fetch apartment images for ${item.apartment}`);
-            }
-
-            const imagesData = await imagesResponse.json();
-
-            const imagesWithBase64 = imagesData.images?.map((image) => {
-              if (image.image_data?.startsWith("ffd8")) {
-                return {
-                  ...image,
-                  image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
-                };
-              }
-              return image;
-            }) || [];
-
-            const hostelImage = imagesWithBase64.length > 0 ? imagesWithBase64[0].image_url : DEFAULT_THUMBNAIL;
-
-            const foodOptions = {
-              1: 'Breakfast',
-              2: 'Lunch',
-              3: 'Dinner',
-            };
-
-            const amenities = [
-              ...(apartmentData.food || []).map(foodId => foodOptions[foodId]),
-              apartmentData.parking_available ? 'Parking Available' : '',
-              apartmentData.bhk ? apartmentData.bhk : '',
-            ].filter(Boolean);
-
-            return {
-              id: item.apartment,
-              name: apartmentData.title,
-              location: apartmentData.location,
-              price: `$${apartmentData.rent}/night`,
-              rating: apartmentData.rating,
-              image: hostelImage,
-              amenities: amenities,
-            };
-          })
-        );
-
-        setWishlist(wishlistWithDetails);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching wishlist:', error);
-        setLoading(false);
+      if (!wishlistResponse.ok) {
+        throw new Error('Failed to fetch wishlist');
       }
-    };
 
+      const wishlistData = await wishlistResponse.json();
+
+      if (!Array.isArray(wishlistData)) {
+        throw new Error('Wishlist data is not an array');
+      }
+
+      const wishlistWithDetails = await Promise.all(
+        wishlistData.map(async (item) => {
+          if (!item || !item.apartment) {
+            throw new Error('Invalid wishlist item');
+          }
+
+          const apartmentResponse = await fetch(
+            `http://127.0.0.1:8000/api/apartments_by_id/${item.apartment}/`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+
+          if (!apartmentResponse.ok) {
+            throw new Error(`Failed to fetch details for apartment ${item.apartment}`);
+          }
+
+          const apartmentData = await apartmentResponse.json();
+
+          const imagesResponse = await fetch(
+            `http://127.0.0.1:8000/api/apartment-images/${item.apartment}/`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+
+          if (!imagesResponse.ok) {
+            throw new Error(`Failed to fetch apartment images for ${item.apartment}`);
+          }
+
+          const imagesData = await imagesResponse.json();
+
+          const imagesWithBase64 = imagesData.images?.map((image) => {
+            if (image.image_data?.startsWith("ffd8")) {
+              return {
+                ...image,
+                image_url: `data:image/jpeg;base64,${hexToBase64(image.image_data)}`,
+              };
+            }
+            return image;
+          }) || [];
+
+          const hostelImage = imagesWithBase64.length > 0 ? imagesWithBase64[0].image_url : DEFAULT_THUMBNAIL;
+
+          const foodOptions = {
+            1: 'Breakfast',
+            2: 'Lunch',
+            3: 'Dinner',
+          };
+
+          const amenities = [
+            ...(apartmentData.food || []).map(foodId => foodOptions[foodId]),
+            apartmentData.parking_available ? 'Parking Available' : '',
+            apartmentData.bhk ? apartmentData.bhk : '',
+          ].filter(Boolean);
+
+          return {
+            id: item.apartment,
+            wishlist_id: item.wishlist_id,
+            name: apartmentData.title,
+            location: apartmentData.location,
+            price: `$${apartmentData.rent}/night`,
+            rating: apartmentData.rating,
+            image: hostelImage,
+            amenities: amenities,
+          };
+        })
+      );
+
+      setWishlist(wishlistWithDetails);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching wishlist:', error);
+      setLoading(false);
+    }
+  });
+
+  useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [fetchWishlist]);
+
+  
 
   const removeFromWishlist = async (wishlistId) => {
     try {
-      // 1. Optimistic UI Update (remove immediately)
-      const previousWishlist = [...wishlist]; // Save copy for rollback
+      
+      const previousWishlist = [...wishlist];
       setWishlist(prev => prev.filter(item => item.wishlist_id !== wishlistId));
-
-      // 2. API Call to delete from server
+  
+      
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/wishlist/delete-item/${wishlistId}`,
         {
@@ -144,30 +148,20 @@ const WishlistPage = () => {
           }
         }
       );
-
-      // 3. Verify successful deletion
+  
+      
       if (!response.ok) {
         throw new Error('Failed to remove from wishlist');
       }
-
-      // 4. Full Synchronization (optional but recommended)
-      const syncResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/wishlist/`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token_user')}`
-          }
-        }
-      );
-
-      const updatedWishlist = await syncResponse.json();
-      setWishlist(updatedWishlist);
-
+  
+      
+      await fetchWishlist();
+  
     } catch (error) {
       console.error('Error:', error);
-      // Rollback on error
+    
       setWishlist(previousWishlist);
-      // Optional: Show error notification
+    
       alert('Failed to remove item. Please try again.');
     }
   };
