@@ -30,7 +30,6 @@ const useBookingData = (setBookingData, setLoading) => {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/payments/user/${userId}`,
       );
-      //console.log(response.data.payments);
       setData(response.data.payments);
     } catch (error) {
       console.log(error);
