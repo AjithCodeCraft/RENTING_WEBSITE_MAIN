@@ -59,8 +59,10 @@ import requests
 
 from .serializers import (
     ApartmentSerializer,
+    BookingSerializerReadOnly,
     CheckOwnerVerificationSerializer,
     HouseOwnerSerializer,
+    PaymentSerializerReadOnly,
     UserSerializer,
     ApartmentImageSerializer,
     SearchFilterSerializer,
@@ -512,34 +514,6 @@ def get_apartments_by_owner(request, owner_id):
             )
 
         apartments = Apartment.objects.filter(owner=user)
-        apartment_serializer = ApartmentSerializer(apartments, many=True)
-
-        return Response(
-            {
-                "owner_id": owner_id,
-                "total_apartments": apartments.count(),
-                "apartments": apartment_serializer.data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    except User.DoesNotExist:
-        return Response({"error": "Owner not found"}, status=status.HTTP_404_NOT_FOUND)
-
-
-# Get All Apartments by Owner ID
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def get_apartments_by_owner(request, owner_id):
-    try:
-        user = User.objects.get(id=owner_id)
-
-        if user.user_type != "owner":
-            return Response(
-                {"error": "User is not an owner"}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        apartments = Apartment.objects.filter(owner__owner=user)
         apartment_serializer = ApartmentSerializer(apartments, many=True)
 
         return Response(
@@ -1137,7 +1111,7 @@ def bookings_by_apartment(request, apartment_id):
 def bookings_by_user(request, user_id):
     """Get all bookings for a specific user ID"""
     bookings = Booking.objects.filter(user_id=user_id)
-    serializer = BookingSerializer(bookings, many=True)
+    serializer = BookingSerializerReadOnly(bookings, many=True)
     return Response(serializer.data)
 
 
@@ -1198,9 +1172,9 @@ def payments_by_user(request, user_id):
     """Get all payments for a specific user ID"""
     payments = Payment.objects.filter(
         user_id=str(user_id)
-    )  # Convert user_id to string for query
+    ).order_by("-timestamp")  # Convert user_id to string for query
     total = payments.count()
-    serializer = PaymentSerializer(payments, many=True)
+    serializer = PaymentSerializerReadOnly(payments, many=True)
 
     return Response({"total_payments": total, "payments": serializer.data})
 
@@ -1639,7 +1613,7 @@ def add_item_wishlist(request, apartment_id):
     # Create the wishlist item
     wishlist_item = Wishlist.objects.create(user=request.user, apartment=apartment)
     serializer = WishlistSerializer(wishlist_item)
-    
+
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -1743,7 +1717,7 @@ def get_approved_apartments(request):
     )
     serialized_apartments = ApartmentSerializer(approved_apartments, many=True).data
 
-    
+
 
     return JsonResponse(serialized_apartments, safe=False)
 
@@ -2116,7 +2090,7 @@ def send_password_reset_email(request):
         # Generate password reset link
         try:
             link = auth.generate_password_reset_link(email)
-            
+
             send_mail(
                 subject="Reset Your Password",
                 message=f"Click the link below to reset your password:\n{link}",
@@ -2125,7 +2099,7 @@ def send_password_reset_email(request):
                 fail_silently=False,
             )
             return Response({"message": "Password reset email sent"}, status=200)
-            
+
         except FirebaseError as e:
             return Response({"error": f"Firebase error: {str(e)}"}, status=500)
 

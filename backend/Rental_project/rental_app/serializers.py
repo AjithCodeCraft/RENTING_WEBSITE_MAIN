@@ -57,7 +57,7 @@ class ApartmentSerializer(serializers.ModelSerializer):
     food = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Food.objects.all(),
-        required=False,  
+        required=False,
     )
 
     class Meta:
@@ -104,12 +104,27 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = "__all__"
 
+class BookingSerializerReadOnly(serializers.ModelSerializer):
+    apartment = ApartmentSerializer()
+    user = UserSerializer()
+
+    class Meta:
+        model = Booking
+        fields = "__all__"
+
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = "__all__"
 
+class PaymentSerializerReadOnly(serializers.ModelSerializer):
+    user = UserSerializer()
+    apartment = ApartmentSerializer()
+    booking = BookingSerializer()
+    class Meta:
+        model = Payment
+        fields = "__all__"
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
