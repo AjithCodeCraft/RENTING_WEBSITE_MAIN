@@ -174,3 +174,22 @@ class ApartmentOwnerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Apartment
         fields = ["apartment_id", "title", "location", "rent", "bhk", "owner"]
+
+
+
+class OwnerPaymentDetailsSerializer(serializers.ModelSerializer):
+    apartment_name = serializers.CharField(source="apartment.title", read_only=True)
+    check_in = serializers.DateTimeField(source="booking.booking_date", read_only=True)
+    check_out = serializers.DateTimeField(source="booking.checkout_date", read_only=True)
+    user_name = serializers.CharField(source="user.name", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    user_phone = serializers.CharField(source = "user.phone",read_only =True)
+
+    class Meta:
+        model = Payment
+        fields = [
+            "payment_id", "transaction_id", "amount", "timestamp",
+            "payment_status", "payment_method",
+            "apartment_name", "check_in", "check_out",
+            "user_name", "user_email","user_phone"
+        ]

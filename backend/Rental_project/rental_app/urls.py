@@ -18,6 +18,7 @@ from .views import (
     get_user_details,
     get_user_messages,
     is_logged_admin_in,
+    payments_by_owner,
     register_user,
     login_user,
     apartment_detail,
@@ -341,5 +342,6 @@ urlpatterns = [
        path(
         "password-reset/", send_password_reset_email, name="send_password_reset_email"
     ),
+    path("owner/<int:owner_id>/payments/", payments_by_owner, name="payments-by-owner"),
 
 ]

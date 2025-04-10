@@ -288,6 +288,7 @@ const HostelDetails = () => {
                },
             }
          );
+         
 
          setSaved(true);
          setModalMessage("Apartment saved to wishlist successfully!");

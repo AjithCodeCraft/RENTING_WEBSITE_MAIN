@@ -81,11 +81,13 @@ export default function UserHeader() {
   const [user, setUser] = useState({ name: "", avatarUrl: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [wishlistCount, setWishlistCount] = useState(0); // Add wishlist count state
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserData = async () => {
       try {
-        const response = await axios.get(
+        // Fetch user profile
+        const profileResponse = await axios.get(
           "http://127.0.0.1:8000/api/user/profile",
           {
             headers: {
@@ -94,19 +96,36 @@ export default function UserHeader() {
           },
         );
         setUser({
-          name: response.data.name,
-          avatarUrl: response.data.avatarUrl || "https://github.com/shadcn.png",
+          name: profileResponse.data.name,
+          avatarUrl: profileResponse.data.avatarUrl || "https://github.com/shadcn.png",
         });
+
+        // Fetch wishlist count
+        const accessToken = localStorage.getItem("access_token_user");
+        if (accessToken) {
+          const wishlistResponse = await axios.get(
+            "http://localhost:8000/api/wishlist/get-item",
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+          const items = wishlistResponse.data || [];
+          setWishlistCount(items.length); 
+          
+        }
+
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching profile:", err);
+        console.error("Error fetching data:", err);
         setError(err.message);
         setLoading(false);
       }
     };
 
-    fetchUserProfile();
+    fetchUserData();
   }, []);
+
+  
 
   const logout = (e) => {
     e.preventDefault();
@@ -114,7 +133,7 @@ export default function UserHeader() {
     router.push("/login");
   };
 
- 
+
   if (error) {
     return <div>Error: {error}</div>;
   }
@@ -226,13 +245,15 @@ export default function UserHeader() {
             <MessageSquareText className="h-8 w-8" />
           </Link>
           <div className="relative">
-  <Link href="/users/wishlist">
-    <Heart className="h-8 w-8" />
-    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-      3
-    </span>
-  </Link>
-</div>
+            <Link href="/users/wishlist">
+              <Heart className="h-8 w-8" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
+            </Link>
+          </div>
 
           {/* Avatar Popup */}
           <Sheet>

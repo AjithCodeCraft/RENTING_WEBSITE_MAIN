@@ -17,7 +17,7 @@ export const BookingDetailsDialog = ({
       <DialogContent className="sm:max-w-[600px] bg-white">
         <div className="bg-slate-50 p-4 rounded-lg mb-4 bg">
           <h3 className="font-semibold text-lg">{booking.hostelName}</h3>
-          <p className="text-sm text-muted-foreground">Room/Dormitory: {booking.roomNumber}</p>
+          <p className="text-sm text-muted-foreground">Room/Dormitory: {booking.room_number}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -62,6 +62,7 @@ from .serializers import (
     BookingSerializerReadOnly,
     CheckOwnerVerificationSerializer,
     HouseOwnerSerializer,
+    OwnerPaymentDetailsSerializer,
     PaymentSerializerReadOnly,
     UserSerializer,
     ApartmentImageSerializer,
@@ -2113,3 +2114,22 @@ def send_password_reset_email(request):
 
     except Exception as e:
         return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
+
+
+
+
+@api_view(["GET"])
+def payments_by_owner(request, owner_id):
+    """Get all payments for apartments owned by a specific owner"""
+    # Get all apartments owned by the owner
+    apartments = Apartment.objects.filter(owner_id=owner_id)
+    
+    # Get all payments made for bookings in those apartments
+    payments = Payment.objects.filter(apartment__in=apartments)\
+        .select_related("booking", "user", "apartment")\
+        .order_by("-timestamp")
+
+    total = payments.count()
+
+    serializer = OwnerPaymentDetailsSerializer(payments, many=True)
+    return Response({"total_payments": total, "payments": serializer.data})
