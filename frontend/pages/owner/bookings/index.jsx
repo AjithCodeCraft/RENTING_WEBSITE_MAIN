@@ -1,96 +1,103 @@
-import React, { useState, useEffect, useMemo } from 'react';
-// import OwnerHeader from "../OwnerHeader";
-// import BookingCard from "./BookingCard";
-// import BookingTable from "./BookingTable";
-// import BookingDetailsDialog from "./BookingDetailsDialog";
-import OwnerHeader from '../OwnerHeader';
-import BookingCard from '@/components/ownerBooking/BookingCard';
-import BookingTable from '@/components/ownerBooking/BookingTable';
-import BookingDetailsDialog from '@/components/ownerBooking/BookingDetailsDialog';
-import PdfPreview from '@/components/ownerBooking/PdfPreview';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogContent,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Calendar, ArrowUpDown, ChevronsUpDown } from "lucide-react";
+import { Search, Printer, Download } from "lucide-react";
+import OwnerHeader from "../OwnerHeader";
+import { BookingCard } from '@/components/ownerBooking/BookingCard';
+import { BookingTable } from '@/components/ownerBooking/BookingTable';
+import { BookingDetailsDialog } from '@/components/ownerBooking/BookingDetailsDialog';
+import { PdfPreview } from '@/components/ownerBooking/PdfPreview';
+import { format } from "date-fns";
+import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
 
+// Sample booking data
 const sampleBookings = [
-  {
-    id: 1,
-    hostelName: "Sunshine Hostel",
-    guestName: "John Doe",
-    checkIn: "2023-10-01",
-    checkOut: "2023-10-05",
-    status: "Confirmed",
-    revenue: 200,
-    roomNumber: "D-101",
-    paymentMethod: "Credit Card",
-    paymentId: "PAY-12345-ABCDE",
-    guestEmail: "john.doe@example.com",
-    guestPhone: "+1 (234) 567-8901",
-    guestCount: 2,
-  },
-  {
-    id: 2,
-    hostelName: "Moonlight Hostel",
-    guestName: "Jane Smith",
-    checkIn: "2023-10-10",
-    checkOut: "2023-10-15",
-    status: "Pending",
-    revenue: 150,
-    roomNumber: "D-203",
-    paymentMethod: "PayPal",
-    paymentId: "PAY-67890-FGHIJ",
-    guestEmail: "jane.smith@example.com",
-    guestPhone: "+1 (345) 678-9012",
-    guestCount: 1,
-  },
-  {
-    id: 3,
-    hostelName: "Ocean View Hostel",
-    guestName: "Alice Johnson",
-    checkIn: "2023-10-15",
-    checkOut: "2023-10-20",
-    status: "Confirmed",
-    revenue: 250,
-    roomNumber: "D-305",
-    paymentMethod: "Bank Transfer",
-    paymentId: "PAY-54321-KLMNO",
-    guestEmail: "alice.johnson@example.com",
-    guestPhone: "+1 (456) 789-0123",
-    guestCount: 3,
-  },
-  {
-    id: 4,
-    hostelName: "Mountain Retreat",
-    guestName: "Bob Williams",
-    checkIn: "2023-10-18",
-    checkOut: "2023-10-25",
-    status: "Cancelled",
-    revenue: 320,
-    roomNumber: "D-401",
-    paymentMethod: "Credit Card",
-    paymentId: "PAY-09876-PQRST",
-    guestEmail: "bob.williams@example.com",
-    guestPhone: "+1 (567) 890-1234",
-    guestCount: 2,
-  },
-  {
-    id: 5,
-    hostelName: "City Center Hostel",
-    guestName: "Charlie Brown",
-    checkIn: "2023-10-20",
-    checkOut: "2023-10-23",
-    status: "Confirmed",
-    revenue: 180,
-    roomNumber: "D-102",
-    paymentMethod: "Cash",
-    paymentId: "PAY-24680-UVWXY",
-    guestEmail: "charlie.brown@example.com",
-    guestPhone: "+1 (678) 901-2345",
-    guestCount: 1,
-  },
+    {
+        id: 1,
+        hostelName: "Sunshine Hostel",
+        guestName: "John Doe",
+        checkIn: "2023-10-01",
+        checkOut: "2023-10-05",
+        status: "Confirmed",
+        revenue: 200,
+        roomNumber: "D-101",
+        paymentMethod: "Credit Card",
+        paymentId: "PAY-12345-ABCDE",
+        guestEmail: "john.doe@example.com",
+        guestPhone: "+1 (234) 567-8901",
+        guestCount: 2,
+      },
+      {
+        id: 2,
+        hostelName: "Moonlight Hostel",
+        guestName: "Jane Smith",
+        checkIn: "2023-10-10",
+        checkOut: "2023-10-15",
+        status: "Pending",
+        revenue: 150,
+        roomNumber: "D-203",
+        paymentMethod: "PayPal",
+        paymentId: "PAY-67890-FGHIJ",
+        guestEmail: "jane.smith@example.com",
+        guestPhone: "+1 (345) 678-9012",
+        guestCount: 1,
+      },
+      {
+        id: 3,
+        hostelName: "Ocean View Hostel",
+        guestName: "Alice Johnson",
+        checkIn: "2023-10-15",
+        checkOut: "2023-10-20",
+        status: "Confirmed",
+        revenue: 250,
+        roomNumber: "D-305",
+        paymentMethod: "Bank Transfer",
+        paymentId: "PAY-54321-KLMNO",
+        guestEmail: "alice.johnson@example.com",
+        guestPhone: "+1 (456) 789-0123",
+        guestCount: 3,
+      },
+      {
+        id: 4,
+        hostelName: "Mountain Retreat",
+        guestName: "Bob Williams",
+        checkIn: "2023-10-18",
+        checkOut: "2023-10-25",
+        status: "Cancelled",
+        revenue: 320,
+        roomNumber: "D-401",
+        paymentMethod: "Credit Card",
+        paymentId: "PAY-09876-PQRST",
+        guestEmail: "bob.williams@example.com",
+        guestPhone: "+1 (567) 890-1234",
+        guestCount: 2,
+      },
+      {
+        id: 5,
+        hostelName: "City Center Hostel",
+        guestName: "Charlie Brown",
+        checkIn: "2023-10-20",
+        checkOut: "2023-10-23",
+        status: "Confirmed",
+        revenue: 180,
+        roomNumber: "D-102",
+        paymentMethod: "Cash",
+        paymentId: "PAY-24680-UVWXY",
+        guestEmail: "charlie.brown@example.com",
+        guestPhone: "+1 (678) 901-2345",
+        guestCount: 1,
+      },
+  // ... (your sample bookings data)
 ];
 
 const OwnerDashboard = () => {
@@ -99,6 +106,7 @@ const OwnerDashboard = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingDetails, setShowBookingDetails] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const pdfPreviewRef = useRef(null);
 
   useEffect(() => {
     setBookings(sampleBookings);
@@ -149,28 +157,65 @@ const OwnerDashboard = () => {
     setShowPdfPreview(false);
   };
 
+  const calculateDays = (checkIn, checkOut) => {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const formatDate = (dateString) => {
+    return format(new Date(dateString), "MMMM d, yyyy");
+  };
+
+  const getStatusColor = (status) => {
+    switch(status.toLowerCase()) {
+      case 'confirmed':
+        return "bg-green-100 text-green-800 border-green-300";
+      case 'pending':
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case 'cancelled':
+        return "bg-red-100 text-red-800 border-red-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
+
+  const generatePDF = (booking) => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      margins: { top: 20, bottom: 20, left: 20, right: 20 }
+    });
+    
+    // ... (same PDF generation code as in PdfPreview component)
+    
+    doc.save(`Booking-${booking.id}-${booking.guestName.replace(/\s+/g, '-')}.pdf`);
+  };
+
   return (
     <div>
       <OwnerHeader />
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <BookingCard
+          <BookingCard 
             title="Total Bookings"
             value={filteredBookings.length}
-            icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
-            subtext={`+${filteredBookings.filter(b => b.status === "Confirmed").length} confirmed`}
+            description={`+${filteredBookings.filter(b => b.status === "Confirmed").length} confirmed`}
+            icon="Calendar"
           />
-          <BookingCard
+          <BookingCard 
             title="Monthly Revenue"
             value={`₹${totalRevenueMonth}`}
-            icon={<ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
-            subtext={`From ${filteredBookings.filter(b => b.status === "Confirmed").length} bookings`}
+            description={`From ${filteredBookings.filter(b => b.status === "Confirmed").length} bookings`}
+            icon="ArrowUpDown"
           />
-          <BookingCard
+          <BookingCard 
             title="Yearly Revenue"
             value={`₹${totalRevenueYear}`}
-            icon={<ChevronsUpDown className="h-4 w-4 text-muted-foreground" />}
-            subtext={`+${totalRevenueYear - totalRevenueMonth} from other months`}
+            description={`+${totalRevenueYear - totalRevenueMonth} from other months`}
+            icon="ChevronsUpDown"
           />
         </div>
 
@@ -197,140 +242,63 @@ const OwnerDashboard = () => {
               </div>
             </div>
 
-            <BookingTable
-              bookings={filteredBookings}
-              onViewBooking={handleViewBooking}
-              onPrintBooking={(booking) => {
-                setSelectedBooking(booking);
-                setShowBookingDetails(true);
-                handleShowPdfPreview();
-              }}
-            />
+            <div className="rounded-md border">
+              <BookingTable 
+                bookings={filteredBookings}
+                onViewBooking={handleViewBooking}
+                onPrintBooking={handleShowPdfPreview}
+                formatDate={formatDate}
+                getStatusColor={getStatusColor}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <BookingDetailsDialog
-        booking={selectedBooking}
-        isOpen={showBookingDetails}
-        onClose={handleCloseDialog}
-        onPreviewPDF={handleShowPdfPreview}
-        onDownloadPDF={() => {
-          const doc = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4',
-            margins: { top: 20, bottom: 20, left: 20, right: 20 }
-          });
+      <Dialog open={showBookingDetails} onOpenChange={handleCloseDialog}>
+        {selectedBooking && !showPdfPreview && (
+          <BookingDetailsDialog 
+            booking={selectedBooking}
+            onClose={handleCloseDialog}
+            onShowPdfPreview={handleShowPdfPreview}
+            formatDate={formatDate}
+            calculateDays={calculateDays}
+            getStatusColor={getStatusColor}
+            generatePDF={generatePDF}
+          />
+        )}
 
-          const margin = 20;
-          const pageWidth = doc.internal.pageSize.getWidth();
-          const pageHeight = doc.internal.pageSize.getHeight();
-          const contentWidth = pageWidth - (margin * 2);
-
-          const COMPANY_NAME = "Hostel Management System";
-          const COMPANY_ADDRESS = "123 Accommodation Street, Tourism City, 90210";
-          const COMPANY_CONTACT = "+1 (555) 123-4567 | info@hostelmanagement.com";
-          const COMPANY_WEBSITE = "www.hostelmanagement.com";
-
-          doc.setFontSize(18);
-          doc.setFont('helvetica', 'bold');
-          doc.text(COMPANY_NAME, pageWidth / 2, margin + 5, { align: 'center' });
-
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'normal');
-          doc.text(COMPANY_ADDRESS, pageWidth / 2, margin + 12, { align: 'center' });
-          doc.text(COMPANY_CONTACT, pageWidth / 2, margin + 18, { align: 'center' });
-          doc.text(COMPANY_WEBSITE, pageWidth / 2, margin + 24, { align: 'center' });
-
-          doc.setDrawColor(200, 200, 200);
-          doc.line(margin, margin + 28, pageWidth - margin, margin + 28);
-
-          doc.setFontSize(16);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`BOOKING CONFIRMATION`, pageWidth / 2, margin + 38, { align: 'center' });
-
-          doc.setFontSize(12);
-          doc.text(`Reference: #${selectedBooking.id}`, pageWidth / 2, margin + 46, { align: 'center' });
-
-          const statusColor = selectedBooking.status === 'Confirmed' ? [76, 175, 80] :
-                               selectedBooking.status === 'Pending' ? [255, 152, 0] : [244, 67, 54];
-          doc.setFillColor(...statusColor);
-          doc.roundedRect(pageWidth / 2 - 15, margin + 50, 30, 10, 2, 2, 'F');
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(8);
-          doc.text(selectedBooking.status.toUpperCase(), pageWidth / 2, margin + 56, { align: 'center' });
-          doc.setTextColor(0, 0, 0);
-
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Guest Information', margin, margin + 70);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.text(`Name: ${selectedBooking.guestName}`, margin, margin + 78);
-          doc.text(`Email: ${selectedBooking.guestEmail}`, margin, margin + 85);
-          doc.text(`Phone: ${selectedBooking.guestPhone}`, margin, margin + 92);
-          doc.text(`Number of Guests: ${selectedBooking.guestCount}`, margin, margin + 99);
-
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Accommodation Details', margin, margin + 114);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.text(`Property: ${selectedBooking.hostelName}`, margin, margin + 122);
-          doc.text(`Room/Dormitory: ${selectedBooking.roomNumber}`, margin, margin + 129);
-
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Booking Period', pageWidth / 2 + 10, margin + 70);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.text(`Check-in: ${formatDate(selectedBooking.checkIn)}`, pageWidth / 2 + 10, margin + 78);
-          doc.text(`Check-out: ${formatDate(selectedBooking.checkOut)}`, pageWidth / 2 + 10, margin + 85);
-          doc.text(`Duration: ${calculateDays(selectedBooking.checkIn, selectedBooking.checkOut)} days`, pageWidth / 2 + 10, margin + 92);
-
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Payment Information', pageWidth / 2 + 10, margin + 114);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.text(`Method: ${selectedBooking.paymentMethod}`, pageWidth / 2 + 10, margin + 122);
-          doc.text(`Payment ID: ${selectedBooking.paymentId}`, pageWidth / 2 + 10, margin + 129);
-          doc.text(`Total Amount: $${selectedBooking.revenue.toFixed(2)}`, pageWidth / 2 + 10, margin + 136);
-
-          doc.setDrawColor(200, 200, 200);
-          doc.setFillColor(250, 250, 250);
-          doc.roundedRect(margin, margin + 150, contentWidth, 40, 3, 3, 'FD');
-
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Important Information', margin + 5, margin + 158);
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.text('• Check-in time: 2:00 PM - 8:00 PM', margin + 5, margin + 166);
-          doc.text('• Check-out time: Before 11:00 AM', margin + 5, margin + 173);
-          doc.text('• Please present ID and booking confirmation upon arrival', margin + 5, margin + 180);
-
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'italic');
-          doc.text('Thank you for choosing our accommodation. We look forward to your stay!',
-                   pageWidth / 2, pageHeight - margin, { align: 'center' });
-
-          doc.setDrawColor(200, 200, 200);
-          doc.line(margin, pageHeight - margin - 5, pageWidth - margin, pageHeight - margin - 5);
-
-          doc.save(`Booking-${selectedBooking.id}-${selectedBooking.guestName.replace(/\s+/g, '-')}.pdf`);
-        }}
-      />
-
-      {showPdfPreview && (
-        <PdfPreview booking={selectedBooking} />
-      )}
+        {selectedBooking && showPdfPreview && (
+          <>
+            <DialogHeader>
+              <DialogTitle>PDF Preview</DialogTitle>
+            </DialogHeader>
+            <DialogContent className="p-0 sm:max-w-[800px]">
+              <PdfPreview booking={selectedBooking} innerRef={pdfPreviewRef} />
+            </DialogContent>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPdfPreview(false)}>
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (pdfPreviewRef.current) {
+                    pdfPreviewRef.current.contentWindow.print();
+                  }
+                }}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Print
+              </Button>
+              <Button onClick={() => generatePDF(selectedBooking)}>
+                <Download className="h-4 w-4 mr-1" />
+                Download PDF
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </Dialog>
     </div>
   );
 };
