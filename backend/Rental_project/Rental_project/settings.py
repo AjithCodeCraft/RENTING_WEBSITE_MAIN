@@ -20,7 +20,7 @@ from firebase_admin import credentials
 from datetime import timedelta
 
 # Path to your Firebase credentials JSON file
-FIREBASE_CREDENTIALS_PATH = r"../rentinghostels-firebase-adminsdk-fbsvc-926a7d2725.json"
+FIREBASE_CREDENTIALS_PATH = r"../rentinghostels-firebase-adminsdk-fbsvc-3311ee8fee.json"
 
 # Initialize Firebase if not already initialized
 if not firebase_admin._apps:
