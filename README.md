@@ -77,4 +77,4 @@ The frontend communicates with the backend API to fetch and manage rental listin
 
 ## License
 
-This project is licensed under AJITh S
+This project is licensed under AJITH S
