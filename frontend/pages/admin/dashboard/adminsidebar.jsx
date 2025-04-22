@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetTrigger } from '../../../components/ui/sheet'
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from "framer-motion";
+import Cookies from 'js-cookie';
 
 const AdminLayout = ({ children }) => {
   const router = useRouter();
@@ -26,7 +27,7 @@ const AdminLayout = ({ children }) => {
   ];
 
   const logout = () => {
-    localStorage.removeItem("access_token");
+    Cookies.remove("access_token");
     router.push("/admin/login");
   };
 

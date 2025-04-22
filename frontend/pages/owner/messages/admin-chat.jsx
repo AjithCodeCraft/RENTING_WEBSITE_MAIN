@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import Cookies from 'js-cookie';
+
 
 function AdminChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -25,11 +27,10 @@ function AdminChatInterface() {
 
   // Fetch owner ID from localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const ownerIdFromStorage = localStorage.getItem("owner_id_number");
-      setOwnerIdNumber(ownerIdFromStorage);
-    }
-  }, []);
+    
+    const ownerIdFromStorage = Cookies.get("owner_id_number");
+    setOwnerIdNumber(ownerIdFromStorage);
+    }, []);
 
   // Initialize the worker
   useEffect(() => {
@@ -51,7 +52,7 @@ function AdminChatInterface() {
     workerRef.current.postMessage({
       type: "start",
       ownerId: ownerIdNumber,
-      accessToken: localStorage.getItem("access_token_owner"),
+      accessToken: Cookies.get("access_token_owner"),
     });
 
     // Clean up on unmount
@@ -65,35 +66,50 @@ function AdminChatInterface() {
 
   // Process new messages
   const processNewMessages = (data) => {
+    // Safeguard check
+    if (!Array.isArray(data)) {
+      console.warn("Expected an array, but got:", data);
+      setIsLoading(false);
+      return;
+    }
+  
     const groupedMessages = {};
     const uniqueContactIds = new Set();
-
+  
     data.forEach((message) => {
       const contactId = message.sender === parseInt(ownerIdNumber) ? message.receiver : message.sender;
       uniqueContactIds.add(contactId);
-
+  
       if (!groupedMessages[contactId]) {
         groupedMessages[contactId] = [];
       }
-
+  
       groupedMessages[contactId].push({
         ...message,
         timestamp: message.timestamp || new Date().toISOString(),
         isSentByCurrentUser: parseInt(message.sender) === parseInt(ownerIdNumber),
       });
     });
-
-    // Sort messages by timestamp
+  
+      // Sort messages by timestamp
     Object.keys(groupedMessages).forEach((contactId) => {
       groupedMessages[contactId].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     });
 
     // Update state
     setMessages(groupedMessages);
-    setContacts(Array.from(uniqueContactIds).filter((id) => parseInt(id) !== parseInt(ownerIdNumber)));
-    fetchUserNames(Array.from(uniqueContactIds));
-    setIsLoading(false);
+    const contactArray = Array.from(uniqueContactIds).filter(
+      (id) => parseInt(id) !== parseInt(ownerIdNumber)
+    );
+    setContacts(contactArray);
+
+    if (contactArray.length > 0) {
+      fetchUserNames(contactArray);
+    }
+
+    setIsLoading(false); // always stop loading here
   };
+  
 
   // Fetch user names
   const fetchUserNames = async (userIds) => {
@@ -101,7 +117,7 @@ function AdminChatInterface() {
     const fetchPromises = userIds.map((userId) => {
       if (!names[userId]) {
         return fetch(`http://127.0.0.1:8000/api/get_user_details/${userId}/`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("access_token_owner")}` },
+          headers: { Authorization: `Bearer ${Cookies.get("access_token_owner")}` },
         })
           .then((response) => response.json())
           .then((data) => {
@@ -130,7 +146,7 @@ function AdminChatInterface() {
     if (!newMessage.trim() || !selectedContactId) return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_owner");
+      const accessToken = Cookies.get("access_token_owner");
       const receiverId = parseInt(selectedContactId);
 
       // Optimistically add message to UI

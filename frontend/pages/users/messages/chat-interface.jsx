@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import Cookies from 'js-cookie';
 
 function UserChatInterface() {
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -27,7 +28,7 @@ function UserChatInterface() {
   // Fetch user ID from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const userIdFromStorage = localStorage.getItem("user_id_number");
+      const userIdFromStorage = Cookies.get("user_id_number");
       setUserId(userIdFromStorage);
     }
   }, []);
@@ -37,7 +38,7 @@ function UserChatInterface() {
     if (!userId) return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       const response = await fetch(`http://127.0.0.1:8000/api/get_messages/user/${userId}/`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -63,7 +64,7 @@ function UserChatInterface() {
 
     for (const ownerId of ownerIds) {
       try {
-        const accessToken = localStorage.getItem("access_token_user");
+        const accessToken = Cookies.get("access_token_user");
         const response = await fetch(`http://127.0.0.1:8000/api/apartment/by-owner/${ownerId}/`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -90,7 +91,7 @@ function UserChatInterface() {
     if (!userId || !selectedContactId) return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       const response = await fetch(
         `http://127.0.0.1:8000/api/chat/get-all-send-received-messages-with/${selectedContactId}`,
         {
@@ -140,7 +141,7 @@ function UserChatInterface() {
     }
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       const response = await fetch(
         `http://127.0.0.1:8000/api/chat/get-all-send-received-messages-with/${selectedContactId}`,
         {
@@ -176,7 +177,7 @@ function UserChatInterface() {
     if (!userId || !selectedContactId) return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       const response = await fetch(
         `http://127.0.0.1:8000/api/chat/get-all-send-received-messages-with/${selectedContactId}`,
         {
@@ -247,7 +248,7 @@ function UserChatInterface() {
     if (newMessage.trim() === "" || !selectedContactId) return;
 
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       const receiverId = Number(selectedContactId);
 
       // Optimistically add the message to UI first for immediate feedback

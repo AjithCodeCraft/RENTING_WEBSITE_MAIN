@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import Cookies from 'js-cookie';
 import {
   Sheet,
   SheetClose,
@@ -91,7 +92,7 @@ export default function UserHeader() {
           "http://127.0.0.1:8000/api/user/profile",
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
+              Authorization: `Bearer ${Cookies.get("access_token_user")}`,
             },
           },
         );
@@ -101,7 +102,7 @@ export default function UserHeader() {
         });
 
         // Fetch wishlist count
-        const accessToken = localStorage.getItem("access_token_user");
+        const accessToken = Cookies.get("access_token_user");
         if (accessToken) {
           const wishlistResponse = await axios.get(
             "http://localhost:8000/api/wishlist/get-item",
@@ -129,7 +130,7 @@ export default function UserHeader() {
 
   const logout = (e) => {
     e.preventDefault();
-    localStorage.removeItem("access_token_user");
+    Cookies.remove("access_token_user");
     router.push("/login");
   };
 

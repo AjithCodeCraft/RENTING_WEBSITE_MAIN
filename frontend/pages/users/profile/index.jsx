@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import UserHeader from "../UserHeader";
+import Cookies from 'js-cookie';
 
 export default function ProfilePage() {
   const [user, setUser] = useState({
@@ -35,7 +36,7 @@ export default function ProfilePage() {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/user/profile", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
+            Authorization: `Bearer ${Cookies.get("access_token_user")}`,
           },
         });
         console.log("API Response:", response.data); // Debugging: Log the response
@@ -109,11 +110,10 @@ export default function ProfilePage() {
         formData,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token_user")}`,
+            Authorization: `Bearer ${Cookies.get("access_token_user")}`,
           },
         }
       );
-      console.log("Profile Updated:", response.data); // Debugging: Log the update response
       setUser(response.data);
       setIsEditing(false);
       setError(null); // Clear any previous errors
@@ -229,22 +229,7 @@ export default function ProfilePage() {
            
           </CardContent>
 
-          {/* Edit Profile Button */}
-          <CardFooter className="flex justify-end p-8">
-            {isEditing ? (
-              <div className="flex gap-4">
-                <Button variant="outline" onClick={handleCancelClick}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveClick}>Save Changes</Button>
-              </div>
-            ) : (
-              <Button onClick={handleEditClick}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-            )}
-          </CardFooter>
+          
         </Card>
       </main>
     </div>

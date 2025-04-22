@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import UserHeader from '../UserHeader';
+import Cookies from 'js-cookie';
 
 const hexToBase64 = (hex) => {
   const bytes = new Uint8Array(hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
@@ -30,7 +31,7 @@ const WishlistPage = () => {
 
   const fetchWishlist = useCallback(async () => {
     try {
-      const accessToken = localStorage.getItem("access_token_user");
+      const accessToken = Cookies.get("access_token_user");
       if (!accessToken) throw new Error("No access token found");
 
       const wishlistResponse = await fetch('http://localhost:8000/api/wishlist/get-item', {
@@ -137,7 +138,7 @@ const WishlistPage = () => {
         {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token_user')}`,
+            'Authorization': `Bearer ${Cookies.get('access_token_user')}`,
             'Content-Type': 'application/json'
           }
         }

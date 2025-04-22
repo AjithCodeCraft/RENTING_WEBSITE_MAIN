@@ -10,6 +10,7 @@ import axios from 'axios';
 import useLoginValidation from '@/hooks/useLoginValidation';
 import { Spinner } from '@/components/ui/Spinner';
 import { motion } from "framer-motion";
+import Cookies from 'js-cookie';
 
 export default function AdminLogin({ className, ...props }) {
   const [email, setEmail] = useState('');
@@ -51,7 +52,7 @@ export default function AdminLogin({ className, ...props }) {
         }
       });
 
-      localStorage.setItem("access_token", response.data.access);
+      Cookies.set("access_token", response.data.access);
       route.push("/admin/dashboard");
     } catch(error) {
       setErrorMessage(error.response?.data?.error || "An error occurred. Please try again.");

@@ -21,6 +21,8 @@ import { PdfPreview } from '@/components/ownerBooking/PdfPreview';
 import { format } from "date-fns";
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
+import Cookies from 'js-cookie';
+
 
 const OwnerDashboard = () => {
   const [bookings, setBookings] = useState([]);
@@ -34,7 +36,7 @@ const OwnerDashboard = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const ownerId = localStorage.getItem('owner_id_number');
+        const ownerId = Cookies.get('owner_id_number');
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const response = await axios.get(`${apiUrl}/owner/${ownerId}/payments/`);
         const payments = response.data.payments;

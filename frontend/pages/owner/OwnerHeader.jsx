@@ -21,6 +21,8 @@ import { useEffect, useState } from "react";
 import { abortController } from ".";
 import Image from "next/image";
 import axios from "axios";
+import Cookies from 'js-cookie';
+
 
 export default function OwnerHeader() {
   // Removed duplicate declaration of router
@@ -31,7 +33,7 @@ export default function OwnerHeader() {
   const logout = (e) => {
     e.preventDefault();
     abortController.abort();
-    localStorage.removeItem("access_token_owner");
+    Cookies.remove("access_token_owner");
     router.push("/login");
   };
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function OwnerHeader() {
           "http://127.0.0.1:8000/api/user/profile",
           {
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
+              Authorization: `Bearer ${Cookies.get("access_token_owner")}`,
             },
           },
         );

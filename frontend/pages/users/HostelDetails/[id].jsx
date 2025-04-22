@@ -15,6 +15,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import usePaymentConfirmation from "@/hooks/usePaymentConfirmation";
 import axios from "axios";
 import { useRouter } from "next/router";
+import Cookies from 'js-cookie';
 
 
 const DEFAULT_THUMBNAIL = "/default-image.jpg";
@@ -116,7 +117,7 @@ const HostelDetails = () => {
 
       const fetchApartmentDetails = async () => {
          try {
-            const accessToken = localStorage.getItem("access_token_user");
+            const accessToken = Cookies.get("access_token_user");
             if (!accessToken) {
                throw new Error("No access token found");
             }
@@ -176,7 +177,7 @@ const HostelDetails = () => {
 
             if (ownerData.success) {
                // Store owner information in localStorage
-               localStorage.setItem("selected_owner_id", ownerData.user.id);
+               Cookies.set("selected_owner_id", ownerData.user.id);
             } else {
                console.error("Failed to get owner details:", ownerData.error);
             }
@@ -212,7 +213,7 @@ const HostelDetails = () => {
 
    useEffect(() => {
       const checkWishlist = async () => {
-         const token = localStorage.getItem("access_token_user");
+         const token = Cookies.get("access_token_user");
    
          if (!apartment_id || !token) {
             console.log("Apartment ID or token is missing.");
@@ -253,8 +254,8 @@ const HostelDetails = () => {
 
    useEffect(() => {
       // This code runs only on the client side
-      const lat = parseFloat(localStorage.getItem("user_lat"));
-      const lng = parseFloat(localStorage.getItem("user_lng"));
+      const lat = parseFloat(Cookies.get("user_lat"));
+      const lng = parseFloat(Cookies.get("user_lng"));
       setUserLocation({ lat, lng });
    }, []);
 
@@ -268,8 +269,8 @@ const HostelDetails = () => {
    };
 
    const handleAddToWishlist = async () => {
-      const apartmentId = localStorage.getItem("apartment_id");
-      const token = localStorage.getItem("access_token_user");
+      const apartmentId = Cookies.get("apartment_id");
+      const token = Cookies.get("access_token_user");
 
       if (!apartmentId || !token) {
          setModalMessage("Missing apartment ID or token");
@@ -305,8 +306,8 @@ const HostelDetails = () => {
       if (!message || message.trim() === "") return;
 
       try {
-         const accessToken = localStorage.getItem("access_token_user");
-         const receiverId = Number(localStorage.getItem("selected_owner_id"));
+         const accessToken = Cookies.get("access_token_user");
+         const receiverId = Number(Cookies.get("selected_owner_id"));
 
          if (isNaN(receiverId)) {
             console.error("Invalid receiver ID");
@@ -390,8 +391,8 @@ const HostelDetails = () => {
          const expiryDate = addDays(startDate, 30);
          const amount = calculateTotalAmount();
 
-         const accessToken = localStorage.getItem("access_token_user");
-         const user_id = localStorage.getItem("user_id_number");
+         const accessToken = Cookies.get("access_token_user");
+         const user_id = Cookies.get("user_id_number");
 
          const bookingResponse = await fetch("http://127.0.0.1:8000/api/booking/create/", {
             method: "POST",

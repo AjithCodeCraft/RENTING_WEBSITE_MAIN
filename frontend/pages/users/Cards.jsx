@@ -24,6 +24,7 @@ const HOSTEL_ICON_URL = "/hostel.png"; // Ensure the path is correct
 const USER_ICON_URL = "/user.png"; // Ensure the path is correct
 const ITEMS_PER_PAGE = 9; // Number of hostels per page
 const DEFAULT_THUMBNAIL = "/default-image.jpg"; // Default thumbnail image
+import Cookies from 'js-cookie';
 
 const createCustomMarker = (iconUrl, size = [30, 30]) => {
     const el = document.createElement("div");
@@ -86,7 +87,7 @@ const UserHostels = () => {
     
         const fetchHostels = async () => {
             try {
-                const accessToken = localStorage.getItem("access_token_user");
+                const accessToken = Cookies.get("access_token_user");
                 if (!accessToken) throw new Error("No access token found");
     
                 // Fetch hostels
@@ -197,8 +198,8 @@ const UserHostels = () => {
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setUserLocation({ lat: latitude, lng: longitude });
-                    localStorage.setItem("user_lat", latitude);
-                    localStorage.setItem("user_lng", longitude);
+                    Cookies.set("user_lat", latitude);
+                    Cookies.set("user_lng", longitude);
                     const userMarker = new maplibregl.Marker({ element: createCustomMarker(USER_ICON_URL, [35, 35]) })
                         .setLngLat([longitude, latitude])
                         .setPopup(new maplibregl.Popup().setText("Your Location"))
@@ -277,7 +278,7 @@ const UserHostels = () => {
         } else if (tapCount === 1) {
             clearTimeout(tapTimeout);
             setTapCount(0);
-            localStorage.setItem("apartment_id", hostel.apartment_id);
+            Cookies.set("apartment_id", hostel.apartment_id);
             router.push(`/users/HostelDetails/${hostel.apartment_id}`);
         }
     };

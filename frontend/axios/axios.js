@@ -1,4 +1,6 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
+
 
 const axiosInstance = axios.create({
   baseURL: 'http://127.0.0.1:8000/api/', // Replace with your API base URL
@@ -12,7 +14,7 @@ axiosInstance.interceptors.request.use(
   function (config) {
     // Do something before the request is sent
     // For example, add an authentication token to the headers
-    const token = localStorage.getItem('authToken'); // Retrieve auth token from localStorage
+    const token = Cookies.get('authToken'); // Retrieve auth token from localStorage
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

@@ -9,6 +9,8 @@ import Router from "next/router";
 import { Spinner } from '@/components/ui/Spinner';
 import { motion } from "framer-motion";
 import axios from 'axios';
+import Cookies from 'js-cookie';
+
 
 export default function LoginPage({ className, ...props }) {
   // Login form state
@@ -49,20 +51,20 @@ export default function LoginPage({ className, ...props }) {
       }
 
       // Store tokens and user data
-      sessionStorage.setItem("access_token", data.access);
-      localStorage.setItem("user_type", data.user_type);
-      localStorage.setItem("email", email);
+      
+      Cookies.set("user_type", data.user_type);
+      Cookies.set("email", email);
 
       // Redirect based on user type
       if (data.user_type === "owner") {
-        localStorage.setItem("access_token_owner", data.access);
-        localStorage.setItem("owner_id", data.user_id);
-        localStorage.setItem("owner_id_number", data.id);
+        Cookies.set("access_token_owner", data.access);
+        Cookies.set("owner_id", data.user_id);
+        Cookies.set("owner_id_number", data.id);
         Router.push("/owner");
       } else if (data.user_type === "seeker") {
-        localStorage.setItem("access_token_user", data.access);
-        localStorage.setItem("user_id", data.user_id);
-        localStorage.setItem("user_id_number", data.id);
+        Cookies.set("access_token_user", data.access);
+        Cookies.set("user_id", data.user_id);
+        Cookies.set("user_id_number", data.id);
         Router.push("/users");
       }
     } catch (error) {

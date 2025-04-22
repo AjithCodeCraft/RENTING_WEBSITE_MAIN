@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import UserHeader from "../UserHeader";
 import FooterSection from "../footerSection";
+import Cookies from 'js-cookie';
 
 const DEFAULT_THUMBNAIL = "/default-hostel.jpg"; // Default thumbnail image
 
@@ -21,7 +22,7 @@ export function HostelCards() {
   useEffect(() => {
     const fetchHostelsAndImages = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token_user");
+        const accessToken = Cookies.get("access_token_user");
         if (!accessToken) {
           throw new Error("No access token found");
         }
@@ -42,7 +43,7 @@ export function HostelCards() {
         }
 
         const hostelsData = await hostelsResponse.json();
-        console.log("Hostels data:", hostelsData);
+        
         setHostels(hostelsData);
 
         // Fetch images for each hostel concurrently
@@ -58,7 +59,7 @@ export function HostelCards() {
             }
             
             const imagesData = await imagesResponse.json();
-            console.log(`Images data for hostel ${hostel.apartment_id}:`, imagesData);
+            
 
             if (imagesData.images && imagesData.images.length > 0) {
               images[hostel.apartment_id] = imagesData.images;
@@ -78,7 +79,7 @@ export function HostelCards() {
         setError(error.message);
 
         if (error.message.includes("Unauthorized")) {
-          localStorage.removeItem("access_token_user");
+          Cookies.remove("access_token_user");
           window.location.href = "/login";
         }
       } finally {
@@ -99,8 +100,8 @@ export function HostelCards() {
 
   // Handle card tap
   const handleHostelCardTap = (hostel) => {
-    localStorage.setItem("apartment_name", hostel.title);
-    localStorage.setItem("apartment_id", hostel.apartment_id);
+    Cookies.set("apartment_name", hostel.title);
+    Cookies.set("apartment_id", hostel.apartment_id);
     console.log("Stored owner_id:", hostel.owner);
 
     router.push(`/users/HostelDetails/${hostel.apartment_id}`);

@@ -33,6 +33,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { motion } from "framer-motion";
+import Cookies from 'js-cookie';
+
 
 const Signup = () => {
   const router = useRouter();
@@ -149,20 +151,20 @@ const Signup = () => {
         const loginData = await loginResponse.json();
 
         if (loginResponse.ok) {
-          localStorage.setItem("user_type", loginData.user_type);
-          localStorage.setItem("email", email);
-          localStorage.setItem("id", data.id);
+          Cookies.set("user_type", loginData.user_type);
+          Cookies.set("email", email);
+          Cookies.set("id", data.id);
 
           const auth = getAuth();
           await signInWithEmailAndPassword(auth, email, password);
 
           // Redirect based on user type
           if (loginData.user_type === "owner") {
-            localStorage.setItem("access_token_owner", loginData.access);
-            localStorage.setItem("owner_id", data.user_id);
+            Cookies.set("access_token_owner", loginData.access, { expires: 1 });
+            Cookies.set("owner_id", data.user_id);
             router.push("/addapp");
           } else {
-            localStorage.setItem("user_id", data.user_id);
+            Cookies.set("user_id", data.user_id);
             router.push("/login");
           }
         } else {
@@ -170,7 +172,7 @@ const Signup = () => {
         }
 
       } else {
-        setErrorMessage(data.message || "Signup failed. Please try again.");
+        setErrorMessage(data.message || "Email or phone already exists");
       }
     } catch (error) {
       setErrorMessage("An error occurred. Please try again.");

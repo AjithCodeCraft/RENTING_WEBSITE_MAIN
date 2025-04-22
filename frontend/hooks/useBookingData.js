@@ -1,5 +1,6 @@
 import axios from "axios";
 import React, { useEffect } from "react";
+import Cookies from 'js-cookie';
 
 const useBookingData = (setBookingData, setLoading) => {
   const setData = (data) => {
@@ -39,7 +40,7 @@ const useBookingData = (setBookingData, setLoading) => {
   };
 
   useEffect(() => {
-    const userId = localStorage.getItem("user_id_number");
+    const userId = Cookies.get("user_id_number");
     fetchBookingData(userId);
   }, []);
 };

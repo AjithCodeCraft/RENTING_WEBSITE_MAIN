@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import OwnerHeader from "../OwnerHeader";
+import Cookies from 'js-cookie';
 
 export default function ProfilePage() {
   const [user, setUser] = useState({
@@ -35,10 +36,10 @@ export default function ProfilePage() {
       try {
         const response = await axios.get("http://127.0.0.1:8000/api/user/profile", {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
+            Authorization: `Bearer ${Cookies.get("access_token_owner")}`,
           },
         });
-        console.log("API Response:", response.data); // Debugging: Log the response
+
         setUser(response.data);
         setFormData({
           bio: response.data.bio || "",
@@ -109,11 +110,11 @@ export default function ProfilePage() {
         formData,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
+            Authorization: `Bearer ${Cookies.get("access_token_owner")}`,
           },
         }
       );
-      console.log("Profile Updated:", response.data); // Debugging: Log the update response
+      
       setUser(response.data);
       setIsEditing(false);
       setError(null); // Clear any previous errors
@@ -226,31 +227,10 @@ export default function ProfilePage() {
               <p className="text-[#86909c]">{user.phone}</p>
             </div>
 
-            {/* Location Section */}
-            <div className="mb-8">
-              <h3 className="text-xl font-semibold text-[#3e435d] mb-4">Location</h3>
-              <p className="text-[#86909c]">
-                Latitude: {user.latitude || "Not provided"}, Longitude: {user.longitude || "Not provided"}
-              </p>
-            </div>
+            
           </CardContent>
 
-          {/* Edit Profile Button */}
-          <CardFooter className="flex justify-end p-8">
-            {isEditing ? (
-              <div className="flex gap-4">
-                <Button variant="outline" onClick={handleCancelClick}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveClick}>Save Changes</Button>
-              </div>
-            ) : (
-              <Button onClick={handleEditClick}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-            )}
-          </CardFooter>
+          
         </Card>
       </main>
     </div>

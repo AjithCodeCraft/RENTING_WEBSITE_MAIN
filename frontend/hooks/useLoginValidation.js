@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
+import Cookies from 'js-cookie';
 
 const useLoginValidation = async (setLoading, redirectToIfLoggedIn) => {
    const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -27,7 +28,7 @@ const useLoginValidation = async (setLoading, redirectToIfLoggedIn) => {
    };
 
    useEffect(() => {
-      const token = localStorage.getItem("access_token");
+      const token = Cookies.get("access_token");
       if (token) validateLogin(token);
       else {
          if (route.pathname != "/admin/login") {

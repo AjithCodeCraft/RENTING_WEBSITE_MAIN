@@ -6,6 +6,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import axios from "axios";
 import useApartmentStore from "@/store/apartmentStore";
 import { ownerDocument } from "@mui/material";
+import Cookies from 'js-cookie';
 
 const PendingApprovalsList = ({
   limit, setPendingCount, updateTotalApartmentCount
@@ -28,7 +29,7 @@ const PendingApprovalsList = ({
     try {
       const response = await axios.get(API_URL, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${Cookies.get("access_token")}`,
           "Content-Type": "application/json",
         },
         withCredentials: true,
@@ -69,7 +70,7 @@ const PendingApprovalsList = ({
     try {
       await axios.delete(API_URL, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${Cookies.get("access_token")}`,
         },
         withCredentials: true,
       });
@@ -85,7 +86,7 @@ const PendingApprovalsList = ({
     try {
       await axios.patch(API_URL, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${Cookies.get("access_token")}`,
           "Content-Type": "application/json",
         },
         withCredentials: true,

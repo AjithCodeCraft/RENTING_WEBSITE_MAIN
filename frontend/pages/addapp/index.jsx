@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import OwnerHeader from "../owner/OwnerHeader";
+import Cookies from "js-cookie";
+
 
 export default function AddApartmentForm() {
   const router = useRouter();
@@ -56,7 +58,7 @@ export default function AddApartmentForm() {
   // Check verification status on component mount
   useEffect(() => {
     const checkVerificationStatus = async () => {
-      const accessToken = localStorage.getItem("access_token_owner");
+      const accessToken = Cookies.get("access_token_owner");
       if (!accessToken) {
         setErrorMessage("Authentication token not found");
         return;
@@ -69,7 +71,7 @@ export default function AddApartmentForm() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ email: localStorage.getItem("email") }),
+          body: JSON.stringify({ email: Cookies.get("email") }),
         });
 
         const data = await response.json();
@@ -98,7 +100,7 @@ export default function AddApartmentForm() {
     }
 
     try {
-      const accessToken = localStorage.getItem("access_token_owner");
+      const accessToken = Cookies.get("access_token_owner");
       if (!accessToken) {
         setErrorMessage("Authentication token not found");
         return;
@@ -129,7 +131,7 @@ export default function AddApartmentForm() {
 
   // Handle form submission
   const onSubmit = async (data) => {
-    const accessToken = localStorage.getItem("access_token_owner");
+    const accessToken = Cookies.get("access_token_owner");
     if (!accessToken) {
       setErrorMessage("Authentication token not found");
       return;
@@ -192,7 +194,7 @@ export default function AddApartmentForm() {
 
   // Upload image to the server
   const uploadImage = async (file, apartmentId) => {
-    const accessToken = localStorage.getItem("access_token_owner");
+    const accessToken = Cookies.get("access_token_owner");
     if (!accessToken) {
       setErrorMessage("Authentication token not found");
       return;

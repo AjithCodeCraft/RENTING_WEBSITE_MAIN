@@ -21,6 +21,8 @@ import { ImageSourceMLGL } from "@maptiler/sdk";
 import { useWatch } from "react-hook-form";
 import axios from "axios";
 import ConfimationPopup, { Popup } from "@/components/Popup";
+import Cookies from 'js-cookie';
+
 
 export default function hostelUpdate() {
     const router = useRouter();
@@ -106,7 +108,7 @@ export default function hostelUpdate() {
     }, [watchFields]);
 
     useEffect(() => {
-        access.current = localStorage.getItem("access_token_owner");
+        access.current = Cookies.get("access_token_owner");
     }, []);
 
     // Handle food selection

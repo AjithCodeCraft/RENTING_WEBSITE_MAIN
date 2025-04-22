@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Cookies from 'js-cookie';
+
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -43,7 +45,7 @@ export default function OwnerHome() {
   async function callApi(url) {
     const response = await axios.get(`${API_URL}${url}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token_owner")}`,
+        Authorization: `Bearer ${Cookies.get("access_token_owner")}`,
         "Content-Type": "application/json",
       },
       withCredentials: true,
@@ -60,8 +62,6 @@ export default function OwnerHome() {
       setOwnedApartments(response_total_aparment.data.apartments);
       const response_total_booking = await callApi(`/get-all-received-booking`);
       setBookings(response_total_booking.data);
-      const response_notification = await callApi("/get-notifications/");
-      setNotifications(response_notification.data);
       const response_pending = await callApi(`/pending_apartments_for_owner/`);
       const data = response_pending.data.filter(
         (item) => item.owner === Number(ownerId.current)
@@ -83,7 +83,7 @@ export default function OwnerHome() {
   }
 
   useEffect(() => {
-    ownerId.current = localStorage.getItem("owner_id_number");
+    ownerId.current = Cookies.get("owner_id_number");
     fetchData();
   }, []);
 

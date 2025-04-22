@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import Cookies from 'js-cookie';
+
 
 const withAuth = (WrappedComponent) => {
   return function AuthComponent(props) {
@@ -8,7 +10,7 @@ const withAuth = (WrappedComponent) => {
     const router = useRouter();
 
     useEffect(() => {
-      const token = localStorage.getItem("access_token");
+      const token = Cookies.get("access_token");
 
       if (!token) {
         router.replace("/login"); // Redirect to login if not authenticated

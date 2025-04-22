@@ -16,6 +16,8 @@ import Link from "next/link";
 import OwnerHeader from "../OwnerHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useRouter } from "next/router";
+import Cookies from 'js-cookie';
+
 
 const DEFAULT_ZOOM = 7;
 const CLOSE_ZOOM = 13.5;
@@ -65,7 +67,7 @@ const OwnerHostels = () => {
   useEffect(() => {
     const fetchPendingApartments = async () => {
       try {
-        const accessToken = localStorage.getItem("access_token_owner");
+        const accessToken = Cookies.get("access_token_owner");
         if (!accessToken) {
           throw new Error("No access token found");
         }

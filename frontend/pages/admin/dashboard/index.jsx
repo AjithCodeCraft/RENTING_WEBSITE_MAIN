@@ -33,6 +33,7 @@ import { useRouter } from "next/router";
 import { Spinner } from "@/components/ui/Spinner";
 import useLoginValidation from "@/hooks/useLoginValidation";
 import { ISOLanguage } from "@maptiler/client";
+import Cookies from 'js-cookie';
 
 const AdminDashboard = () => {
   const route = useRouter();
@@ -72,7 +73,7 @@ const AdminDashboard = () => {
     try {
       const response = await axios.get(`${API_URL}/get-users`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          Authorization: `Bearer ${Cookies.get("access_token")}`,
           "Content-Type": "application/json",
         },
         withCredentials: true,
