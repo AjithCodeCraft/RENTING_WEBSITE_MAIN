@@ -10,6 +10,15 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import OwnerHeader from "../owner/OwnerHeader";
 import Cookies from "js-cookie";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Clipboard, ClipboardCheck } from "lucide-react";
 
 
 export default function AddApartmentForm() {
@@ -20,6 +29,12 @@ export default function AddApartmentForm() {
   const [imageFiles, setImageFiles] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
   const [selectedFood, setSelectedFood] = useState([]);
+  const [generatedDescription, setGeneratedDescription] = useState("");
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showMissingFieldsDialog, setShowMissingFieldsDialog] = useState(false);
+  const [missingFields, setMissingFields] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const {
     register,
@@ -44,6 +59,7 @@ export default function AddApartmentForm() {
     "longitude",
     "hostel_type",
     "duration",
+    "food",
   ]);
 
   // Check if all required fields are filled
@@ -230,7 +246,7 @@ export default function AddApartmentForm() {
     }
   };
 
-  // Handle file upload
+  // Handle file change
   const handleFileChange = (e) => {
     const files = e.target.files;
     setImageFiles([...imageFiles, ...files]); // Store the selected files in state for preview
@@ -246,264 +262,415 @@ export default function AddApartmentForm() {
     setValue("food", updatedFood); // Update the form value
   };
 
+  // Check if required fields for description generation are filled
+  const canGenerateDescription = () => {
+    const requiredFields = [
+      "title",
+      "rent",
+      "bhk",
+      "room_sharing_type",
+      "available_beds",
+      "total_beds",
+      "food",
+      "location"
+    ];
+    
+    const missing = [];
+    
+    requiredFields.forEach(field => {
+      const value = watch(field);
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        missing.push(field);
+      }
+    });
+    
+    setMissingFields(missing);
+    return missing.length === 0;
+  };
+
+  // Handle generate description button click
+  const handleGenerateDescription = async () => {
+    if (!canGenerateDescription()) {
+      setShowMissingFieldsDialog(true);
+      return;
+    }
+    
+    setIsGenerating(true);
+    setErrorMessage("");
+    
+    try {
+      const response = await fetch("http://localhost:8000/api/generate-description/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: watch("title"),
+          rent: watch("rent"),
+          bhk: watch("bhk"),
+          room_sharing_type: watch("room_sharing_type"),
+          available_beds: watch("available_beds"),
+          total_beds: watch("total_beds"),
+          food: watch("food"),
+          location: watch("location"),
+          hostel_type: watch("hostel_type"),
+          duration: watch("duration"),
+          parking_available: watch("parking_available")
+        }),
+      });
+  
+      const data = await response.json();
+      
+      if (response.ok) {
+        setGeneratedDescription(data.description);
+        setShowGenerateDialog(true);
+      } else {
+        setErrorMessage(data.error || "Failed to generate description");
+      }
+    } catch (error) {
+      setErrorMessage("Network error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(generatedDescription);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  // Apply generated description to form
+  const applyGeneratedDescription = () => {
+    setValue("description", generatedDescription);
+    setShowGenerateDialog(false);
+  };
+
   return (
     <>
-    <header className="sticky top-0 z-50 bg-white shadow-md">
-      <OwnerHeader />
-    </header>
-    <div className="max-w-3xl mx-auto my-8">
-      {!isVerified && (
-        <div className="mb-4">
-          <Label htmlFor="aadharNumber">Aadhar Number</Label>
-          <Input id="aadharNumber" {...register("aadharNumber")} placeholder="Enter 12-digit Aadhar number" />
-          <Button onClick={handleValidate} className="mt-2">Validate</Button>
-          {isVerified && <p className="text-sm text-green-500 mt-2">Aadhar Verified</p>}
-          {errorMessage && <p className="text-sm text-red-500 mt-2">{errorMessage}</p>}
-        </div>
-      )}
+      <header className="sticky top-0 z-50 bg-white shadow-md">
+        <OwnerHeader />
+      </header>
+      <div className="max-w-3xl mx-auto my-8">
+        {!isVerified && (
+          <div className="mb-4">
+            <Label htmlFor="aadharNumber">Aadhar Number</Label>
+            <Input id="aadharNumber" {...register("aadharNumber")} placeholder="Enter 12-digit Aadhar number" />
+            <Button onClick={handleValidate} className="mt-2">Validate</Button>
+            {isVerified && <p className="text-sm text-green-500 mt-2">Aadhar Verified</p>}
+            {errorMessage && <p className="text-sm text-red-500 mt-2">{errorMessage}</p>}
+          </div>
+        )}
 
-      {/* Apartment Form - Disabled if Aadhar is not valid */}
-      <Card className="max-w-3xl mx-auto my-8">
-        <CardHeader>
-          <CardTitle>Add a New Apartment</CardTitle>
-          <CardDescription>Fill in the details to list your apartment.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Title */}
-            <div>
-              <Label>Title</Label>
-              <Input
-                {...register("title", { required: true })}
-                placeholder="Enter apartment title"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.title && <p className="text-sm text-red-500">Title is required</p>}
-            </div>
+        {/* Apartment Form - Disabled if Aadhar is not valid */}
+        <Card className="max-w-3xl mx-auto my-8">
+          <CardHeader>
+            <CardTitle>Add a New Apartment</CardTitle>
+            <CardDescription>Fill in the details to list your apartment.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Title */}
+              <div>
+                <Label>Title</Label>
+                <Input
+                  {...register("title", { required: true })}
+                  placeholder="Enter apartment title"
+                  disabled={!isAadharValid && !isVerified} />
+                {errors.title && <p className="text-sm text-red-500">Title is required</p>}
+              </div>
 
-            {/* Description */}
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                {...register("description", { required: true })}
-                placeholder="Describe the apartment"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.description && <p className="text-sm text-red-500">Description is required</p>}
-            </div>
-
-            {/* Rent */}
-            <div>
-              <Label>Rent (per month)</Label>
-              <Input
-                type="number"
-                {...register("rent", { required: true })}
-                placeholder="Enter rent amount"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.rent && <p className="text-sm text-red-500">Rent is required</p>}
-            </div>
-
-            {/* BHK */}
-            <div>
-              <Label>BHK</Label>
-              <Controller
-                name="bhk"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select BHK" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1BHK">1BHK</SelectItem>
-                      <SelectItem value="2BHK">2BHK</SelectItem>
-                      <SelectItem value="3BHK">3BHK</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
-              {errors.bhk && <p className="text-sm text-red-500">BHK is required</p>}
-            </div>
-
-            {/* Room Sharing Type */}
-            <div>
-              <Label>Room Sharing Type</Label>
-              <Controller
-                name="room_sharing_type"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sharing type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="private">Private</SelectItem>
-                      <SelectItem value="shared">Shared</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
-              {errors.room_sharing_type && <p className="text-sm text-red-500">Room sharing type is required</p>}
-            </div>
-
-            {/* Available Beds */}
-            <div>
-              <Label>Available Beds</Label>
-              <Input
-                type="number"
-                {...register("available_beds", { required: true })}
-                placeholder="Available beds"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.available_beds && <p className="text-sm text-red-500">Available beds is required</p>}
-            </div>
-
-            {/* Total Beds */}
-            <div>
-              <Label>Total Beds</Label>
-              <Input
-                type="number"
-                {...register("total_beds", { required: true })}
-                placeholder="Total beds"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.total_beds && <p className="text-sm text-red-500">Total beds is required</p>}
-            </div>
-
-            {/* Food Options */}
-            <div>
-              <Label>Food Options</Label>
-              <div className="flex gap-4">
-                {[
-                  { label: "Breakfast", value: "1" },
-                  { label: "Lunch", value: "2" },
-                  { label: "Dinner", value: "3" },
-                ].map((food) => (
-                  <Button
-                    key={food.value}
-                    type="button"
-                    variant={selectedFood.includes(food.value) ? "default" : "outline"}
-                    onClick={() => handleFoodSelection(food.value)}
+              {/* Description */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label>Description</Label>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handleGenerateDescription}
                     disabled={!isAadharValid && !isVerified}
                   >
-                    {food.label}
+                    Generate Now
                   </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Location */}
-            <div>
-              <Label>Location</Label>
-              <Input
-                {...register("location", { required: true })}
-                placeholder="Enter location"
-                disabled={!isAadharValid && !isVerified} />
-              {errors.location && <p className="text-sm text-red-500">Location is required</p>}
-            </div>
-
-            {/* Latitude and Longitude */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Latitude</Label>
-                <Input
-                  type="text"
-                  {...register("latitude", { required: true })}
-                  placeholder="Enter latitude"
+                </div>
+                <Textarea
+                  {...register("description", { required: true })}
+                  placeholder="Describe the apartment"
                   disabled={!isAadharValid && !isVerified} />
-                {errors.latitude && <p className="text-sm text-red-500">Latitude is required</p>}
+                {errors.description && <p className="text-sm text-red-500">Description is required</p>}
               </div>
+
+              {/* Rent */}
               <div>
-                <Label>Longitude</Label>
+                <Label>Rent (per month)</Label>
                 <Input
-                  type="text"
-                  {...register("longitude", { required: true })}
-                  placeholder="Enter longitude"
+                  type="number"
+                  {...register("rent", { required: true })}
+                  placeholder="Enter rent amount"
                   disabled={!isAadharValid && !isVerified} />
-                {errors.longitude && <p className="text-sm text-red-500">Longitude is required</p>}
+                {errors.rent && <p className="text-sm text-red-500">Rent is required</p>}
               </div>
-            </div>
 
-            {/* Hostel Type */}
-            <div>
-              <Label>Hostel Type</Label>
-              <Controller
-                name="hostel_type"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Hostel Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="boys">Boys</SelectItem>
-                      <SelectItem value="girls">Girls</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
-              {errors.hostel_type && <p className="text-sm text-red-500">Hostel type is required</p>}
-            </div>
-
-            {/* Duration */}
-            <div>
-              <Label>Duration</Label>
-              <Controller
-                name="duration"
-                control={control}
-                rules={{ required: true }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="long-term">Long-term</SelectItem>
-                      <SelectItem value="short-term">Short-term</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )} />
-              {errors.duration && <p className="text-sm text-red-500">Duration is required</p>}
-            </div>
-
-            {/* Parking Available */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register("parking_available")}
-                disabled={!isAadharValid && !isVerified} />
-              <Label>Parking Available</Label>
-            </div>
-
-            {/* Apartment Images */}
-            <div>
-              <Label>Apartment Images</Label>
-              <Input
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                disabled={!isAadharValid && !isVerified} />
-              <div className="mt-4">
-                {imageFiles.length > 0 && (
-                  <div className="flex flex-wrap gap-4">
-                    {imageFiles.map((file, index) => (
-                      <div key={index} className="w-32 h-32">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`preview-${index}`}
-                          className="object-cover w-full h-full rounded-md" />
-                        <p className="text-xs text-center mt-2">{file.name}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* BHK */}
+              <div>
+                <Label>BHK</Label>
+                <Controller
+                  name="bhk"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select BHK" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1BHK">1BHK</SelectItem>
+                        <SelectItem value="2BHK">2BHK</SelectItem>
+                        <SelectItem value="3BHK">3BHK</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                {errors.bhk && <p className="text-sm text-red-500">BHK is required</p>}
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <Button type="submit" disabled={!isFormValid()}>
-              Submit
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              {/* Room Sharing Type */}
+              <div>
+                <Label>Room Sharing Type</Label>
+                <Controller
+                  name="room_sharing_type"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sharing type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="private">Private</SelectItem>
+                        <SelectItem value="shared">Shared</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                {errors.room_sharing_type && <p className="text-sm text-red-500">Room sharing type is required</p>}
+              </div>
+
+              {/* Available Beds */}
+              <div>
+                <Label>Available Beds</Label>
+                <Input
+                  type="number"
+                  {...register("available_beds", { required: true })}
+                  placeholder="Available beds"
+                  disabled={!isAadharValid && !isVerified} />
+                {errors.available_beds && <p className="text-sm text-red-500">Available beds is required</p>}
+              </div>
+
+              {/* Total Beds */}
+              <div>
+                <Label>Total Beds</Label>
+                <Input
+                  type="number"
+                  {...register("total_beds", { required: true })}
+                  placeholder="Total beds"
+                  disabled={!isAadharValid && !isVerified} />
+                {errors.total_beds && <p className="text-sm text-red-500">Total beds is required</p>}
+              </div>
+
+              {/* Food Options */}
+              <div>
+                <Label>Food Options</Label>
+                <div className="flex gap-4">
+                  {[
+                    { label: "Breakfast", value: "1" },
+                    { label: "Lunch", value: "2" },
+                    { label: "Dinner", value: "3" },
+                  ].map((food) => (
+                    <Button
+                      key={food.value}
+                      type="button"
+                      variant={selectedFood.includes(food.value) ? "default" : "outline"}
+                      onClick={() => handleFoodSelection(food.value)}
+                      disabled={!isAadharValid && !isVerified}
+                    >
+                      {food.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <Label>Location</Label>
+                <Input
+                  {...register("location", { required: true })}
+                  placeholder="Enter location"
+                  disabled={!isAadharValid && !isVerified} />
+                {errors.location && <p className="text-sm text-red-500">Location is required</p>}
+              </div>
+
+              {/* Latitude and Longitude */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Latitude</Label>
+                  <Input
+                    type="text"
+                    {...register("latitude", { required: true })}
+                    placeholder="Enter latitude"
+                    disabled={!isAadharValid && !isVerified} />
+                  {errors.latitude && <p className="text-sm text-red-500">Latitude is required</p>}
+                </div>
+                <div>
+                  <Label>Longitude</Label>
+                  <Input
+                    type="text"
+                    {...register("longitude", { required: true })}
+                    placeholder="Enter longitude"
+                    disabled={!isAadharValid && !isVerified} />
+                  {errors.longitude && <p className="text-sm text-red-500">Longitude is required</p>}
+                </div>
+              </div>
+
+              {/* Hostel Type */}
+              <div>
+                <Label>Hostel Type</Label>
+                <Controller
+                  name="hostel_type"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Hostel Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="boys">Boys</SelectItem>
+                        <SelectItem value="girls">Girls</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                {errors.hostel_type && <p className="text-sm text-red-500">Hostel type is required</p>}
+              </div>
+
+              {/* Duration */}
+              <div>
+                <Label>Duration</Label>
+                <Controller
+                  name="duration"
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isAadharValid && !isVerified}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="long-term">Long-term</SelectItem>
+                        <SelectItem value="short-term">Short-term</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )} />
+                {errors.duration && <p className="text-sm text-red-500">Duration is required</p>}
+              </div>
+
+              {/* Parking Available */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  {...register("parking_available")}
+                  disabled={!isAadharValid && !isVerified} />
+                <Label>Parking Available</Label>
+              </div>
+
+              {/* Apartment Images */}
+              <div>
+                <Label>Apartment Images</Label>
+                <Input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={!isAadharValid && !isVerified} />
+                <div className="mt-4">
+                  {imageFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-4">
+                      {imageFiles.map((file, index) => (
+                        <div key={index} className="w-32 h-32">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`preview-${index}`}
+                            className="object-cover w-full h-full rounded-md" />
+                          <p className="text-xs text-center mt-2">{file.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button type="submit" disabled={!isFormValid()}>
+                Submit
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Generated Description Dialog */}
+        <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
+  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Generated Property Description</DialogTitle>
+      <DialogDescription>
+        Professional listing description for your property
+      </DialogDescription>
+    </DialogHeader>
+    <div className="p-4 bg-gray-50 rounded-md border relative">
+      <pre className="whitespace-pre-wrap font-sans">{generatedDescription}</pre>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-2 right-2"
+        onClick={copyToClipboard}
+      >
+        {copied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+      </Button>
     </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setShowGenerateDialog(false)}>
+        Cancel
+      </Button>
+      <Button 
+        onClick={applyGeneratedDescription}
+        disabled={isGenerating}
+      >
+        {isGenerating ? "Generating..." : "Use This Description"}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+        {/* Missing Fields Dialog */}
+        <Dialog open={showMissingFieldsDialog} onOpenChange={setShowMissingFieldsDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Missing Information</DialogTitle>
+              <DialogDescription>
+                Please fill in the following required fields to generate a description:
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <ul className="list-disc pl-5">
+                {missingFields.map((field, index) => (
+                  <li key={index} className="capitalize">
+                    {field.replace(/_/g, ' ')}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setShowMissingFieldsDialog(false)}>OK</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 }

@@ -82,7 +82,8 @@ from .views import (
     get_all_booking_received,
     get_all_tenants,
     get_approved_apartment_by_owner,
-    send_password_reset_email
+    send_password_reset_email,
+    generate_description
 )
 
 
@@ -343,5 +344,6 @@ urlpatterns = [
         "password-reset/", send_password_reset_email, name="send_password_reset_email"
     ),
     path("owner/<int:owner_id>/payments/", payments_by_owner, name="payments-by-owner"),
+     path('generate-description/', generate_description, name='generate_description'),
 
 ]

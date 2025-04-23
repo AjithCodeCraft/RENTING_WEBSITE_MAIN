@@ -2133,3 +2133,47 @@ def payments_by_owner(request, owner_id):
 
     serializer = OwnerPaymentDetailsSerializer(payments, many=True)
     return Response({"total_payments": total, "payments": serializer.data})
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+from gradio_client import Client
+import logging
+
+client = Client("alameenas/gym_assastant")
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def generate_description(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Extract parameters with defaults
+            title = data.get('title', 'This property')
+            rent = data.get('rent', '')
+            bhk = data.get('bhk', '')
+            available = data.get('available_beds', '')
+            total = data.get('total_beds', '')
+            food_count = len(data.get('food', []))
+            location = data.get('location', '')
+            hostel_type = data.get('hostel_type', 'hostel')
+            duration = data.get('duration', 'long-term')
+            parking = "with parking" if data.get('parking_available') else ""
+
+            description = (
+                f"{title} offers a {bhk} shared accommodation in {location} at ₹{rent}/month. "
+                f"With {available} bed(s) available out of {total}, this {hostel_type} provides "
+                f"{duration} stays{f' with {food_count} meal options' if food_count else ''}. "
+                f"{parking.capitalize()}. Ideal for budget-conscious tenants."
+            )
+
+            return JsonResponse({'description': description.strip()})
+
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            return JsonResponse({'error': 'Generation failed'}, status=500)
+    
+    return JsonResponse({'error': 'Invalid method'}, status=405)
