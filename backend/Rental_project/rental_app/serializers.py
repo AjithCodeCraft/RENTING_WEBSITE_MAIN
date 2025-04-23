@@ -22,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user_id",
+            "upi_id",
             "name",
             "email",
             "phone",
@@ -36,7 +37,8 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "is_active": {"required": False},
             "id": {"read_only": True},
-            "password_hash": {"write_only": True}
+            "password_hash": {"write_only": True},
+            'upi_id': {'required': False, 'allow_blank': True},
         }  # Hide password in responses
 
 

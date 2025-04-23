@@ -26,7 +26,7 @@ import Cookies from 'js-cookie';
 
 export default function OwnerHeader() {
   // Removed duplicate declaration of router
-  const [user, setUser] = useState({ name: "", avatarUrl: "" });
+  const [user, setUser] = useState({ name: "", avatarUrl: "" ,upi_id: ""});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
@@ -50,6 +50,7 @@ export default function OwnerHeader() {
         setUser({
           name: response.data.name,
           avatarUrl: response.data.avatarUrl || "https://github.com/shadcn.png",
+          upi_id: response.data.upi_id || ""
         });
         setLoading(false);
       } catch (err) {

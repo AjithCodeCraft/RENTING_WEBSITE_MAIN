@@ -225,11 +225,27 @@ export default function ProfilePage() {
               <h3 className="text-xl font-semibold text-[#3e435d] mb-4">Phone</h3>
               <p className="text-[#86909c]">{user.phone}</p>
             </div>
+            {/* Edit Profile Button */}
+            <CardFooter className="flex justify-end p-8">
+              {isEditing ? (
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={handleCancelClick}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveClick}>Save Changes</Button>
+                </div>
+              ) : (
+                <Button onClick={handleEditClick}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Button>
+              )}
+            </CardFooter>
 
-           
+
           </CardContent>
 
-          
+
         </Card>
       </main>
     </div>

@@ -37,6 +37,7 @@ class User(AbstractBaseUser,PermissionsMixin):
     user_id = models.CharField(max_length=28, unique=True)  # Firebase UID is usually 28 chars
     name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
+    upi_id = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, unique=True)
     password_hash = models.TextField()
     date_of_birth = models.DateField(blank=True, null=True) 

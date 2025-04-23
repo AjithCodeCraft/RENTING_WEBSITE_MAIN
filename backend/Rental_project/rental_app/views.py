@@ -55,8 +55,7 @@ from django.middleware.csrf import get_token
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 import requests
-
-
+from django.db.models import Sum
 from .serializers import (
     ApartmentSerializer,
     BookingSerializerReadOnly,
@@ -1913,6 +1912,8 @@ def update_profile(request):
         user.bio = data["bio"]
     if "date_of_birth" in data:
         user.date_of_birth = data["date_of_birth"]
+    if "upi_id" in data:
+        user.upi_id = data["upi_id"]
 
     user.save()
     serializer = UserSerializer(user)
@@ -2135,6 +2136,7 @@ def payments_by_owner(request, owner_id):
     return Response({"total_payments": total, "payments": serializer.data})
 
 
+<<<<<<< Updated upstream
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
@@ -2177,3 +2179,23 @@ def generate_description(request):
             return JsonResponse({'error': 'Generation failed'}, status=500)
     
     return JsonResponse({'error': 'Invalid method'}, status=405)
+=======
+class CompletedPaymentsTotalView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        payments = Payment.objects.filter(payment_status='paid').values_list('amount', flat=True)
+        
+        total = 0
+        for amt in payments:
+            try:
+                if isinstance(amt, Decimal128):
+                    amt = amt.to_decimal()  # Convert to Python decimal
+                elif not isinstance(amt, Decimal):
+                    amt = Decimal(str(amt))  # fallback for strings or float-like values
+                total += amt
+            except Exception as e:
+                print("Skipping invalid amount:", amt, "Error:", e)
+
+        return Response({'completed_total_amount': float(total)}) 
+>>>>>>> Stashed changes

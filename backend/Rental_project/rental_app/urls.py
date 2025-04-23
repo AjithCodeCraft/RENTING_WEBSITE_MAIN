@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
    
+    CompletedPaymentsTotalView,
     OwnerDetailsByApartmentView,
     add_house_owner,
     check_owner_verification,
@@ -340,10 +341,14 @@ urlpatterns = [
     path("get_user_details/<int:user_id>/", get_user_details, name="get_user_details"),
     path("token/verify/", is_logged_admin_in, name="token_verify"),
     path('owner-by-apartment/<uuid:apartment_id>/', OwnerDetailsByApartmentView.as_view()),
-       path(
+    path(
         "password-reset/", send_password_reset_email, name="send_password_reset_email"
     ),
     path("owner/<int:owner_id>/payments/", payments_by_owner, name="payments-by-owner"),
+<<<<<<< Updated upstream
      path('generate-description/', generate_description, name='generate_description'),
+=======
+    path('payments/completed/total/', CompletedPaymentsTotalView.as_view(), name='completed-payments-total'),
+>>>>>>> Stashed changes
 
 ]

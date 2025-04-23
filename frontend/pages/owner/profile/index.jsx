@@ -18,6 +18,7 @@ export default function ProfilePage() {
     password_hash: "",
     date_of_birth: "",
     bio: "",
+    upi_id: "",
     user_type: "",
     latitude: null,
     longitude: null,
@@ -29,6 +30,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     bio: "",
     date_of_birth: "",
+    upi_id: "",
   });
 
   useEffect(() => {
@@ -44,10 +46,11 @@ export default function ProfilePage() {
         setFormData({
           bio: response.data.bio || "",
           date_of_birth: response.data.date_of_birth || "",
+          upi_id: response.data.upi_id || "",
         });
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching profile:", err); // Debugging: Log the error
+        console.error("Error fetching profile:", err);
         setError(err.message);
         setLoading(false);
       }
@@ -57,7 +60,7 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    console.log("User State Updated:", user); // Debugging: Log the user state
+    console.log("User State Updated:", user);
   }, [user]);
 
   const handleEditClick = () => {
@@ -69,6 +72,7 @@ export default function ProfilePage() {
     setFormData({
       bio: user.bio || "",
       date_of_birth: user.date_of_birth || "",
+      upi_id: user.upi_id || "",
     });
   };
 
@@ -76,32 +80,41 @@ export default function ProfilePage() {
     const currentDate = new Date();
     const selectedDate = new Date(dateOfBirth);
 
-    // Calculate the age difference in years
     const ageDifference = currentDate.getFullYear() - selectedDate.getFullYear();
 
-    // Check if the user is at least 16 years old
     if (ageDifference < 16) {
-      return false; // Invalid (under 16)
+      return false;
     }
 
-    // Handle edge cases (e.g., if the birthday hasn't occurred yet this year)
     if (
       ageDifference === 16 &&
       (currentDate.getMonth() < selectedDate.getMonth() ||
         (currentDate.getMonth() === selectedDate.getMonth() &&
           currentDate.getDate() < selectedDate.getDate()))
     ) {
-      return false; // Invalid (under 16)
+      return false;
     }
 
-    return true; // Valid (16 or older)
+    return true;
+  };
+
+  const validateUpiId = (upiId) => {
+    if (!upiId) return true; // Allow empty UPI ID
+    const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
+    return upiRegex.test(upiId);
   };
 
   const handleSaveClick = async () => {
     // Validate date of birth
     if (!validateDateOfBirth(formData.date_of_birth)) {
       setError("You must be at least 16 years old.");
-      return; // Stop execution if validation fails
+      return;
+    }
+
+    // Validate UPI ID if provided
+    if (formData.upi_id && !validateUpiId(formData.upi_id)) {
+      setError("Please enter a valid UPI ID (e.g., username@upi)");
+      return;
     }
 
     try {
@@ -117,9 +130,9 @@ export default function ProfilePage() {
       
       setUser(response.data);
       setIsEditing(false);
-      setError(null); // Clear any previous errors
+      setError(null);
     } catch (err) {
-      console.error("Error updating profile:", err); // Debugging: Log the error
+      console.error("Error updating profile:", err);
       setError(err.message);
     }
   };
@@ -199,18 +212,32 @@ export default function ProfilePage() {
                     value={formData.date_of_birth}
                     onChange={handleInputChange}
                     className="w-full p-2 border rounded-lg"
-                    max={new Date().toISOString().split("T")[0]} // Restrict future dates
-                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split("T")[0]} // Allow up to 100 years old
+                    max={new Date().toISOString().split("T")[0]}
+                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split("T")[0]}
                   />
-                  {error && (
-                    <div className="mt-2 text-red-500 text-sm">
-                      {error}
-                    </div>
-                  )}
                 </>
               ) : (
                 <p className="text-[#86909c]">
                   {user.date_of_birth || "Not provided"}
+                </p>
+              )}
+            </div>
+
+            {/* UPI ID Section */}
+            <div className="mb-8">
+              <h3 className="text-xl font-semibold text-[#3e435d] mb-4">UPI ID</h3>
+              {isEditing ? (
+                <Input
+                  type="text"
+                  name="upi_id"
+                  value={formData.upi_id}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Enter your UPI ID (e.g., username@upi)"
+                />
+              ) : (
+                <p className="text-[#86909c]">
+                  {user.upi_id || "Not provided"}
                 </p>
               )}
             </div>
@@ -227,10 +254,29 @@ export default function ProfilePage() {
               <p className="text-[#86909c]">{user.phone}</p>
             </div>
 
-            
-          </CardContent>
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 text-red-500 text-sm">
+                {error}
+              </div>
+            )}
 
-          
+            <CardFooter className="flex justify-end p-8">
+              {isEditing ? (
+                <div className="flex gap-4">
+                  <Button variant="outline" onClick={handleCancelClick}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveClick}>Save Changes</Button>
+                </div>
+              ) : (
+                <Button onClick={handleEditClick}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Button>
+              )}
+            </CardFooter>
+          </CardContent>
         </Card>
       </main>
     </div>
