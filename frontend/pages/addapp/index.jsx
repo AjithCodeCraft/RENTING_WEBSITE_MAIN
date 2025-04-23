@@ -390,7 +390,7 @@ export default function AddApartmentForm() {
                     onClick={handleGenerateDescription}
                     disabled={!isAadharValid && !isVerified}
                   >
-                    Generate Now
+                    Generate With AI
                   </Button>
                 </div>
                 <Textarea
