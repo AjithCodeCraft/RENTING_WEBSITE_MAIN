@@ -345,10 +345,7 @@ urlpatterns = [
         "password-reset/", send_password_reset_email, name="send_password_reset_email"
     ),
     path("owner/<int:owner_id>/payments/", payments_by_owner, name="payments-by-owner"),
-<<<<<<< Updated upstream
-     path('generate-description/', generate_description, name='generate_description'),
-=======
+    path('generate-description/', generate_description, name='generate_description'),
     path('payments/completed/total/', CompletedPaymentsTotalView.as_view(), name='completed-payments-total'),
->>>>>>> Stashed changes
 
 ]

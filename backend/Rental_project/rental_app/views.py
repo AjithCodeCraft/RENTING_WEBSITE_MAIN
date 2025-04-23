@@ -24,6 +24,9 @@ from firebase_admin import auth
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+from gradio_client import Client
+import logging
 from .models import (
     HostelApproval,
     HouseOwner,
@@ -2136,12 +2139,7 @@ def payments_by_owner(request, owner_id):
     return Response({"total_payments": total, "payments": serializer.data})
 
 
-<<<<<<< Updated upstream
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from gradio_client import Client
-import logging
+
 
 client = Client("alameenas/gym_assastant")
 logging.basicConfig(level=logging.ERROR)
@@ -2179,7 +2177,6 @@ def generate_description(request):
             return JsonResponse({'error': 'Generation failed'}, status=500)
     
     return JsonResponse({'error': 'Invalid method'}, status=405)
-=======
 class CompletedPaymentsTotalView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -2198,4 +2195,3 @@ class CompletedPaymentsTotalView(APIView):
                 print("Skipping invalid amount:", amt, "Error:", e)
 
         return Response({'completed_total_amount': float(total)}) 
->>>>>>> Stashed changes
