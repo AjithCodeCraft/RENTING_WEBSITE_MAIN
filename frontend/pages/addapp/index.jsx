@@ -383,7 +383,8 @@ export default function AddApartmentForm() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Description</Label>
-                  <Button 
+                  <Button  className="bg-green-500 hover:bg-teal-500
+"
                     type="button" 
                     variant="outline" 
                     onClick={handleGenerateDescription}
@@ -648,8 +649,8 @@ export default function AddApartmentForm() {
 </Dialog>
 
         {/* Missing Fields Dialog */}
-        <Dialog open={showMissingFieldsDialog} onOpenChange={setShowMissingFieldsDialog}>
-          <DialogContent>
+        <Dialog open={showMissingFieldsDialog} onOpenChange={setShowMissingFieldsDialog} >
+          <DialogContent className="bg-white">
             <DialogHeader>
               <DialogTitle>Missing Information</DialogTitle>
               <DialogDescription>
