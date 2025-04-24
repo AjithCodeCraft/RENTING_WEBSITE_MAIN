@@ -11,7 +11,6 @@ import { motion } from "framer-motion";
 import axios from 'axios';
 import Cookies from 'js-cookie';
 
-
 export default function LoginPage({ className, ...props }) {
   // Login form state
   const [email, setEmail] = useState("");
@@ -51,16 +50,28 @@ export default function LoginPage({ className, ...props }) {
       }
 
       // Store tokens and user data
-      
       Cookies.set("user_type", data.user_type);
       Cookies.set("email", email);
 
-      // Redirect based on user type
+      // Check owner verification status if the user is an owner
       if (data.user_type === "owner") {
-        Cookies.set("access_token_owner", data.access);
-        Cookies.set("owner_id", data.user_id);
-        Cookies.set("owner_id_number", data.id);
-        Router.push("/owner");
+        const verificationResponse = await axios.post(
+          'http://localhost:8000/api/check-owner-verification/',
+          { email: email },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        if (verificationResponse.data.verified) {
+          Cookies.set("access_token_owner", data.access);
+          Cookies.set("owner_id", data.user_id);
+          Cookies.set("owner_id_number", data.id);
+          Router.push("/owner");
+        } else {
+          Cookies.set("access_token_owner", data.access);
+          Cookies.set("owner_id", data.user_id);
+          Cookies.set("owner_id_number", data.id);
+          Router.push("/addapp");
+        }
       } else if (data.user_type === "seeker") {
         Cookies.set("access_token_user", data.access);
         Cookies.set("user_id", data.user_id);
@@ -78,7 +89,7 @@ export default function LoginPage({ className, ...props }) {
     e.preventDefault();
     setForgotPasswordLoading(true);
     setForgotPasswordError("");
-    
+
     try {
       const response = await axios.post(
         'http://127.0.0.1:8000/api/password-reset/',
@@ -126,36 +137,36 @@ export default function LoginPage({ className, ...props }) {
       {/* Forgot Password Modal */}
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white p-6 rounded-lg w-full max-w-md mx-4"
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Reset Password</h2>
-              <button 
+              <button
                 onClick={resetForgotPasswordModal}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {forgotPasswordSuccess ? (
               <div className="text-center py-4">
                 <div className="mb-4 text-green-500">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-12 w-12 mx-auto" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 mx-auto"
+                    fill="none"
+                    viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M5 13l4 4L19 7" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
                     />
                   </svg>
                 </div>
@@ -189,9 +200,9 @@ export default function LoginPage({ className, ...props }) {
                     {forgotPasswordError && (
                       <p className="text-red-500 text-sm">{forgotPasswordError}</p>
                     )}
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
+                    <Button
+                      type="submit"
+                      className="w-full"
                       disabled={forgotPasswordLoading}
                     >
                       {forgotPasswordLoading ? (
@@ -234,8 +245,8 @@ export default function LoginPage({ className, ...props }) {
 
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
-            <form 
-              className={cn("flex flex-col gap-6", className)} 
+            <form
+              className={cn("flex flex-col gap-6", className)}
               onSubmit={handleLogin}
               {...props}
             >
@@ -245,7 +256,7 @@ export default function LoginPage({ className, ...props }) {
                   Enter your credentials to access your account
                 </p>
               </div>
-              
+
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="email">Email</Label>
@@ -259,11 +270,11 @@ export default function LoginPage({ className, ...props }) {
                     autoComplete="username"
                   />
                 </div>
-                
+
                 <div className="grid gap-2">
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>
-                    <button 
+                    <button
                       type="button"
                       className="ml-auto text-sm underline-offset-4 hover:underline"
                       onClick={() => setShowForgotPassword(true)}
@@ -293,20 +304,20 @@ export default function LoginPage({ className, ...props }) {
                     </button>
                   </div>
                 </div>
-                
+
                 {errorMessage && (
                   <p className="text-red-500 text-sm text-center">{errorMessage}</p>
                 )}
-                
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Spinner className="mr-2" /> : "Login"}
                 </Button>
               </div>
-              
+
               <p className="text-center text-sm">
                 Don't have an account?{" "}
-                <a 
-                  href="/signup" 
+                <a
+                  href="/signup"
                   className="underline underline-offset-4 hover:text-primary"
                 >
                   Sign up

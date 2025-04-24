@@ -7,12 +7,7 @@ import axios from 'axios';
 const Pocket = () => {
   const [balance, setBalance] = useState(0);
   const [showStatement, setShowStatement] = useState(false);
-  const [withdrawals, setWithdrawals] = useState([
-    { id: 1, date: '2025-04-15', amount: 1200.00, commission: 24.00, type: 'Manual', status: 'Completed' },
-    { id: 2, date: '2025-04-08', amount: 950.50, commission: 19.01, type: 'Automatic (Monday)', status: 'Completed' },
-    { id: 3, date: '2025-04-01', amount: 1350.25, commission: 27.01, type: 'Automatic (Monday)', status: 'Completed' },
-    { id: 4, date: '2025-03-25', amount: 850.00, commission: 17.00, type: 'Manual', status: 'Completed' },
-  ]);
+  const [withdrawals, setWithdrawals] = useState([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [nextMondayDate, setNextMondayDate] = useState('');
   const [upiId, setUpiId] = useState('');
@@ -39,12 +34,11 @@ const Pocket = () => {
     // Fetch the total completed payments from the API and store in cookies if not already set
     const fetchAndSetBalance = async () => {
       const storedBalance = Cookies.get('balance');
-      if (storedBalance) {
-        setBalance(parseFloat(storedBalance));
-      } else {
+      if (storedBalance === 'undefined' || !storedBalance) {
         try {
           const token = Cookies.get('access_token_owner');
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/completed/total/`, {
+          const owner_id = Cookies.get("owner_id_number");
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/owner/${owner_id}/payments/`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -54,13 +48,15 @@ const Pocket = () => {
             throw new Error('Network response was not ok');
           }
           const data = await response.json();
-          const totalAmount = data.completed_total_amount;
+          const totalAmount = data.total_amount;
           setBalance(totalAmount);
           Cookies.set('balance', totalAmount, { expires: 7 });
         } catch (error) {
           console.error('Failed to fetch balance:', error);
           setBalance(0);
         }
+      } else {
+        setBalance(parseFloat(storedBalance));
       }
     };
 
@@ -77,7 +73,72 @@ const Pocket = () => {
     };
 
     setNextMondayDate(calculateNextMonday());
+
+    // Load withdrawals from localStorage and set timeouts for pending withdrawals
+    const loadWithdrawals = () => {
+      try {
+        const storedWithdrawals = localStorage.getItem('owner_withdrawals');
+        if (storedWithdrawals) {
+          const parsedWithdrawals = JSON.parse(storedWithdrawals);
+          // Filter out any invalid entries and ensure proper formatting
+          const validWithdrawals = parsedWithdrawals.filter(w => 
+            w.id && w.date && w.amount && w.commission && w.type && w.status
+          );
+          
+          // Process each withdrawal to check if it needs status update
+          const processedWithdrawals = validWithdrawals.map(withdrawal => {
+            // If withdrawal is still processing, set a timeout to mark it as completed
+            if (withdrawal.status === 'Processing') {
+              const createdAt = new Date(withdrawal.date).getTime();
+              const now = new Date().getTime();
+              const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+              
+              // If more than 5 minutes have passed, mark as completed
+              if (now - createdAt > fiveMinutes) {
+                return { ...withdrawal, status: 'Completed' };
+              } else {
+                // Set timeout for the remaining time
+                const timeLeft = fiveMinutes - (now - createdAt);
+                setTimeout(() => {
+                  updateWithdrawalStatus(withdrawal.id, 'Completed');
+                }, timeLeft);
+              }
+            }
+            return withdrawal;
+          });
+
+          setWithdrawals(processedWithdrawals);
+          saveWithdrawalsToStorage(processedWithdrawals);
+        }
+      } catch (error) {
+        console.error('Error loading withdrawals from localStorage:', error);
+        localStorage.removeItem('owner_withdrawals');
+      }
+    };
+
+    loadWithdrawals();
   }, []);
+
+  const saveWithdrawalsToStorage = (withdrawalsData) => {
+    try {
+      localStorage.setItem('owner_withdrawals', JSON.stringify(withdrawalsData));
+    } catch (error) {
+      console.error('Error saving withdrawals to localStorage:', error);
+    }
+  };
+
+  const updateWithdrawalStatus = (id, newStatus) => {
+    setWithdrawals(prevWithdrawals => {
+      const updatedWithdrawals = prevWithdrawals.map(withdrawal => {
+        if (withdrawal.id === id) {
+          return { ...withdrawal, status: newStatus };
+        }
+        return withdrawal;
+      });
+      saveWithdrawalsToStorage(updatedWithdrawals);
+      return updatedWithdrawals;
+    });
+  };
 
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
@@ -88,20 +149,29 @@ const Pocket = () => {
       return;
     }
 
+    const withdrawalDate = new Date();
     const newWithdrawal = {
-      id: withdrawals.length + 1,
-      date: new Date().toISOString().split('T')[0],
+      id: Date.now(), // Using timestamp for unique ID
+      date: withdrawalDate.toISOString().split('T')[0],
       amount: amount,
       commission: commission,
       type: 'Manual',
       status: 'Processing'
     };
 
-    setWithdrawals([newWithdrawal, ...withdrawals]);
+    const updatedWithdrawals = [newWithdrawal, ...withdrawals];
+    setWithdrawals(updatedWithdrawals);
+    saveWithdrawalsToStorage(updatedWithdrawals);
+    
     const newBalance = balance - totalDeduction;
     setBalance(newBalance);
     Cookies.set('balance', newBalance, { expires: 7 });
     setWithdrawAmount('');
+
+    // Set timeout to update status after 5 minutes
+    setTimeout(() => {
+      updateWithdrawalStatus(newWithdrawal.id, 'Completed');
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
   };
 
   const commission = parseFloat(withdrawAmount) * 0.12;
@@ -163,7 +233,7 @@ const Pocket = () => {
                 Withdraw Now
               </button>
             </div>
-            
+
             {/* UPI ID Information */}
             {withdrawAmount && (
               <div className="mt-4 p-4 bg-blue-50 rounded-lg">
@@ -229,23 +299,31 @@ const Pocket = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {withdrawals.map((withdrawal) => (
-                    <tr key={withdrawal.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{withdrawal.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: '#17A345' }}>₹{withdrawal.amount.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: '#FF0000' }}>-₹{withdrawal.commission.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{withdrawal.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          withdrawal.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                          withdrawal.status === 'Processing' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {withdrawal.status}
-                        </span>
+                  {withdrawals.length > 0 ? (
+                    withdrawals.map((withdrawal) => (
+                      <tr key={withdrawal.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{withdrawal.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: '#17A345' }}>₹{withdrawal.amount.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium" style={{ color: '#FF0000' }}>-₹{withdrawal.commission.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{withdrawal.type}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            withdrawal.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            withdrawal.status === 'Processing' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {withdrawal.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No withdrawals yet
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

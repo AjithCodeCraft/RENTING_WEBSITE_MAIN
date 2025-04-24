@@ -50,7 +50,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password, check_password
-from decimal import Decimal
+from decimal import Decimal,InvalidOperation
 from bson.decimal128 import Decimal128
 from django.db.models import Q
 
@@ -1856,8 +1856,8 @@ def check_owner_verification(request):
             )
         except HouseOwner.DoesNotExist:
             return Response(
-                {"error": "Owner Not Verified Yet! Please Verify"},
-                status=status.HTTP_404_NOT_FOUND,
+                {"not verified": "Owner Not Verified Yet! Please Verify"},
+                status=status.HTTP_200_OK,
             )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2121,22 +2121,33 @@ def send_password_reset_email(request):
 
 
 
-
 @api_view(["GET"])
 def payments_by_owner(request, owner_id):
     """Get all payments for apartments owned by a specific owner"""
     # Get all apartments owned by the owner
     apartments = Apartment.objects.filter(owner_id=owner_id)
-    
+
     # Get all payments made for bookings in those apartments
     payments = Payment.objects.filter(apartment__in=apartments)\
         .select_related("booking", "user", "apartment")\
         .order_by("-timestamp")
 
-    total = payments.count()
+    total_payments = payments.count()
+    total_amount = 0
+
+    for payment in payments:
+        try:
+            amount = payment.amount
+            if isinstance(amount, Decimal128):
+                amount = amount.to_decimal()  # Convert to Python decimal
+            elif not isinstance(amount, Decimal):
+                amount = Decimal(str(amount))  # fallback for strings or float-like values
+            total_amount += amount
+        except (InvalidOperation, ValueError) as e:
+            print("Skipping invalid amount:", payment.amount, "Error:", e)
 
     serializer = OwnerPaymentDetailsSerializer(payments, many=True)
-    return Response({"total_payments": total, "payments": serializer.data})
+    return Response({"total_payments": total_payments, "total_amount": total_amount, "payments": serializer.data})
 
 
 

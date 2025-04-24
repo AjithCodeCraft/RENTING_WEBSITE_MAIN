@@ -370,14 +370,14 @@ const OwnerHostels = () => {
                 className="w-full md:w-auto"
                 onClick={handleApprovedTabClick}
               >
-                Approved Apartements
+                Approved Apartments
               </TabsTrigger>
               <TabsTrigger
                 value="pending"
                 className="w-full md:w-auto"
                 onClick={handlePendingTabClick}
               >
-                Pending Apartements
+                Pending Apartments
               </TabsTrigger>
             </TabsList>
 
@@ -407,13 +407,13 @@ const OwnerHostels = () => {
                     >
                       <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-black opacity-60"></div>
                       <div className="flex flex-row items-center space-x-4 z-10 p-4">
-                        <Image
+                        {/* <Image
                           height="100"
                           width="100"
                           alt="Avatar"
                           src="/manu.png"
                           className="h-10 w-10 rounded-full border-2 object-cover"
-                        />
+                        /> */}
                         <div className="flex flex-col">
                           <p className="font-normal text-base text-gray-50 relative z-10">
                             {apartment.title}
