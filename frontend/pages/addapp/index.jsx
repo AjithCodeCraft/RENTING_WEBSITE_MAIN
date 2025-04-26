@@ -402,7 +402,7 @@ export default function AddApartmentForm() {
 
               {/* Rent */}
               <div>
-                <Label>Rent (per month)</Label>
+                <Label>Rent (per day)</Label>
                 <Input
                   type="number"
                   {...register("rent", { required: true })}
@@ -605,11 +605,21 @@ export default function AddApartmentForm() {
                   )}
                 </div>
               </div>
+              <div>
+              <Button
+              type="submit"
+              disabled={!isFormValid()}
+              className="mt-20"
+            >
+              Submit
+            </Button>
+
+              </div>
 
               {/* Submit Button */}
-              <Button type="submit" disabled={!isFormValid()}>
-                Submit
-              </Button>
+              
+    
+
             </form>
           </CardContent>
         </Card>
