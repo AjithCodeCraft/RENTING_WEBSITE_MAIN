@@ -268,7 +268,7 @@ export default function hostelUpdate() {
 
                             {/* Rent */}
                             <FormInput
-                                label={"Rent (per month)"}
+                                label={"Rent (per day)"}
                                 type="decimal"
                                 name={"rent"}
                                 placeholder={"Enter rent amount"}

@@ -109,7 +109,7 @@ const WishlistPage = () => {
             wishlist_id: item.wishlist_id,
             name: apartmentData.title,
             location: apartmentData.location,
-            price: `$${apartmentData.rent}/night`,
+            price: `₹${apartmentData.rent}/night`,
             rating: apartmentData.rating,
             image: hostelImage,
             amenities: amenities,
