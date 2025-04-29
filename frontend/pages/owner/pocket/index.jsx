@@ -81,10 +81,10 @@ const Pocket = () => {
         if (storedWithdrawals) {
           const parsedWithdrawals = JSON.parse(storedWithdrawals);
           // Filter out any invalid entries and ensure proper formatting
-          const validWithdrawals = parsedWithdrawals.filter(w => 
+          const validWithdrawals = parsedWithdrawals.filter(w =>
             w.id && w.date && w.amount && w.commission && w.type && w.status
           );
-          
+
           // Process each withdrawal to check if it needs status update
           const processedWithdrawals = validWithdrawals.map(withdrawal => {
             // If withdrawal is still processing, set a timeout to mark it as completed
@@ -92,7 +92,7 @@ const Pocket = () => {
               const createdAt = new Date(withdrawal.date).getTime();
               const now = new Date().getTime();
               const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-              
+
               // If more than 5 minutes have passed, mark as completed
               if (now - createdAt > fiveMinutes) {
                 return { ...withdrawal, status: 'Completed' };
@@ -143,7 +143,7 @@ const Pocket = () => {
   const handleWithdraw = () => {
     const amount = parseFloat(withdrawAmount);
     const commission = amount * 0.12;
-    const totalDeduction = amount + commission;
+    const totalDeduction = amount; // Commission is already included in the amount
 
     if (!withdrawAmount || amount <= 0 || totalDeduction > balance) {
       return;
@@ -153,7 +153,7 @@ const Pocket = () => {
     const newWithdrawal = {
       id: Date.now(), // Using timestamp for unique ID
       date: withdrawalDate.toISOString().split('T')[0],
-      amount: amount,
+      amount: amount - commission, // Amount after deducting commission
       commission: commission,
       type: 'Manual',
       status: 'Processing'
@@ -162,7 +162,7 @@ const Pocket = () => {
     const updatedWithdrawals = [newWithdrawal, ...withdrawals];
     setWithdrawals(updatedWithdrawals);
     saveWithdrawalsToStorage(updatedWithdrawals);
-    
+
     const newBalance = balance - totalDeduction;
     setBalance(newBalance);
     Cookies.set('balance', newBalance, { expires: 7 });
@@ -226,9 +226,9 @@ const Pocket = () => {
               </div>
               <button
                 onClick={handleWithdraw}
-                disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) + commission > balance}
+                disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > balance}
                 className="py-2 px-4 rounded-md font-medium text-white flex items-center justify-center"
-                style={{ backgroundColor: parseFloat(withdrawAmount) > 0 && parseFloat(withdrawAmount) + commission <= balance ? '#17A345' : '#9CA3AF' }}
+                style={{ backgroundColor: parseFloat(withdrawAmount) > 0 && parseFloat(withdrawAmount) <= balance ? '#17A345' : '#9CA3AF' }}
               >
                 Withdraw Now
               </button>
@@ -256,7 +256,7 @@ const Pocket = () => {
               </div>
             )}
 
-            {parseFloat(withdrawAmount) + commission > balance && (
+            {parseFloat(withdrawAmount) > balance && (
               <p className="text-red-500 mt-2 text-sm">Insufficient balance for this withdrawal.</p>
             )}
             {withdrawAmount && (

@@ -2123,7 +2123,7 @@ def send_password_reset_email(request):
 
 @api_view(["GET"])
 def payments_by_owner(request, owner_id):
-    """Get all payments for apartments owned by a specific owner"""
+    
     # Get all apartments owned by the owner
     apartments = Apartment.objects.filter(owner_id=owner_id)
 
@@ -2136,15 +2136,16 @@ def payments_by_owner(request, owner_id):
     total_amount = 0
 
     for payment in payments:
-        try:
-            amount = payment.amount
-            if isinstance(amount, Decimal128):
-                amount = amount.to_decimal()  # Convert to Python decimal
-            elif not isinstance(amount, Decimal):
-                amount = Decimal(str(amount))  # fallback for strings or float-like values
-            total_amount += amount
-        except (InvalidOperation, ValueError) as e:
-            print("Skipping invalid amount:", payment.amount, "Error:", e)
+        if payment.payment_status == "paid":
+            try:
+                amount = payment.amount
+                if isinstance(amount, Decimal128):
+                    amount = amount.to_decimal()  
+                elif not isinstance(amount, Decimal):
+                    amount = Decimal(str(amount))  
+                total_amount += amount
+            except (InvalidOperation, ValueError) as e:
+                print("Skipping invalid amount:", payment.amount, "Error:", e)
 
     serializer = OwnerPaymentDetailsSerializer(payments, many=True)
     return Response({"total_payments": total_payments, "total_amount": total_amount, "payments": serializer.data})
