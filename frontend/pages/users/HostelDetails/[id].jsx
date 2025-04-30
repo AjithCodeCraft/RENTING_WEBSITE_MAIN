@@ -411,7 +411,8 @@ const HostelDetails = () => {
          }
 
          const bookingData = await bookingResponse.json();
-         const booking_id = bookingData.booking_id; // Retrieve the booking_id
+         const booking_id = bookingData.booking_id;
+         console.log('bookingid',booking_id) 
          setBookingId(booking_id);
 
          // Step 2: Generate the payment link using the booking_id

@@ -27,6 +27,7 @@ from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from gradio_client import Client
 import logging
+from time import sleep
 from .models import (
     HostelApproval,
     HouseOwner,
@@ -1389,63 +1390,69 @@ def generate_payment_url(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            user_id = data.get("user_id")  # Required user ID
-            apartment_id = data.get("apartment_id")  # Required apartment ID
-            amount = data.get("amount")  # Required amount in INR
-            booking_id = data.get("booking_id")  # Required booking ID
+            user_id = data.get("user_id")
+            apartment_id = data.get("apartment_id")
+            amount = data.get("amount")
+            booking_id = data.get("booking_id")
 
             if not user_id or not apartment_id or not amount or not booking_id:
                 return JsonResponse({"error": "Missing required fields"}, status=400)
 
-            # Convert amount to paise
             amount_paise = int(float(amount) * 100)
-
-            # ✅ Generate unique transaction and payment IDs (Convert UUIDs to strings)
             transaction_id = str(uuid.uuid4())
             payment_id = str(uuid.uuid4())
 
-            # ✅ Create an **order** in Razorpay
-            order_data = {
-                "amount": amount_paise,
-                "currency": "INR",
-                "receipt": transaction_id,
-                "payment_capture": 1,  # Auto-capture payment
-            }
-            razorpay_order = razorpay_client.order.create(order_data)
+            # Retry logic for Razorpay order creation
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    order_data = {
+                        "amount": amount_paise,
+                        "currency": "INR",
+                        "receipt": transaction_id,
+                        "payment_capture": 1,
+                    }
+                    razorpay_order = razorpay_client.order.create(order_data)
+                    break
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        return JsonResponse({"error": f"Failed to create Razorpay order: {str(e)}"}, status=500)
+                    sleep(1)  # Wait for 1 second before retrying
 
-            # ✅ Create the payment link on Razorpay with the order ID
-            payment_data = {
-                "amount": amount_paise,
-                "currency": "INR",
-                "description": "Apartment Booking Payment",
-                "notify": {"sms": True, "email": True},
-                "reminder_enable": True,
-                "callback_url": "http://127.0.0.1:8000/api/payment/callback/",
-                "callback_method": "get",
-                "reference_id": razorpay_order["id"],  # ✅ Store correct order ID
-            }
-
-            payment_link = razorpay_client.payment_link.create(payment_data)
-
-            # ✅ Save the order details in MongoDB (Explicitly store UUIDs as strings)
+            # Retry logic for payment link creation
+            for attempt in range(max_retries):
+                try:
+                    payment_data = {
+                        "amount": amount_paise,
+                        "currency": "INR",
+                        "description": "Apartment Booking Payment",
+                        "notify": {"sms": True, "email": True},
+                        "reminder_enable": True,
+                        "callback_url": "http://127.0.0.1:8000/api/payment/callback/",
+                        "callback_method": "get",
+                        "reference_id": razorpay_order["id"],
+                    }
+                    payment_link = razorpay_client.payment_link.create(payment_data)
+                    break
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        return JsonResponse({"error": f"Failed to create payment link: {str(e)}"}, status=500)
+                    sleep(1)
 
             BookingInstance = Booking.objects.filter(booking_id=booking_id).first()
             UserInstance = User.objects.filter(id=user_id).first()
-            ApartmentInstance = Apartment.objects.filter(
-                apartment_id=apartment_id
-            ).first()
+            ApartmentInstance = Apartment.objects.filter(apartment_id=apartment_id).first()
+
             if not BookingInstance:
                 return Response(
                     {"message": "No booking found with provided ID!"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-
             if not UserInstance:
                 return Response(
                     {"message": "No user found with the provided ID!"},
                     status=status.HTTP_404_NOT_FOUND,
                 )
-
             if not ApartmentInstance:
                 return Response(
                     {"message": "No apartment found with the provided ID!"},
@@ -1470,7 +1477,6 @@ def generate_payment_url(request):
 
             if serializer.is_valid():
                 serializer.save()
-
                 return JsonResponse(
                     {
                         "payment_url": payment_link["short_url"],
@@ -1481,7 +1487,6 @@ def generate_payment_url(request):
                     },
                     status=200,
                 )
-
             return JsonResponse(serializer.errors, status=405)
 
         except Exception as e:
