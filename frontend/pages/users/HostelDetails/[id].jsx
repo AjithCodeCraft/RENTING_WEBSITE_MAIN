@@ -25,11 +25,6 @@ const hexToBase64 = (hex) => {
    return Buffer.from(bytes).toString("base64");
 };
 
-
-
-
-
-
 const dateToCalendarFormat = (date) => ({
    year: date.getFullYear(),
    month: date.getMonth() + 1,
@@ -78,7 +73,6 @@ const HostelDetails = () => {
    const [saving, setSaving] = useState(false);
    const [userLocation, setUserLocation] = useState({ lat: null, lng: null });
 
-
    const openRazorpayGatway = () => {
       setPaymentLoading(true);
       window.open(paymentLink, "_blank");
@@ -94,23 +88,11 @@ const HostelDetails = () => {
       }
    }, [paymentStatus, paymentFailed]);
 
-   
    useEffect(() => {
-           if (router.isReady) {
-            setApartmentId(router.query.id);
-           }
-       }, [router]);
-
-
-   // useEffect(() => {
-   //    const apartmentId = localStorage.getItem("apartment_id");
-   //    if (apartmentId) {
-   //       setApartmentId(apartmentId);
-   //    } else {
-   //       setError("Apartment ID not found in localStorage");
-   //       setLoading(false);
-   //    }
-   // }, []);
+      if (router.isReady) {
+         setApartmentId(router.query.id);
+      }
+   }, [router]);
 
    useEffect(() => {
       if (!apartment_id) return;
@@ -200,10 +182,12 @@ const HostelDetails = () => {
       fetchApartmentDetails();
    }, [apartment_id]);
 
-
-
    const toggleMessagePopup = () => {
       setIsMessagePopupOpen(!isMessagePopupOpen);
+      // Set the initial message when opening the popup
+      if (!isMessagePopupOpen && hostel) {
+         setMessage(`Hi, I'm inquiring about your hostel "${hostel.title}". `);
+      }
    };
 
    const closeModal = () => {
@@ -290,7 +274,6 @@ const HostelDetails = () => {
             }
          );
          
-
          setSaved(true);
          setModalMessage("Apartment saved to wishlist successfully!");
       } catch (error) {
@@ -300,7 +283,6 @@ const HostelDetails = () => {
          setSaving(false);
       }
    };
-
 
    const handleSendMessage = async () => {
       if (!message || message.trim() === "") return;
@@ -481,8 +463,6 @@ const HostelDetails = () => {
       return <div className="flex justify-center items-center h-screen">No data found</div>;
    }
 
-
-
    const Modal = ({ message, onClose }) => {
       let displayMessage = "Something went wrong";
 
@@ -510,10 +490,6 @@ const HostelDetails = () => {
          </div>
       );
    };
-
-
-
-
 
    const renderBookingCard = () => (
       <Card className="p-6">
@@ -806,7 +782,6 @@ const HostelDetails = () => {
                      </div>
                   </div>
                </div>
-
 
                <div className="lg:sticky lg:top-4 lg:self-start py-20">{renderBookingCard()}</div>
             </div>
